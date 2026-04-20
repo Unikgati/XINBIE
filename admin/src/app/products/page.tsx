@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import ActionMenu from '@/components/ActionMenu';
 
 interface Variant {
@@ -133,8 +133,8 @@ export default function ProductsPage() {
                 const hasVariants = p.variants.length > 0;
                 const isExpanded = expandedProducts.has(p.id);
                 return (
-                  <>
-                    <tr key={p.id} style={{ cursor: hasVariants ? 'pointer' : 'default' }} onClick={() => hasVariants && toggleExpand(p.id)}>
+                  <React.Fragment key={p.id}>
+                    <tr style={{ cursor: hasVariants ? 'pointer' : 'default' }} onClick={() => hasVariants && toggleExpand(p.id)}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           {hasVariants && (
@@ -230,7 +230,7 @@ export default function ProductsPage() {
                         </tr>
                       );
                     })}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>
