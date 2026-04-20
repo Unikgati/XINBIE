@@ -17,7 +17,6 @@ export 'models/promo_code.dart';
 export 'models/notification_model.dart';
 export 'models/driver_profile.dart';
 export 'models/pickup_point.dart';
-export 'models/product_variant.dart';
 export 'models/cart_item.dart';
 
 // API
@@ -28,6 +27,13 @@ export 'api/api_exception.dart';
 // Auth
 export 'auth/auth_repository.dart';
 export 'auth/auth_state.dart';
+
+// Repositories
+export 'repositories/product_repository.dart';
+export 'repositories/order_repository.dart';
+export 'repositories/address_repository.dart';
+export 'repositories/notification_repository.dart';
+export 'repositories/driver_repository.dart';
 
 // Utils
 export 'utils/currency_formatter.dart';

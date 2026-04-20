@@ -1,0 +1,86 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core/core.dart';
+
+/// Driver auth notifier — extends base auth with driver-specific flows.
+class DriverAuthNotifier extends StateNotifier<AuthState> {
+  DriverAuthNotifier(this._authRepo) : super(const AuthState.initial());
+
+  final AuthRepository _authRepo;
+
+  Future<void> checkAuthStatus() async {
+    state = const AuthState.loading();
+    try {
+      final loggedIn = await _authRepo.isLoggedIn();
+      if (loggedIn) {
+        final user = await _authRepo.getMe();
+        state = AuthState.authenticated(user: user);
+      } else {
+        state = const AuthState.unauthenticated();
+      }
+    } catch (e) {
+      state = const AuthState.unauthenticated();
+    }
+  }
+
+  Future<void> login({required String email, required String password}) async {
+    state = const AuthState.loading();
+    try {
+      state = await _authRepo.login(email: email, password: password);
+    } catch (e) {
+      state = AuthState.error(message: e.toString());
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      await _authRepo.logout();
+    } finally {
+      state = const AuthState.unauthenticated();
+    }
+  }
+}
+
+final driverAuthNotifierProvider = StateNotifierProvider<DriverAuthNotifier, AuthState>((ref) {
+  return DriverAuthNotifier(ref.watch(authRepositoryProvider));
+});
+
+/// Driver online status
+class OnlineStatusNotifier extends StateNotifier<bool> {
+  OnlineStatusNotifier(this._driverRepo) : super(false);
+
+  final DriverRepository _driverRepo;
+
+  Future<void> toggle() async {
+    final newStatus = !state;
+    await _driverRepo.setOnlineStatus(newStatus);
+    state = newStatus;
+  }
+}
+
+final onlineStatusProvider = StateNotifierProvider<OnlineStatusNotifier, bool>((ref) {
+  return OnlineStatusNotifier(ref.watch(driverRepositoryProvider));
+});
+
+/// Driver active orders
+final driverActiveOrdersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final repo = ref.watch(driverRepositoryProvider);
+  return repo.getActiveOrders();
+});
+
+/// Driver order history
+final driverOrderHistoryProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final repo = ref.watch(driverRepositoryProvider);
+  return repo.getOrderHistory();
+});
+
+/// Driver earnings
+final driverEarningsProvider = FutureProvider.family<Map<String, dynamic>, String?>((ref, period) async {
+  final repo = ref.watch(driverRepositoryProvider);
+  return repo.getEarnings(period: period);
+});
+
+/// Verification status
+final verificationStatusProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final repo = ref.watch(driverRepositoryProvider);
+  return repo.getVerificationStatus();
+});
