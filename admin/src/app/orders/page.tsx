@@ -11,16 +11,16 @@ const mockOrders = [
   { id: '6', code: 'DG-260419-1111', customer: 'Hendra Gunawan', phone: '0856-xxxx', items: 6, total: 200000, status: 'completed', payment: 'QRIS', driver: 'Driver A', date: '19 Apr 2026 16:00' },
 ];
 
-const statusMap: Record<string, { label: string; badge: string }> = {
-  waitingPayment: { label: '🟡 Menunggu Bayar', badge: 'orange' },
-  received: { label: '🔵 Diterima', badge: 'blue' },
-  processing: { label: '🟣 Diproses', badge: 'purple' },
-  waitingDriver: { label: '🟠 Tunggu Driver', badge: 'orange' },
-  inDelivery: { label: '🚚 Dikirim', badge: 'green' },
-  delivered: { label: '📦 Diantar', badge: 'green' },
-  completed: { label: '✅ Selesai', badge: 'green' },
-  cancelled: { label: '❌ Batal', badge: 'red' },
-  problem: { label: '⚠️ Masalah', badge: 'orange' },
+const statusMap: Record<string, { label: string; badge: string; icon: string }> = {
+  waitingPayment: { label: 'Menunggu Bayar', badge: 'orange', icon: 'schedule' },
+  received: { label: 'Diterima', badge: 'blue', icon: 'inbox' },
+  processing: { label: 'Diproses', badge: 'purple', icon: 'pending' },
+  waitingDriver: { label: 'Tunggu Driver', badge: 'orange', icon: 'hail' },
+  inDelivery: { label: 'Dikirim', badge: 'green', icon: 'local_shipping' },
+  delivered: { label: 'Diantar', badge: 'green', icon: 'package_2' },
+  completed: { label: 'Selesai', badge: 'green', icon: 'check_circle' },
+  cancelled: { label: 'Batal', badge: 'red', icon: 'cancel' },
+  problem: { label: 'Masalah', badge: 'orange', icon: 'warning' },
 };
 
 const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
@@ -38,12 +38,10 @@ export default function OrdersPage() {
         </div>
       </div>
       <div className="page-body">
-        {/* Filters */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div className="chip-group">
           {['all', 'waitingPayment', 'processing', 'inDelivery', 'completed', 'cancelled'].map(s => (
-            <button key={s} className={`btn btn-sm ${filter === s ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setFilter(s)}>
-              {s === 'all' ? 'Semua' : statusMap[s]?.label.split(' ').slice(1).join(' ')}
+            <button key={s} className={`chip ${filter === s ? 'active' : ''}`} onClick={() => setFilter(s)}>
+              {s === 'all' ? 'Semua' : statusMap[s]?.label}
             </button>
           ))}
         </div>
@@ -51,16 +49,7 @@ export default function OrdersPage() {
         <div className="data-card">
           <table className="data-table">
             <thead>
-              <tr>
-                <th>Kode</th>
-                <th>Pelanggan</th>
-                <th>Items</th>
-                <th>Total</th>
-                <th>Pembayaran</th>
-                <th>Driver</th>
-                <th>Status</th>
-                <th>Tanggal</th>
-              </tr>
+              <tr><th>Kode</th><th>Pelanggan</th><th>Items</th><th>Total</th><th>Pembayaran</th><th>Driver</th><th>Status</th><th>Tanggal</th></tr>
             </thead>
             <tbody>
               {filtered.map(o => (
@@ -71,10 +60,10 @@ export default function OrdersPage() {
                     <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{o.phone}</div>
                   </td>
                   <td>{o.items} item</td>
-                  <td style={{ fontWeight: 600 }}>{fmt(o.total)}</td>
+                  <td style={{ fontWeight: 700 }}>{fmt(o.total)}</td>
                   <td><span className="badge gray">{o.payment}</span></td>
                   <td>{o.driver}</td>
-                  <td><span className={`badge ${statusMap[o.status]?.badge}`}>{statusMap[o.status]?.label}</span></td>
+                  <td><span className={`badge ${statusMap[o.status]?.badge}`}><span className="material-symbols-outlined">{statusMap[o.status]?.icon}</span> {statusMap[o.status]?.label}</span></td>
                   <td style={{ color: 'var(--text-hint)', fontSize: 13 }}>{o.date}</td>
                 </tr>
               ))}

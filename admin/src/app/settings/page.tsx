@@ -4,20 +4,11 @@ import { useState } from 'react';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
-    storeName: 'Dapur Gizi',
-    phone: '0812-3456-7890',
-    email: 'info@dapurgizi.com',
-    address: 'Jl. Sudirman No. 15, Jakarta',
-    lat: '-6.200000',
-    lng: '106.816666',
-    deliveryRadius: '10',
-    baseDeliveryFee: '5000',
-    freeDeliveryMin: '150000',
-    operationalStart: '07:00',
-    operationalEnd: '20:00',
-    maxOrderPerSlot: '10',
+    storeName: 'Dapur Gizi', phone: '0812-3456-7890', email: 'info@dapurgizi.com',
+    address: 'Jl. Sudirman No. 15, Jakarta', lat: '-6.200000', lng: '106.816666',
+    deliveryRadius: '10', baseDeliveryFee: '5000', freeDeliveryMin: '150000',
+    operationalStart: '07:00', operationalEnd: '20:00', maxOrderPerSlot: '10',
   });
-
   const update = (key: string, value: string) => setSettings(prev => ({ ...prev, [key]: value }));
 
   return (
@@ -27,12 +18,11 @@ export default function SettingsPage() {
           <h1 className="page-title">Pengaturan</h1>
           <p className="page-subtitle">Konfigurasi toko dan pengiriman</p>
         </div>
-        <button className="btn btn-primary">💾 Simpan</button>
+        <button className="btn btn-primary"><span className="material-symbols-outlined">save</span> Simpan</button>
       </div>
       <div className="page-body">
-        {/* Store Info */}
         <div className="data-card" style={{ marginBottom: 16 }}>
-          <div className="data-card-header"><h3 className="data-card-title">🏪 Informasi Toko</h3></div>
+          <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">storefront</span> Informasi Toko</h3></div>
           <div style={{ padding: 20 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="form-group"><label className="form-label">Nama Toko</label><input className="form-input" value={settings.storeName} onChange={e => update('storeName', e.target.value)} /></div>
@@ -44,10 +34,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-
-        {/* Delivery */}
         <div className="data-card" style={{ marginBottom: 16 }}>
-          <div className="data-card-header"><h3 className="data-card-title">🚚 Pengiriman</h3></div>
+          <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">local_shipping</span> Pengiriman</h3></div>
           <div style={{ padding: 20 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="form-group"><label className="form-label">Radius Pengiriman (km)</label><input className="form-input" type="number" value={settings.deliveryRadius} onChange={e => update('deliveryRadius', e.target.value)} /></div>
@@ -57,10 +45,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-
-        {/* Operational */}
         <div className="data-card">
-          <div className="data-card-header"><h3 className="data-card-title">🕐 Jam Operasional</h3></div>
+          <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">schedule</span> Jam Operasional</h3></div>
           <div style={{ padding: 20 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="form-group"><label className="form-label">Buka</label><input className="form-input" type="time" value={settings.operationalStart} onChange={e => update('operationalStart', e.target.value)} /></div>

@@ -18,31 +18,26 @@ export default function UsersPage() {
       <div className="page-body">
         <div className="stat-grid">
           <div className="stat-card">
-            <div className="stat-icon green">👥</div>
+            <div className="stat-icon green"><span className="material-symbols-outlined">group</span></div>
             <div><div className="stat-value">{mockUsers.length}</div><div className="stat-label">Total Pelanggan</div></div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon blue">🛒</div>
+            <div className="stat-icon blue"><span className="material-symbols-outlined">shopping_cart</span></div>
             <div><div className="stat-value">{mockUsers.reduce((s, u) => s + u.orders, 0)}</div><div className="stat-label">Total Pesanan</div></div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon orange">⭐</div>
+            <div className="stat-icon orange"><span className="material-symbols-outlined">verified_user</span></div>
             <div><div className="stat-value">{mockUsers.filter(u => u.active).length}</div><div className="stat-label">Aktif</div></div>
           </div>
         </div>
 
         <div className="data-card">
           <div className="data-card-header">
-            <h3 className="data-card-title">Daftar Pelanggan</h3>
-            <div className="search-bar">
-              <span>🔍</span>
-              <input placeholder="Cari pelanggan..." />
-            </div>
+            <h3 className="data-card-title"><span className="material-symbols-outlined">group</span> Daftar Pelanggan</h3>
+            <div className="search-bar"><span className="material-symbols-outlined">search</span><input placeholder="Cari pelanggan..." /></div>
           </div>
           <table className="data-table">
-            <thead>
-              <tr><th>Pelanggan</th><th>Kontak</th><th>Pesanan</th><th>Total Belanja</th><th>Bergabung</th><th>Status</th></tr>
-            </thead>
+            <thead><tr><th>Pelanggan</th><th>Kontak</th><th>Pesanan</th><th>Total Belanja</th><th>Bergabung</th><th>Status</th></tr></thead>
             <tbody>
               {mockUsers.map(u => (
                 <tr key={u.id}>
@@ -54,7 +49,7 @@ export default function UsersPage() {
                   </td>
                   <td><div style={{ fontSize: 13 }}>{u.email}</div><div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{u.phone}</div></td>
                   <td>{u.orders}</td>
-                  <td style={{ fontWeight: 600 }}>{u.total}</td>
+                  <td style={{ fontWeight: 700 }}>{u.total}</td>
                   <td style={{ color: 'var(--text-hint)', fontSize: 13 }}>{u.joined}</td>
                   <td><span className={`badge ${u.active ? 'green' : 'gray'}`}>{u.active ? 'Aktif' : 'Nonaktif'}</span></td>
                 </tr>

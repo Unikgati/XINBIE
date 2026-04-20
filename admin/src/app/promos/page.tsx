@@ -20,35 +20,37 @@ export default function PromosPage() {
           <h1 className="page-title">Promo</h1>
           <p className="page-subtitle">{mockPromos.length} kode promo</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Buat Promo</button>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <span className="material-symbols-outlined">add</span> Buat Promo
+        </button>
       </div>
       <div className="page-body">
         <div className="data-card">
           <table className="data-table">
-            <thead>
-              <tr><th>Kode</th><th>Tipe</th><th>Nilai</th><th>Min. Order</th><th>Penggunaan</th><th>Expired</th><th>Status</th><th>Aksi</th></tr>
-            </thead>
+            <thead><tr><th>Kode</th><th>Tipe</th><th>Nilai</th><th>Min. Order</th><th>Penggunaan</th><th>Expired</th><th>Status</th><th>Aksi</th></tr></thead>
             <tbody>
               {mockPromos.map(p => (
                 <tr key={p.id}>
-                  <td style={{ fontWeight: 700, letterSpacing: 1 }}>{p.code}</td>
-                  <td><span className={`badge ${p.type === 'percent' ? 'blue' : 'purple'}`}>{p.type === 'percent' ? 'Persen' : 'Nominal'}</span></td>
-                  <td style={{ fontWeight: 600 }}>{p.type === 'percent' ? `${p.value}%` : fmt(p.value)}</td>
+                  <td style={{ fontWeight: 800, letterSpacing: 1 }}>{p.code}</td>
+                  <td><span className={`badge ${p.type === 'percent' ? 'blue' : 'purple'}`}>
+                    <span className="material-symbols-outlined">{p.type === 'percent' ? 'percent' : 'payments'}</span> {p.type === 'percent' ? 'Persen' : 'Nominal'}
+                  </span></td>
+                  <td style={{ fontWeight: 700 }}>{p.type === 'percent' ? `${p.value}%` : fmt(p.value)}</td>
                   <td>{fmt(p.minOrder)}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ flex: 1, height: 6, background: 'var(--background)', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ width: `${(p.used / p.limit) * 100}%`, height: '100%', background: p.used >= p.limit ? 'var(--error)' : 'var(--primary)', borderRadius: 3 }} />
+                      <div className="progress-bar" style={{ flex: 1 }}>
+                        <div className={`progress-fill ${p.used >= p.limit ? 'red' : 'green'}`} style={{ width: `${(p.used / p.limit) * 100}%` }} />
                       </div>
-                      <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>{p.used}/{p.limit}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-hint)', whiteSpace: 'nowrap' }}>{p.used}/{p.limit}</span>
                     </div>
                   </td>
                   <td style={{ fontSize: 13, color: 'var(--text-hint)' }}>{p.expires}</td>
                   <td><span className={`badge ${p.active ? 'green' : 'gray'}`}>{p.active ? 'Aktif' : 'Expired'}</span></td>
                   <td>
                     <div style={{ display: 'flex', gap: 4 }}>
-                      <button className="btn btn-outline btn-sm">✏️</button>
-                      <button className="btn btn-danger btn-sm">🗑️</button>
+                      <button className="btn btn-outline btn-icon"><span className="material-symbols-outlined">edit</span></button>
+                      <button className="btn btn-danger btn-icon"><span className="material-symbols-outlined">delete</span></button>
                     </div>
                   </td>
                 </tr>
@@ -61,7 +63,10 @@ export default function PromosPage() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h3>Buat Promo</h3><button className="btn btn-outline btn-sm" onClick={() => setShowModal(false)}>✕</button></div>
+            <div className="modal-header">
+              <h3><span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>sell</span> Buat Promo</h3>
+              <button className="btn btn-outline btn-icon" onClick={() => setShowModal(false)}><span className="material-symbols-outlined">close</span></button>
+            </div>
             <div className="modal-body">
               <div className="form-group"><label className="form-label">Kode Promo</label><input className="form-input" placeholder="KODEPROMO" style={{ textTransform: 'uppercase' }} /></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -77,7 +82,10 @@ export default function PromosPage() {
                 <div className="form-group"><label className="form-label">Expired</label><input className="form-input" type="date" /></div>
               </div>
             </div>
-            <div className="modal-footer"><button className="btn btn-outline" onClick={() => setShowModal(false)}>Batal</button><button className="btn btn-primary" onClick={() => setShowModal(false)}>Simpan</button></div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setShowModal(false)}>Batal</button>
+              <button className="btn btn-primary" onClick={() => setShowModal(false)}><span className="material-symbols-outlined">save</span> Simpan</button>
+            </div>
           </div>
         </div>
       )}

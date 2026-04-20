@@ -10,10 +10,10 @@ const mockDrivers = [
   { id: '5', name: 'Driver Eka', email: 'eka@driver.com', phone: '0856-5678-9012', status: 'approved', rating: 4.9, orders: 200, online: true },
 ];
 
-const statusBadge: Record<string, { label: string; badge: string }> = {
-  approved: { label: '✅ Aktif', badge: 'green' },
-  pending: { label: '⏳ Menunggu', badge: 'orange' },
-  rejected: { label: '❌ Ditolak', badge: 'red' },
+const statusBadge: Record<string, { label: string; badge: string; icon: string }> = {
+  approved: { label: 'Aktif', badge: 'green', icon: 'verified' },
+  pending: { label: 'Menunggu', badge: 'orange', icon: 'hourglass_top' },
+  rejected: { label: 'Ditolak', badge: 'red', icon: 'block' },
 };
 
 export default function DriversPage() {
@@ -25,13 +25,13 @@ export default function DriversPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Driver</h1>
-          <p className="page-subtitle">{mockDrivers.length} driver terdaftar • {mockDrivers.filter(d => d.online).length} online</p>
+          <p className="page-subtitle">{mockDrivers.length} driver terdaftar &bull; {mockDrivers.filter(d => d.online).length} online</p>
         </div>
       </div>
       <div className="page-body">
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div className="chip-group">
           {['all', 'pending', 'approved', 'rejected'].map(s => (
-            <button key={s} className={`btn btn-sm ${filter === s ? 'btn-primary' : 'btn-outline'}`} onClick={() => setFilter(s)}>
+            <button key={s} className={`chip ${filter === s ? 'active' : ''}`} onClick={() => setFilter(s)}>
               {s === 'all' ? 'Semua' : statusBadge[s]?.label}
             </button>
           ))}
@@ -39,17 +39,7 @@ export default function DriversPage() {
 
         <div className="data-card">
           <table className="data-table">
-            <thead>
-              <tr>
-                <th>Driver</th>
-                <th>Kontak</th>
-                <th>Rating</th>
-                <th>Pesanan</th>
-                <th>Online</th>
-                <th>Status</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Driver</th><th>Kontak</th><th>Rating</th><th>Pesanan</th><th>Online</th><th>Status</th><th>Aksi</th></tr></thead>
             <tbody>
               {filtered.map(d => (
                 <tr key={d.id}>
@@ -59,26 +49,20 @@ export default function DriversPage() {
                       <div style={{ fontWeight: 600 }}>{d.name}</div>
                     </div>
                   </td>
-                  <td>
-                    <div style={{ fontSize: 13 }}>{d.email}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{d.phone}</div>
-                  </td>
-                  <td>{d.rating > 0 ? `⭐ ${d.rating}` : '-'}</td>
+                  <td><div style={{ fontSize: 13 }}>{d.email}</div><div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{d.phone}</div></td>
+                  <td>{d.rating > 0 ? <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="material-symbols-outlined icon-filled" style={{ fontSize: 16, color: '#F59E0B' }}>star</span> {d.rating}</span> : '-'}</td>
                   <td>{d.orders}</td>
-                  <td>
-                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: d.online ? 'var(--success)' : 'var(--text-hint)', display: 'inline-block' }} />
-                    <span style={{ marginLeft: 6, fontSize: 13 }}>{d.online ? 'Online' : 'Offline'}</span>
-                  </td>
-                  <td><span className={`badge ${statusBadge[d.status]?.badge}`}>{statusBadge[d.status]?.label}</span></td>
+                  <td><span className={`online-dot ${d.online ? 'active' : 'inactive'}`} /> <span style={{ marginLeft: 6, fontSize: 13 }}>{d.online ? 'Online' : 'Offline'}</span></td>
+                  <td><span className={`badge ${statusBadge[d.status]?.badge}`}><span className="material-symbols-outlined">{statusBadge[d.status]?.icon}</span> {statusBadge[d.status]?.label}</span></td>
                   <td>
                     <div style={{ display: 'flex', gap: 4 }}>
                       {d.status === 'pending' && (
                         <>
-                          <button className="btn btn-primary btn-sm">✅ Approve</button>
-                          <button className="btn btn-danger btn-sm">❌ Reject</button>
+                          <button className="btn btn-primary btn-sm"><span className="material-symbols-outlined">check</span> Approve</button>
+                          <button className="btn btn-danger btn-sm"><span className="material-symbols-outlined">close</span> Reject</button>
                         </>
                       )}
-                      {d.status === 'approved' && <button className="btn btn-outline btn-sm">📄 Detail</button>}
+                      {d.status === 'approved' && <button className="btn btn-outline btn-sm"><span className="material-symbols-outlined">description</span> Detail</button>}
                     </div>
                   </td>
                 </tr>

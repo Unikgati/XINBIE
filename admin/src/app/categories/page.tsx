@@ -3,14 +3,14 @@
 import { useState } from 'react';
 
 const mockCategories = [
-  { id: '1', name: 'Sayuran', icon: '🥬', products: 8, active: true },
-  { id: '2', name: 'Buah-buahan', icon: '🍎', products: 6, active: true },
-  { id: '3', name: 'Bumbu Dapur', icon: '🌶️', products: 5, active: true },
-  { id: '4', name: 'Protein', icon: '🥩', products: 4, active: true },
-  { id: '5', name: 'Bahan Pokok', icon: '🍚', products: 3, active: true },
-  { id: '6', name: 'Minuman', icon: '🧃', products: 2, active: true },
-  { id: '7', name: 'Snack Sehat', icon: '🍪', products: 2, active: true },
-  { id: '8', name: 'Frozen', icon: '🧊', products: 2, active: true },
+  { id: '1', name: 'Bahan Baku', icon: 'rice_bowl', products: 8 },
+  { id: '2', name: 'Sayur & Buah', icon: 'nutrition', products: 6 },
+  { id: '3', name: 'Snack & Roti', icon: 'cookie', products: 5 },
+  { id: '4', name: 'Minuman', icon: 'local_cafe', products: 4 },
+  { id: '5', name: 'Bumbu & Rempah', icon: 'local_fire_department', products: 3 },
+  { id: '6', name: 'Kebersihan & Sanitasi', icon: 'cleaning_services', products: 2 },
+  { id: '7', name: 'Telur & Daging', icon: 'egg_alt', products: 2 },
+  { id: '8', name: 'Frozen Food', icon: 'ac_unit', products: 2 },
 ];
 
 export default function CategoriesPage() {
@@ -23,20 +23,24 @@ export default function CategoriesPage() {
           <h1 className="page-title">Kategori</h1>
           <p className="page-subtitle">{mockCategories.length} kategori</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Tambah Kategori</button>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <span className="material-symbols-outlined">add</span> Tambah Kategori
+        </button>
       </div>
       <div className="page-body">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
           {mockCategories.map(c => (
-            <div key={c.id} className="stat-card" style={{ cursor: 'pointer' }}>
-              <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--primary-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{c.icon}</div>
+            <div key={c.id} className="category-card">
+              <div className="category-icon">
+                <span className="material-symbols-outlined">{c.icon}</span>
+              </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{c.name}</div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{c.name}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{c.products} produk</div>
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
-                <button className="btn btn-outline btn-sm">✏️</button>
-                <button className="btn btn-danger btn-sm">🗑️</button>
+                <button className="btn btn-outline btn-icon"><span className="material-symbols-outlined">edit</span></button>
+                <button className="btn btn-danger btn-icon"><span className="material-symbols-outlined">delete</span></button>
               </div>
             </div>
           ))}
@@ -47,22 +51,16 @@ export default function CategoriesPage() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="modal-header">
-              <h3>Tambah Kategori</h3>
-              <button className="btn btn-outline btn-sm" onClick={() => setShowModal(false)}>✕</button>
+              <h3><span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>category</span> Tambah Kategori</h3>
+              <button className="btn btn-outline btn-icon" onClick={() => setShowModal(false)}><span className="material-symbols-outlined">close</span></button>
             </div>
             <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">Nama Kategori</label>
-                <input className="form-input" placeholder="Masukkan nama" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Ikon (Emoji)</label>
-                <input className="form-input" placeholder="🥬" />
-              </div>
+              <div className="form-group"><label className="form-label">Nama Kategori</label><input className="form-input" placeholder="Masukkan nama" /></div>
+              <div className="form-group"><label className="form-label">Ikon (Material Symbol)</label><input className="form-input" placeholder="rice_bowl" /></div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setShowModal(false)}>Batal</button>
-              <button className="btn btn-primary" onClick={() => setShowModal(false)}>Simpan</button>
+              <button className="btn btn-primary" onClick={() => setShowModal(false)}><span className="material-symbols-outlined">save</span> Simpan</button>
             </div>
           </div>
         </div>
