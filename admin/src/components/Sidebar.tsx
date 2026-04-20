@@ -15,6 +15,7 @@ const navItems = [
   ]},
   { section: 'Pengguna', items: [
     { href: '/drivers', icon: 'local_shipping', label: 'Driver' },
+    { href: '/withdrawals', icon: 'account_balance_wallet', label: 'Pencairan' },
     { href: '/users', icon: 'group', label: 'Pelanggan' },
   ]},
   { section: 'Marketing', items: [
