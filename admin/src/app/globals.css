@@ -931,16 +931,12 @@ html[data-sidebar="collapsed"] .main-content {
 }
 
 .action-menu-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
   background: var(--surface);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--divider);
-  min-width: 160px;
-  z-index: 150;
+  min-width: 180px;
+  padding: 4px 0;
   animation: slideUp 0.15s ease;
   overflow: hidden;
 }
