@@ -102,6 +102,7 @@ model Product {
   description      String   @default("")
   categoryId       String   @map("category_id")
   price            Int
+  costPrice        Int      @default(0) @map("cost_price")
   discountPrice    Int?     @map("discount_price")
   discountPercent  Int?     @map("discount_percent")
   unit             String   @default("pcs")

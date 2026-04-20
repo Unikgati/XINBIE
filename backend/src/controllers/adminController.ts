@@ -17,6 +17,7 @@ export async function getDashboard(req: AuthRequest, res: Response, next: NextFu
       totalUsers, totalDrivers, totalProducts,
       todayOrders, monthOrders, monthRevenue,
       pendingDrivers, activeOrders, recentOrders,
+      monthCogs,
     ] = await Promise.all([
       prisma.user.count({ where: { role: 'USER' } }),
       prisma.driverProfile.count(),
@@ -34,13 +35,29 @@ export async function getDashboard(req: AuthRequest, res: Response, next: NextFu
         orderBy: { createdAt: 'desc' },
         include: { user: { select: { name: true } } },
       }),
+      // Calculate COGS: sum(orderItem.qty * product.costPrice) for paid orders this month
+      prisma.orderItem.findMany({
+        where: {
+          order: { createdAt: { gte: thisMonth }, paymentStatus: 'PAID' },
+          product: { isNot: null },
+        },
+        select: { qty: true, product: { select: { costPrice: true } } },
+      }),
     ]);
+
+    const revenue = monthRevenue._sum.grandTotal || 0;
+    const cogs = monthCogs.reduce((sum, item) => sum + (item.qty * (item.product?.costPrice || 0)), 0);
+    const grossProfit = revenue - cogs;
+    const marginPercent = revenue > 0 ? Math.round((grossProfit / revenue) * 100) : 0;
 
     res.json({
       stats: {
         totalUsers, totalDrivers, totalProducts,
         todayOrders, monthOrders,
-        monthRevenue: monthRevenue._sum.grandTotal || 0,
+        monthRevenue: revenue,
+        monthCogs: cogs,
+        grossProfit,
+        marginPercent,
         pendingDrivers, activeOrders,
       },
       recentOrders: recentOrders.map((o) => ({
@@ -85,7 +102,12 @@ export async function adminCreateProduct(req: AuthRequest, res: Response, next: 
     }
 
     const product = await prisma.product.create({
-      data: { ...req.body, images, price: parseInt(req.body.price) },
+      data: {
+        ...req.body,
+        images,
+        price: parseInt(req.body.price),
+        costPrice: req.body.costPrice ? parseInt(req.body.costPrice) : 0,
+      },
     });
 
     res.status(201).json(product);
@@ -102,6 +124,7 @@ export async function adminUpdateProduct(req: AuthRequest, res: Response, next: 
     const data: any = { ...req.body };
     if (images) data.images = images;
     if (data.price) data.price = parseInt(data.price);
+    if (data.costPrice) data.costPrice = parseInt(data.costPrice);
     if (data.discountPrice) data.discountPrice = parseInt(data.discountPrice);
 
     const product = await prisma.product.update({
