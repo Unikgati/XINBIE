@@ -877,28 +877,121 @@ textarea.form-input:focus {
 }
 
 /* ==========================================
-   Upload area
+/* ==========================================
+   File Upload — DapurGizi Design System
    ========================================== */
-.upload-area {
+.file-upload {
   border: 2px dashed var(--border);
   border-radius: var(--radius-lg);
-  padding: 32px;
+  padding: 24px;
   text-align: center;
   color: var(--text-hint);
   transition: all 0.2s;
   cursor: pointer;
+  background: var(--background);
 }
 
-.upload-area:hover {
-  border-color: var(--primary-light);
+.file-upload:hover,
+.file-upload.drag-over {
+  border-color: var(--primary);
   background: var(--primary-surface);
   color: var(--primary-dark);
 }
 
-.upload-area .material-symbols-outlined {
-  font-size: 36px;
-  margin-bottom: 8px;
+.file-upload.drag-over {
+  border-style: solid;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
 }
+
+.file-upload-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-upload-icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.file-upload-icon-circle .material-symbols-outlined {
+  font-size: 24px;
+  color: #fff;
+}
+
+.file-upload-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.file-upload-hint {
+  font-size: 11px;
+  color: var(--text-hint);
+}
+
+/* Preview state */
+.file-upload.has-preview {
+  border-style: solid;
+  border-color: var(--primary-light);
+  background: var(--primary-surface);
+  padding: 12px;
+}
+
+.file-upload-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-upload-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.file-upload-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.file-upload-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.file-upload-change {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(76, 175, 80, 0.1);
+  transition: all 0.15s;
+}
+
+.file-upload:hover .file-upload-change {
+  background: rgba(76, 175, 80, 0.2);
+}
+
+/* Legacy compat */
+.upload-area { composes: file-upload; }
 
 /* ==========================================
    Online indicator

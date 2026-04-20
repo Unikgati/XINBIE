@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import ActionMenu from '@/components/ActionMenu';
 import CustomSelect from '@/components/CustomSelect';
+import FileUpload from '@/components/FileUpload';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
@@ -133,8 +134,16 @@ export default function BannersPage() {
               <div className="form-group"><label className="form-label">Tipe</label><CustomSelect value={formType} onChange={setFormType} options={[{ value: 'PROMO', label: 'Promo' }, { value: 'INFO', label: 'Info' }, { value: 'EVENT', label: 'Event' }]} /></div>
               <div className="form-group">
                 <label className="form-label">Gambar Banner</label>
-                {imagePreview && <img src={imagePreview} alt="preview" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8, marginBottom: 8 }} />}
-                <input type="file" accept="image/*" className="form-input" onChange={e => { const f = e.target.files?.[0]; if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); } }} />
+                <FileUpload
+                  accept="image/*"
+                  icon="image"
+                  label="Upload gambar banner"
+                  hint="Format JPG, PNG, WebP — maks 2MB"
+                  maxSize={2048}
+                  preview={imagePreview}
+                  onChange={(file) => { setImageFile(file); setImagePreview(URL.createObjectURL(file)); }}
+                  onError={(msg) => toast.error(msg)}
+                />
               </div>
             </div>
             <div className="modal-footer">

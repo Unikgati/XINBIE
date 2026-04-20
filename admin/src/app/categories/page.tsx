@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import ActionMenu from '@/components/ActionMenu';
+import FileUpload from '@/components/FileUpload';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { apiGet, apiPost, apiPut } from '@/lib/api';
@@ -161,13 +162,18 @@ export default function CategoriesPage() {
               <div className="form-group"><label className="form-label">Nama Kategori</label><input className="form-input" placeholder="Masukkan nama" value={formName} onChange={e => setFormName(e.target.value)} /></div>
               <div className="form-group"><label className="form-label">Warna Background</label><input className="form-input" type="color" value={formColor} onChange={e => setFormColor(e.target.value)} style={{ height: 44, padding: 4 }} /></div>
               <div className="form-group">
-                <label className="form-label">Ikon (SVG/PNG/WebP, maks 500KB)</label>
-                {iconPreview && (
-                  <div style={{ marginBottom: 8, padding: 12, background: formColor, borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <img src={iconPreview} alt="preview" style={{ width: 48, height: 48 }} />
-                  </div>
-                )}
-                <input type="file" accept=".svg,.png,.webp" onChange={handleFileChange} className="form-input" />
+                <label className="form-label">Ikon Kategori</label>
+                <FileUpload
+                  accept=".svg,.png,.webp"
+                  icon="category"
+                  label="Upload ikon SVG, PNG, atau WebP"
+                  hint="Maksimal 500KB"
+                  maxSize={500}
+                  preview={iconPreview}
+                  previewBg={formColor}
+                  onChange={(file) => { setIconFile(file); setIconPreview(URL.createObjectURL(file)); }}
+                  onError={(msg) => toast.error(msg)}
+                />
               </div>
             </div>
             <div className="modal-footer">
