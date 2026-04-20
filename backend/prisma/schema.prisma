@@ -29,6 +29,7 @@ model User {
   orders         Order[]       @relation("UserOrders")
   driverOrders   Order[]       @relation("DriverOrders")
   driverProfile  DriverProfile?
+  driverWallet   DriverWallet?
   notifications  Notification[]
   otpCodes       OtpCode[]
   refreshTokens  RefreshToken[]
@@ -365,6 +366,13 @@ model DriverProfile {
   lastLat            Float?             @map("last_lat")
   lastLng            Float?             @map("last_lng")
   lastLocationAt     DateTime?          @map("last_location_at")
+  // Bank / E-Wallet info
+  bankName           String?            @map("bank_name")
+  accountNumber      String?            @map("account_number")
+  accountHolder      String?            @map("account_holder")
+  // Vehicle info
+  vehicleType        String?            @map("vehicle_type")
+  vehiclePlate       String?            @map("vehicle_plate")
   createdAt          DateTime           @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -376,6 +384,67 @@ enum VerificationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// ─────────────────────────────────────────
+// Driver Wallet & Financial
+// ─────────────────────────────────────────
+
+model DriverWallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions DriverTransaction[]
+
+  @@map("driver_wallets")
+}
+
+model DriverTransaction {
+  id        String            @id @default(uuid())
+  walletId  String            @map("wallet_id")
+  orderId   String?           @map("order_id")
+  type      TransactionType
+  amount    Int               // positive = income, negative = deduction
+  balance   Int               // balance snapshot after this transaction
+  note      String?
+  status    WithdrawalStatus? // only for WITHDRAWAL type
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  wallet DriverWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  // Prevent double commission per order
+  @@unique([orderId, type], map: "unique_order_transaction_type")
+  @@map("driver_transactions")
+}
+
+enum TransactionType {
+  COMMISSION
+  BONUS
+  WITHDRAWAL
+  PENALTY
+  COD_SETTLEMENT
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model DriverRating {
+  id        String   @id @default(uuid())
+  orderId   String   @unique @map("order_id")
+  driverId  String   @map("driver_id")
+  userId    String   @map("user_id")
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("driver_ratings")
 }
 
 // ─────────────────────────────────────────

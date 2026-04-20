@@ -3,6 +3,7 @@ import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { processAndUploadImage } from '../middleware/upload';
+import { createCommission, createCodSettlement, getCommissionSettings } from '../utils/commission';
 
 // POST /api/driver/register
 export async function registerDriver(req: AuthRequest, res: Response, next: NextFunction) {
@@ -180,6 +181,15 @@ export async function updateOrderStatus(req: AuthRequest, res: Response, next: N
         where: { userId: req.userId! },
         data: { totalOrdersDone: { increment: 1 } },
       });
+
+      // Auto-create commission + COD settlement
+      try {
+        await createCommission(order.id, req.userId!);
+        await createCodSettlement(order.id, req.userId!);
+      } catch (err) {
+        console.error('Commission creation failed:', err);
+        // Don't fail the status update if commission fails
+      }
     }
 
     res.json({ message: 'Status diperbarui' });
@@ -250,31 +260,174 @@ export async function confirmCod(req: AuthRequest, res: Response, next: NextFunc
 // GET /api/driver/earnings
 export async function getEarnings(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { startDate, endDate } = req.query;
+    const wallet = await prisma.driverWallet.findUnique({
+      where: { userId: req.userId! },
+    });
 
-    const where: any = {
-      driverId: req.userId,
-      orderStatus: { in: ['DELIVERED', 'COMPLETED'] },
-    };
-    if (startDate && endDate) {
-      where.createdAt = {
-        gte: new Date(startDate as string),
-        lte: new Date(endDate as string),
-      };
+    if (!wallet) {
+      return res.json({ balance: 0, totalEarnings: 0, totalOrders: 0, transactions: [] });
     }
 
-    const orders = await prisma.order.findMany({
-      where,
-      select: { deliveryFee: true, createdAt: true, code: true, grandTotal: true },
+    // Get commission transactions
+    const commissions = await prisma.driverTransaction.findMany({
+      where: { walletId: wallet.id, type: 'COMMISSION' },
       orderBy: { createdAt: 'desc' },
+      take: 50,
     });
 
-    const totalEarnings = orders.reduce((sum, o) => sum + o.deliveryFee, 0);
+    const totalEarnings = commissions.reduce((sum, t) => sum + t.amount, 0);
+
+    // Today's earnings
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayCommissions = commissions.filter(t => t.createdAt >= todayStart);
+    const todayEarnings = todayCommissions.reduce((sum, t) => sum + t.amount, 0);
+
+    // This week
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weekCommissions = commissions.filter(t => t.createdAt >= weekStart);
+    const weekEarnings = weekCommissions.reduce((sum, t) => sum + t.amount, 0);
 
     res.json({
+      balance: wallet.balance,
       totalEarnings,
-      totalOrders: orders.length,
-      transactions: orders,
+      todayEarnings,
+      todayOrders: todayCommissions.length,
+      weekEarnings,
+      weekOrders: weekCommissions.length,
+      totalOrders: commissions.length,
+      transactions: commissions,
     });
+  } catch (err) { next(err); }
+}
+
+// GET /api/driver/wallet
+export async function getWallet(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const wallet = await prisma.driverWallet.findUnique({
+      where: { userId: req.userId! },
+    });
+
+    if (!wallet) {
+      return res.json({ balance: 0, transactions: [] });
+    }
+
+    const { page = '1', limit = '20' } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const [transactions, total] = await Promise.all([
+      prisma.driverTransaction.findMany({
+        where: { walletId: wallet.id },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit as string),
+      }),
+      prisma.driverTransaction.count({ where: { walletId: wallet.id } }),
+    ]);
+
+    res.json({
+      balance: wallet.balance,
+      transactions,
+      meta: { total, page: parseInt(page as string) },
+    });
+  } catch (err) { next(err); }
+}
+
+// POST /api/driver/withdrawal
+export async function requestWithdrawal(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { amount } = req.body;
+    if (!amount || amount <= 0) throw new AppError('Jumlah tidak valid', 400);
+
+    const settings = await getCommissionSettings();
+
+    if (amount < settings.minWithdrawal) {
+      throw new AppError(`Minimum penarikan Rp ${settings.minWithdrawal.toLocaleString('id-ID')}`, 400);
+    }
+
+    // Check bank info
+    const profile = await prisma.driverProfile.findUnique({ where: { userId: req.userId! } });
+    if (!profile?.bankName || !profile?.accountNumber) {
+      throw new AppError('Lengkapi data rekening terlebih dahulu', 400);
+    }
+
+    // Atomic withdrawal with balance check
+    const result = await prisma.$transaction(async (tx) => {
+      const wallet = await tx.driverWallet.findUnique({ where: { userId: req.userId! } });
+      if (!wallet) throw new AppError('Wallet tidak ditemukan', 404);
+      if (wallet.balance < amount) throw new AppError('Saldo tidak cukup', 400);
+
+      // Max per day check (WIB = UTC+7)
+      const todayStart = new Date();
+      todayStart.setHours(todayStart.getHours() >= 7 ? -17 : -41, 0, 0, 0); // Approximate WIB
+      const todayWithdrawals = await tx.driverTransaction.count({
+        where: {
+          walletId: wallet.id,
+          type: 'WITHDRAWAL',
+          createdAt: { gte: todayStart },
+        },
+      });
+      if (todayWithdrawals >= settings.maxWithdrawalDay) {
+        throw new AppError(`Maksimal ${settings.maxWithdrawalDay}x penarikan per hari`, 400);
+      }
+
+      // Deduct balance immediately
+      const updatedWallet = await tx.driverWallet.update({
+        where: { id: wallet.id },
+        data: { balance: { decrement: amount } },
+      });
+
+      const transaction = await tx.driverTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: 'WITHDRAWAL',
+          amount: -amount,
+          balance: updatedWallet.balance,
+          status: 'PENDING',
+          note: `Penarikan ke ${profile.bankName} ${profile.accountNumber} a/n ${profile.accountHolder}`,
+        },
+      });
+
+      return { transaction, newBalance: updatedWallet.balance };
+    });
+
+    res.status(201).json({
+      message: 'Permintaan penarikan berhasil diajukan',
+      ...result,
+    });
+  } catch (err) { next(err); }
+}
+
+// GET /api/driver/bank
+export async function getBankInfo(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const profile = await prisma.driverProfile.findUnique({
+      where: { userId: req.userId! },
+      select: { bankName: true, accountNumber: true, accountHolder: true, vehicleType: true, vehiclePlate: true },
+    });
+    if (!profile) throw new AppError('Profil driver tidak ditemukan', 404);
+    res.json(profile);
+  } catch (err) { next(err); }
+}
+
+// PUT /api/driver/bank
+export async function updateBankInfo(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { bankName, accountNumber, accountHolder, vehicleType, vehiclePlate } = req.body;
+
+    const profile = await prisma.driverProfile.update({
+      where: { userId: req.userId! },
+      data: {
+        ...(bankName !== undefined && { bankName }),
+        ...(accountNumber !== undefined && { accountNumber }),
+        ...(accountHolder !== undefined && { accountHolder }),
+        ...(vehicleType !== undefined && { vehicleType }),
+        ...(vehiclePlate !== undefined && { vehiclePlate }),
+      },
+    });
+
+    res.json({ message: 'Data rekening diperbarui', profile });
   } catch (err) { next(err); }
 }

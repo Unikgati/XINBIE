@@ -20,4 +20,10 @@ router.post('/orders/:id/problem', requireRole('DRIVER'), upload.single('photo')
 router.post('/orders/:id/cod-confirm', requireRole('DRIVER'), driver.confirmCod);
 router.get('/earnings', requireRole('DRIVER'), driver.getEarnings);
 
+// Wallet & Financial
+router.get('/wallet', requireRole('DRIVER'), driver.getWallet);
+router.post('/withdrawal', requireRole('DRIVER'), driver.requestWithdrawal);
+router.get('/bank', requireRole('DRIVER'), driver.getBankInfo);
+router.put('/bank', requireRole('DRIVER'), driver.updateBankInfo);
+
 export default router;

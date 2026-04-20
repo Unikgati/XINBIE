@@ -506,3 +506,194 @@ export async function adminBroadcast(req: AuthRequest, res: Response, next: Next
     res.json({ message: `Broadcast terkirim ke ${users.length} user` });
   } catch (err) { next(err); }
 }
+
+// ═══════════════════════════════════════
+// Driver Financial & Withdrawals
+// ═══════════════════════════════════════
+
+// GET /api/admin/withdrawals?status=PENDING
+export async function adminGetWithdrawals(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { status, page = '1', limit = '20' } = req.query;
+
+    const where: any = { type: 'WITHDRAWAL' };
+    if (status) where.status = status;
+
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const [transactions, total] = await Promise.all([
+      prisma.driverTransaction.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit as string),
+        include: {
+          wallet: {
+            include: {
+              user: {
+                select: { id: true, name: true, phone: true, driverProfile: { select: { bankName: true, accountNumber: true, accountHolder: true } } },
+              },
+            },
+          },
+        },
+      }),
+      prisma.driverTransaction.count({ where }),
+    ]);
+
+    res.json({
+      data: transactions.map(t => ({
+        id: t.id,
+        amount: Math.abs(t.amount),
+        status: t.status,
+        note: t.note,
+        createdAt: t.createdAt,
+        driver: {
+          id: t.wallet.user.id,
+          name: t.wallet.user.name,
+          phone: t.wallet.user.phone,
+          bankName: t.wallet.user.driverProfile?.bankName,
+          accountNumber: t.wallet.user.driverProfile?.accountNumber,
+          accountHolder: t.wallet.user.driverProfile?.accountHolder,
+        },
+      })),
+      meta: { total, page: parseInt(page as string) },
+    });
+  } catch (err) { next(err); }
+}
+
+// PUT /api/admin/withdrawals/:id
+export async function adminProcessWithdrawal(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const { action, note } = req.body; // action: 'approve' | 'reject' | 'complete'
+
+    const transaction = await prisma.driverTransaction.findUnique({
+      where: { id },
+      include: { wallet: true },
+    });
+    if (!transaction) throw new AppError('Transaksi tidak ditemukan', 404);
+    if (transaction.type !== 'WITHDRAWAL') throw new AppError('Bukan transaksi withdrawal', 400);
+
+    let newStatus: string;
+
+    switch (action) {
+      case 'approve':
+        if (transaction.status !== 'PENDING') throw new AppError('Hanya bisa approve status PENDING', 400);
+        newStatus = 'APPROVED';
+        break;
+      case 'complete':
+        if (transaction.status !== 'PENDING' && transaction.status !== 'APPROVED') {
+          throw new AppError('Hanya bisa complete status PENDING/APPROVED', 400);
+        }
+        newStatus = 'COMPLETED';
+        break;
+      case 'reject':
+        if (transaction.status !== 'PENDING') throw new AppError('Hanya bisa reject status PENDING', 400);
+        newStatus = 'REJECTED';
+        // Refund balance
+        await prisma.driverWallet.update({
+          where: { id: transaction.walletId },
+          data: { balance: { increment: Math.abs(transaction.amount) } },
+        });
+        break;
+      default:
+        throw new AppError('Action harus: approve, reject, atau complete', 400);
+    }
+
+    await prisma.driverTransaction.update({
+      where: { id },
+      data: {
+        status: newStatus as any,
+        note: note ? `${transaction.note} | Admin: ${note}` : transaction.note,
+      },
+    });
+
+    res.json({ message: `Withdrawal ${action}d`, status: newStatus });
+  } catch (err) { next(err); }
+}
+
+// GET /api/admin/drivers/:id/financial
+export async function adminGetDriverFinancial(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true, name: true, phone: true,
+        driverProfile: {
+          select: {
+            bankName: true, accountNumber: true, accountHolder: true,
+            vehicleType: true, vehiclePlate: true, ratingAvg: true, totalOrdersDone: true,
+          },
+        },
+        driverWallet: {
+          select: {
+            balance: true,
+            transactions: { orderBy: { createdAt: 'desc' }, take: 50 },
+          },
+        },
+      },
+    });
+
+    if (!user) throw new AppError('Driver tidak ditemukan', 404);
+
+    // Aggregate stats
+    const wallet = user.driverWallet;
+    const transactions = wallet?.transactions || [];
+    const totalCommission = transactions.filter(t => t.type === 'COMMISSION').reduce((s, t) => s + t.amount, 0);
+    const totalWithdrawn = transactions.filter(t => t.type === 'WITHDRAWAL' && t.status === 'COMPLETED').reduce((s, t) => s + Math.abs(t.amount), 0);
+    const pendingWithdrawals = transactions.filter(t => t.type === 'WITHDRAWAL' && t.status === 'PENDING').reduce((s, t) => s + Math.abs(t.amount), 0);
+
+    res.json({
+      driver: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        ...user.driverProfile,
+      },
+      financial: {
+        balance: wallet?.balance || 0,
+        totalCommission,
+        totalWithdrawn,
+        pendingWithdrawals,
+      },
+      transactions,
+    });
+  } catch (err) { next(err); }
+}
+
+// POST /api/admin/drivers/:id/adjustment
+export async function adminDriverAdjustment(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const { type, amount, note } = req.body; // type: 'BONUS' | 'PENALTY'
+
+    if (!['BONUS', 'PENALTY'].includes(type)) throw new AppError('Type harus BONUS atau PENALTY', 400);
+    if (!amount || amount <= 0) throw new AppError('Amount harus > 0', 400);
+
+    const adjustedAmount = type === 'PENALTY' ? -amount : amount;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const wallet = await tx.driverWallet.upsert({
+        where: { userId: id },
+        create: { userId: id, balance: adjustedAmount },
+        update: { balance: { increment: adjustedAmount } },
+      });
+
+      const transaction = await tx.driverTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: type as any,
+          amount: adjustedAmount,
+          balance: wallet.balance,
+          note: note || `${type === 'BONUS' ? 'Bonus' : 'Penalti'} dari admin`,
+        },
+      });
+
+      return { transaction, newBalance: wallet.balance };
+    });
+
+    res.json({ message: `${type} berhasil diterapkan`, ...result });
+  } catch (err) { next(err); }
+}

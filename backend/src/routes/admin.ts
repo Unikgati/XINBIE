@@ -34,6 +34,12 @@ router.put('/orders/:id/status', admin.adminUpdateOrderStatus);
 // Drivers
 router.get('/drivers', admin.adminGetDrivers);
 router.put('/drivers/:id/verify', admin.adminVerifyDriver);
+router.get('/drivers/:id/financial', admin.adminGetDriverFinancial);
+router.post('/drivers/:id/adjustment', admin.adminDriverAdjustment);
+
+// Withdrawals
+router.get('/withdrawals', admin.adminGetWithdrawals);
+router.put('/withdrawals/:id', admin.adminProcessWithdrawal);
 
 // Users
 router.get('/users', admin.adminGetUsers);
