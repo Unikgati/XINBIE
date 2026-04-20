@@ -11,7 +11,9 @@ import '../screens/home/driver_home_screen.dart';
 import '../screens/order/driver_order_detail_screen.dart';
 import '../screens/history/driver_history_screen.dart';
 import '../screens/earnings/driver_earnings_screen.dart';
+import '../screens/earnings/withdrawal_screen.dart';
 import '../screens/profile/driver_profile_screen.dart';
+import '../screens/profile/bank_account_screen.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
@@ -41,5 +43,7 @@ final router = GoRouter(
       path: '/order/:id',
       builder: (_, state) => DriverOrderDetailScreen(orderId: state.pathParameters['id']!),
     ),
+    GoRoute(path: '/withdrawal', builder: (_, __) => const WithdrawalScreen()),
+    GoRoute(path: '/bank-account', builder: (_, __) => const BankAccountScreen()),
   ],
 );

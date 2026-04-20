@@ -54,6 +54,8 @@ class DriverProfileScreen extends StatelessWidget {
               Container(
                 color: AppColors.surface,
                 child: Column(children: [
+                  _Menu(Icons.account_balance, 'Rekening / E-Wallet', () => context.push('/bank-account')),
+                  _Menu(Icons.two_wheeler, 'Info Kendaraan', () => context.push('/bank-account')),
                   _Menu(Icons.badge, 'Data KTP', () {}),
                   _Menu(Icons.settings, 'Pengaturan', () {}),
                   _Menu(Icons.help_outline, 'Bantuan', () {}),
