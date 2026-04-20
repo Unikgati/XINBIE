@@ -69,6 +69,31 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Location — Map Picker */}
+        <div className="data-card" style={{ marginBottom: 16 }}>
+          <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">pin_drop</span> Lokasi Gudang / Drop Point</h3></div>
+          <div style={{ padding: 20 }}>
+            <div style={{ marginBottom: 16 }}>
+              <label className="form-label">Alamat Lengkap</label>
+              <textarea 
+                className="form-input" 
+                rows={2} 
+                value={settings.warehouse_address || ''} 
+                onChange={e => update('warehouse_address', e.target.value)} 
+                placeholder="Masukkan alamat lengkap gudang..."
+              />
+            </div>
+            <LocationPicker
+              lat={parseFloat(settings.warehouse_lat || '-6.200000')}
+              lng={parseFloat(settings.warehouse_lng || '106.816666')}
+              onChange={(lat, lng) => {
+                update('warehouse_lat', lat.toString());
+                update('warehouse_lng', lng.toString());
+              }}
+            />
+          </div>
+        </div>
+
         {/* Delivery */}
         <div className="data-card" style={{ marginBottom: 16 }}>
           <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">local_shipping</span> Pengiriman</h3></div>
