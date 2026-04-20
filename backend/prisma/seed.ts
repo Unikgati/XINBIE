@@ -225,9 +225,41 @@ async function main() {
       { key: 'free_delivery_min', value: '150000' },
       { key: 'admin_wa', value: '628123456789' },
       { key: 'app_version_min', value: '1.0.0' },
+      // Commission settings
+      { key: 'commission_type', value: 'HYBRID' },
+      { key: 'commission_fixed', value: '5000' },
+      { key: 'commission_percent', value: '80' },
+      { key: 'commission_bonus_per_km', value: '1500' },
+      { key: 'min_withdrawal', value: '50000' },
+      { key: 'max_withdrawal_per_day', value: '1' },
     ],
   });
-  console.log('✅ App settings');
+  console.log('✅ App settings (+ commission)');
+
+  // Driver wallet (seed with sample balance)
+  await prisma.driverWallet.create({
+    data: {
+      userId: driver.id,
+      balance: 125000,
+      transactions: {
+        createMany: {
+          data: [
+            { type: 'COMMISSION', amount: 13000, balance: 13000, note: 'Komisi order DG-1001' },
+            { type: 'COMMISSION', amount: 8000, balance: 21000, note: 'Komisi order DG-1002' },
+            { type: 'COD_SETTLEMENT', amount: -85000, balance: -64000, note: 'Setoran COD DG-1002' },
+            { type: 'COMMISSION', amount: 15000, balance: -49000, note: 'Komisi order DG-1003' },
+            { type: 'BONUS', amount: 25000, balance: -24000, note: 'Bonus mingguan' },
+            { type: 'COMMISSION', amount: 10000, balance: -14000, note: 'Komisi order DG-1004' },
+            { type: 'COMMISSION', amount: 13000, balance: -1000, note: 'Komisi order DG-1005' },
+            { type: 'COMMISSION', amount: 11000, balance: 10000, note: 'Komisi order DG-1006' },
+            { type: 'COMMISSION', amount: 15000, balance: 25000, note: 'Komisi order DG-1007' },
+            { type: 'COMMISSION', amount: 100000, balance: 125000, note: 'Komisi order DG-1008' },
+          ],
+        },
+      },
+    },
+  });
+  console.log('✅ Driver wallet (Rp 125.000 + 10 sample transactions)');
 
   console.log('\n🌱 Seeding complete!\n');
   console.log('📧 Admin login: admin@dapurgizi.com / Admin123!');

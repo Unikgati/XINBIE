@@ -531,7 +531,7 @@ export async function adminGetWithdrawals(req: AuthRequest, res: Response, next:
           wallet: {
             include: {
               user: {
-                select: { id: true, name: true, phone: true, driverProfile: { select: { bankName: true, accountNumber: true, accountHolder: true } } },
+                select: { id: true, name: true, phoneWa: true, driverProfile: { select: { bankName: true, accountNumber: true, accountHolder: true } } },
               },
             },
           },
@@ -620,7 +620,7 @@ export async function adminGetDriverFinancial(req: AuthRequest, res: Response, n
     const user = await prisma.user.findUnique({
       where: { id },
       select: {
-        id: true, name: true, phone: true,
+        id: true, name: true, phoneWa: true,
         driverProfile: {
           select: {
             bankName: true, accountNumber: true, accountHolder: true,
