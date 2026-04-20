@@ -77,6 +77,7 @@ export default function ProductsPage() {
   const [formStock, setFormStock] = useState('');
   const [formUnit, setFormUnit] = useState('');
   const [formDesc, setFormDesc] = useState('');
+  const [formImages, setFormImages] = useState<File[]>([]);
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -125,6 +126,7 @@ export default function ProductsPage() {
     setEditingId(null);
     setFormName(''); setFormPrice(''); setFormCostPrice(''); setFormDiscountPrice('');
     setFormStock(''); setFormUnit(''); setFormDesc(''); setFormVariants([]);
+    setFormImages([]);
     setProductCategory(categories[0]?.id || '');
   };
 
@@ -162,6 +164,7 @@ export default function ProductsPage() {
       formData.append('stock', formStock || '0');
       formData.append('unit', formUnit || 'pcs');
       formData.append('description', formDesc);
+      formImages.forEach(file => formData.append('images', file));
       
       let prodId = editingId;
       if (editingId) {
@@ -426,6 +429,19 @@ export default function ProductsPage() {
                 <div className="form-group"><label className="form-label">Satuan</label><input className="form-input" placeholder="pcs, kg, ikat..." value={formUnit} onChange={e => setFormUnit(e.target.value)} /></div>
               </div>
               <div className="form-group"><label className="form-label">Deskripsi</label><textarea className="form-input" rows={3} placeholder="Deskripsi produk..." value={formDesc} onChange={e => setFormDesc(e.target.value)} /></div>
+
+              <div className="form-group">
+                <label className="form-label">Foto Produk</label>
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  className="form-input" 
+                  onChange={e => setFormImages(Array.from(e.target.files || []))} 
+                  style={{ padding: '8px' }} 
+                />
+                <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 4 }}>Bisa pilih lebih dari satu foto sekaligus.</div>
+              </div>
 
               {/* Variant Section */}
               <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 16, marginTop: 8 }}>
