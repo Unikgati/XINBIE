@@ -63,10 +63,19 @@ function marginColor(margin: number) {
   return 'red';
 }
 
+interface FormVariant {
+  tempId: string;
+  name: string;
+  price: string;
+  costPrice: string;
+  stockQty: string;
+}
+
 export default function ProductsPage() {
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
+  const [formVariants, setFormVariants] = useState<FormVariant[]>([]);
   const filtered = mockProducts.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
   const toggleExpand = (id: string) => {
@@ -77,6 +86,23 @@ export default function ProductsPage() {
     });
   };
 
+  const addFormVariant = () => {
+    setFormVariants(prev => [...prev, { tempId: Date.now().toString(), name: '', price: '', costPrice: '', stockQty: '' }]);
+  };
+
+  const removeFormVariant = (tempId: string) => {
+    setFormVariants(prev => prev.filter(v => v.tempId !== tempId));
+  };
+
+  const updateFormVariant = (tempId: string, field: keyof FormVariant, value: string) => {
+    setFormVariants(prev => prev.map(v => v.tempId === tempId ? { ...v, [field]: value } : v));
+  };
+
+  const openModal = () => {
+    setFormVariants([]);
+    setShowModal(true);
+  };
+
   return (
     <>
       <div className="page-header">
@@ -84,7 +110,7 @@ export default function ProductsPage() {
           <h1 className="page-title">Produk</h1>
           <p className="page-subtitle">{mockProducts.length} produk terdaftar</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" onClick={openModal}>
           <span className="material-symbols-outlined">add</span> Tambah Produk
         </button>
       </div>
@@ -243,16 +269,51 @@ export default function ProductsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <label className="form-label" style={{ margin: 0 }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 18, verticalAlign: -3, marginRight: 4 }}>tune</span>
-                    Varian Produk (opsional)
+                    Varian Produk ({formVariants.length})
                   </label>
-                  <button className="btn btn-outline btn-sm" type="button">
+                  <button className="btn btn-outline btn-sm" type="button" onClick={addFormVariant}>
                     <span className="material-symbols-outlined">add</span> Tambah Varian
                   </button>
                 </div>
-                <div className="alert info" style={{ fontSize: 12 }}>
-                  <span className="material-symbols-outlined">info</span>
-                  Tambahkan varian jika produk memiliki pilihan ukuran, kemasan, atau tipe. Contoh: Telur Kecil / Sedang / Besar.
-                </div>
+
+                {formVariants.length === 0 ? (
+                  <div className="alert info" style={{ fontSize: 12 }}>
+                    <span className="material-symbols-outlined">info</span>
+                    Tambahkan varian jika produk memiliki pilihan ukuran, kemasan, atau tipe. Contoh: Telur Kecil / Sedang / Besar.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {formVariants.map((v, idx) => (
+                      <div key={v.tempId} style={{ padding: 14, background: 'var(--primary-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--divider)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                          <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--primary-dark)' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 16, verticalAlign: -3 }}>subdirectory_arrow_right</span> Varian {idx + 1}
+                          </span>
+                          <button className="btn btn-outline btn-icon" type="button" onClick={() => removeFormVariant(v.tempId)} style={{ width: 28, height: 28, color: 'var(--error)' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+                          </button>
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 8 }}>
+                          <input className="form-input" placeholder="Nama varian (cth: Besar, 1kg, 500ml)" value={v.name} onChange={e => updateFormVariant(v.tempId, 'name', e.target.value)} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label" style={{ fontSize: 11 }}>Harga Jual</label>
+                            <input className="form-input" type="number" placeholder="0" value={v.price} onChange={e => updateFormVariant(v.tempId, 'price', e.target.value)} />
+                          </div>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label" style={{ fontSize: 11 }}>Harga Beli</label>
+                            <input className="form-input" type="number" placeholder="0" value={v.costPrice} onChange={e => updateFormVariant(v.tempId, 'costPrice', e.target.value)} />
+                          </div>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label" style={{ fontSize: 11 }}>Stok</label>
+                            <input className="form-input" type="number" placeholder="0" value={v.stockQty} onChange={e => updateFormVariant(v.tempId, 'stockQty', e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="modal-footer">
