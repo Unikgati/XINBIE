@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 
 interface Toast {
   id: number;
@@ -20,12 +20,19 @@ let toastId = 0;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const recentRef = useRef<Set<string>>(new Set());
 
   const dismiss = useCallback((id: number) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
   const addToast = useCallback((message: string, type: Toast['type']) => {
+    // Dedup: skip if same message shown within 1s
+    const key = `${type}:${message}`;
+    if (recentRef.current.has(key)) return;
+    recentRef.current.add(key);
+    setTimeout(() => recentRef.current.delete(key), 1000);
+
     const id = ++toastId;
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => dismiss(id), 3500);
