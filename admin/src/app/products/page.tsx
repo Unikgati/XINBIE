@@ -431,16 +431,42 @@ export default function ProductsPage() {
               <div className="form-group"><label className="form-label">Deskripsi</label><textarea className="form-input" rows={3} placeholder="Deskripsi produk..." value={formDesc} onChange={e => setFormDesc(e.target.value)} /></div>
 
               <div className="form-group">
-                <label className="form-label">Foto Produk</label>
-                <input 
-                  type="file" 
-                  multiple 
-                  accept="image/*" 
-                  className="form-input" 
-                  onChange={e => setFormImages(Array.from(e.target.files || []))} 
-                  style={{ padding: '8px' }} 
-                />
-                <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 4 }}>Bisa pilih lebih dari satu foto sekaligus.</div>
+                <label className="form-label">
+                  Foto Produk <span style={{ color: 'var(--text-hint)', fontWeight: 'normal', fontSize: 12 }}>({formImages.length} terpilih)</span>
+                </label>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
+                  {formImages.map((file, idx) => (
+                    <div key={idx} style={{ 
+                      width: 80, height: 80, borderRadius: 'var(--radius-md)', 
+                      background: 'var(--divider)', position: 'relative', overflow: 'hidden',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}>
+                      <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button type="button" 
+                        onClick={() => setFormImages(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                      </button>
+                    </div>
+                  ))}
+
+                  <label className="upload-tile hover-scale" style={{ 
+                    width: 80, height: 80, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                    cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
+                    background: 'var(--primary-surface)'
+                  }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 24, marginBottom: 4, color: 'var(--primary-light)' }}>add_photo_alternate</span>
+                    <span style={{ fontSize: 10, fontWeight: 500 }}>Upload Foto</span>
+                    <input 
+                      type="file" 
+                      multiple 
+                      accept="image/*" 
+                      style={{ display: 'none' }} 
+                      onChange={e => setFormImages(prev => [...prev, ...Array.from(e.target.files || [])])} 
+                    />
+                  </label>
+                </div>
               </div>
 
               {/* Variant Section */}
