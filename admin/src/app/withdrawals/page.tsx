@@ -35,51 +35,21 @@ export default function WithdrawalsPage() {
         </div>
       </div>
       <div className="page-body">
-        {/* Summary Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
-          {([
-            { label: 'Menunggu', value: mockWithdrawals.filter(w => w.status === 'PENDING').length, icon: 'hourglass_top', color: '#F59E0B' },
-            { label: 'Disetujui', value: mockWithdrawals.filter(w => w.status === 'APPROVED').length, icon: 'thumb_up', color: '#3B82F6' },
-            { label: 'Selesai Bulan Ini', value: mockWithdrawals.filter(w => w.status === 'COMPLETED').length, icon: 'verified', color: 'var(--primary)' },
-            { label: 'Ditolak', value: mockWithdrawals.filter(w => w.status === 'REJECTED').length, icon: 'block', color: 'var(--error)' },
-          ]).map((c, i) => (
-            <div className="stat-card" key={i}>
-              <div className="stat-card-icon" style={{ background: `${c.color}18`, color: c.color }}>
-                <span className="material-symbols-outlined">{c.icon}</span>
-              </div>
-              <div className="stat-card-info">
-                <div className="stat-card-value">{c.value}</div>
-                <div className="stat-card-label">{c.label}</div>
-              </div>
-            </div>
+        {/* Filter Chips — same style as Drivers page */}
+        <div className="chip-group">
+          {(['ALL', 'PENDING', 'APPROVED', 'COMPLETED', 'REJECTED'] as const).map(tab => (
+            <button key={tab} className={`chip ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
+              {tab === 'ALL' ? 'Semua' : statusConfig[tab].label}
+              {tab === 'PENDING' && mockWithdrawals.filter(w => w.status === 'PENDING').length > 0 && (
+                <span style={{ marginLeft: 6, background: 'var(--error)', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 11, fontWeight: 600 }}>
+                  {mockWithdrawals.filter(w => w.status === 'PENDING').length}
+                </span>
+              )}
+            </button>
           ))}
         </div>
 
-        {/* Tabs */}
         <div className="data-card">
-          <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--divider)', padding: '0 16px' }}>
-            {(['ALL', 'PENDING', 'APPROVED', 'COMPLETED', 'REJECTED'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                style={{
-                  padding: '12px 20px', border: 'none', background: 'none', cursor: 'pointer',
-                  fontWeight: activeTab === tab ? 600 : 400, fontSize: 13, fontFamily: 'inherit',
-                  color: activeTab === tab ? 'var(--primary-dark)' : 'var(--text-secondary)',
-                  borderBottom: activeTab === tab ? '2px solid var(--primary)' : '2px solid transparent',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {tab === 'ALL' ? 'Semua' : statusConfig[tab].label}
-                {tab === 'PENDING' && mockWithdrawals.filter(w => w.status === 'PENDING').length > 0 && (
-                  <span style={{ marginLeft: 6, background: 'var(--error)', color: '#fff', borderRadius: 10, padding: '2px 7px', fontSize: 11 }}>
-                    {mockWithdrawals.filter(w => w.status === 'PENDING').length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
           <div className="data-table-wrapper">
             <table className="data-table">
               <thead>

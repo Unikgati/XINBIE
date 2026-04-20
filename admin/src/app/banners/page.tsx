@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import ActionMenu from '@/components/ActionMenu';
+import CustomSelect from '@/components/CustomSelect';
 
 const mockBanners = [
   { id: '1', title: 'Gratis Ongkir', type: 'hero', active: true, link: 'promo/free-delivery', imageUrl: '' },
@@ -16,6 +17,7 @@ const RECOMMENDED_SIZE = '1200 × 600 px';
 export default function BannersPage() {
   const [showModal, setShowModal] = useState(false);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [bannerType, setBannerType] = useState('HERO');
 
   return (
     <>
@@ -100,7 +102,7 @@ export default function BannersPage() {
             <div className="modal-body">
               <div className="form-group"><label className="form-label">Judul</label><input className="form-input" placeholder="Judul banner" /></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div className="form-group"><label className="form-label">Tipe</label><select className="form-select"><option value="HERO">Hero</option><option value="PROMO">Promo</option></select></div>
+                <div className="form-group"><label className="form-label">Tipe</label><CustomSelect value={bannerType} onChange={setBannerType} options={[{ value: 'HERO', label: 'Hero' }, { value: 'PROMO', label: 'Promo' }]} /></div>
                 <div className="form-group"><label className="form-label">Link / Action</label><input className="form-input" placeholder="category/sayuran" /></div>
               </div>
               <div className="form-group">

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import ActionMenu from '@/components/ActionMenu';
+import CustomSelect from '@/components/CustomSelect';
 
 interface Variant {
   id: string;
@@ -76,6 +77,7 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [formVariants, setFormVariants] = useState<FormVariant[]>([]);
+  const [productCategory, setProductCategory] = useState('Sayuran');
   const filtered = mockProducts.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
   const toggleExpand = (id: string) => {
@@ -247,7 +249,7 @@ export default function ProductsPage() {
             </div>
             <div className="modal-body">
               <div className="form-group"><label className="form-label">Nama Produk</label><input className="form-input" placeholder="Masukkan nama produk" /></div>
-              <div className="form-group"><label className="form-label">Kategori</label><select className="form-select"><option>Sayuran</option><option>Buah</option><option>Bumbu</option><option>Protein</option><option>Pokok</option><option>Minuman</option><option>Snack</option><option>Frozen</option></select></div>
+              <div className="form-group"><label className="form-label">Kategori</label><CustomSelect value={productCategory} onChange={setProductCategory} options={[{ value: 'Sayuran', label: 'Sayuran' }, { value: 'Buah', label: 'Buah' }, { value: 'Bumbu', label: 'Bumbu' }, { value: 'Protein', label: 'Protein' }, { value: 'Pokok', label: 'Pokok' }, { value: 'Minuman', label: 'Minuman' }, { value: 'Snack', label: 'Snack' }, { value: 'Frozen', label: 'Frozen' }]} /></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <div className="form-group"><label className="form-label">Harga Beli (Rp)</label><input className="form-input" type="number" placeholder="HPP" /></div>
                 <div className="form-group"><label className="form-label">Harga Jual (Rp)</label><input className="form-input" type="number" placeholder="0" /></div>

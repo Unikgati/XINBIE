@@ -16,30 +16,11 @@ export default function UsersPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Pelanggan</h1>
-          <p className="page-subtitle">{mockUsers.length} pelanggan terdaftar</p>
+          <p className="page-subtitle">{mockUsers.length} pelanggan terdaftar &bull; {mockUsers.filter(u => u.active).length} aktif</p>
         </div>
       </div>
       <div className="page-body">
-        <div className="stat-grid">
-          <div className="stat-card">
-            <div className="stat-icon green"><span className="material-symbols-outlined">group</span></div>
-            <div><div className="stat-value">{mockUsers.length}</div><div className="stat-label">Total Pelanggan</div></div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon blue"><span className="material-symbols-outlined">shopping_cart</span></div>
-            <div><div className="stat-value">{mockUsers.reduce((s, u) => s + u.orders, 0)}</div><div className="stat-label">Total Pesanan</div></div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon orange"><span className="material-symbols-outlined">verified_user</span></div>
-            <div><div className="stat-value">{mockUsers.filter(u => u.active).length}</div><div className="stat-label">Aktif</div></div>
-          </div>
-        </div>
-
         <div className="data-card">
-          <div className="data-card-header">
-            <h3 className="data-card-title"><span className="material-symbols-outlined">group</span> Daftar Pelanggan</h3>
-            <div className="search-bar"><span className="material-symbols-outlined">search</span><input placeholder="Cari pelanggan..." /></div>
-          </div>
           <table className="data-table">
             <thead><tr><th>Pelanggan</th><th>Kontak</th><th>Pesanan</th><th>Total Belanja</th><th>Bergabung</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
             <tbody>

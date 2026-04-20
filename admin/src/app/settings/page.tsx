@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import CustomSelect from '@/components/CustomSelect';
 
 // Dynamic import — Leaflet requires window object (no SSR)
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false });
@@ -94,11 +95,15 @@ export default function SettingsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="form-group">
                 <label className="form-label">Model Komisi</label>
-                <select className="form-select" value={settings.commissionType} onChange={e => update('commissionType', e.target.value)}>
-                  <option value="FIXED">Fixed (tetap per order)</option>
-                  <option value="PERCENT">Persentase dari ongkir</option>
-                  <option value="HYBRID">Hybrid (Fixed + %)</option>
-                </select>
+                <CustomSelect
+                  value={settings.commissionType}
+                  onChange={v => update('commissionType', v)}
+                  options={[
+                    { value: 'FIXED', label: 'Fixed (tetap per order)' },
+                    { value: 'PERCENT', label: 'Persentase dari ongkir' },
+                    { value: 'HYBRID', label: 'Hybrid (Fixed + %)' },
+                  ]}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Bonus per KM (Rp)</label>

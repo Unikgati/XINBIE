@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import ActionMenu from '@/components/ActionMenu';
+import CustomSelect from '@/components/CustomSelect';
 
 const mockPromos = [
   { id: '1', code: 'WELCOME10', type: 'percent', value: 10, minOrder: 50000, maxDiscount: 15000, used: 45, limit: 100, active: true, expires: '30 Apr 2026' },
@@ -13,6 +14,7 @@ const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
 export default function PromosPage() {
   const [showModal, setShowModal] = useState(false);
+  const [promoType, setPromoType] = useState('percent');
 
   return (
     <>
@@ -73,7 +75,7 @@ export default function PromosPage() {
             <div className="modal-body">
               <div className="form-group"><label className="form-label">Kode Promo</label><input className="form-input" placeholder="KODEPROMO" style={{ textTransform: 'uppercase' }} /></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div className="form-group"><label className="form-label">Tipe</label><select className="form-select"><option value="percent">Persen (%)</option><option value="nominal">Nominal (Rp)</option></select></div>
+                <div className="form-group"><label className="form-label">Tipe</label><CustomSelect value={promoType} onChange={setPromoType} options={[{ value: 'percent', label: 'Persen (%)' }, { value: 'nominal', label: 'Nominal (Rp)' }]} /></div>
                 <div className="form-group"><label className="form-label">Nilai</label><input className="form-input" type="number" placeholder="10" /></div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
