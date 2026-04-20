@@ -1,0 +1,43 @@
+name: dapurgizi_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+workspace:
+  - packages/core
+  - packages/ui_kit
+  - packages/map_kit
+  - apps/user_app
+  - apps/driver_app
+
+dev_dependencies:
+  melos: ^7.5.1
+
+melos:
+  scripts:
+    analyze:
+      exec: flutter analyze --no-fatal-infos
+      description: Run flutter analyze in all packages
+
+    test:
+      exec: flutter test
+      description: Run flutter test in all packages
+
+    build:user:
+      run: cd apps/user_app && flutter build apk --release
+      description: Build user app APK
+
+    build:driver:
+      run: cd apps/driver_app && flutter build apk --release
+      description: Build driver app APK
+
+    clean:
+      exec: flutter clean
+      description: Clean all packages
+
+    gen:
+      exec: dart run build_runner build --delete-conflicting-outputs
+      description: Run build_runner in all packages
+      packageFilters:
+        dependsOn: build_runner
