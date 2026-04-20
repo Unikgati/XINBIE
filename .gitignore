@@ -1,0 +1,56 @@
+# ============================================
+# DapurGizi Monorepo .gitignore
+# ============================================
+
+# --- Environment ---
+.env
+.env.local
+.env.production
+firebase-service-account.json
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# --- IDE ---
+.idea/
+.vscode/
+*.iml
+
+# --- Flutter / Dart ---
+**/build/
+**/.dart_tool/
+**/.packages
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/pubspec.lock
+!packages/**/pubspec.lock
+*.g.dart
+*.freezed.dart
+
+# --- Node.js ---
+**/node_modules/
+**/dist/
+**/.next/
+**/.turbo/
+*.tsbuildinfo
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- MinIO data (local) ---
+minio_data/
+
+# --- Coverage ---
+**/coverage/
+**/lcov.info
+
+# --- Logs ---
+*.log
+npm-debug.log*
+
+# --- Generated ---
+**/generated/
