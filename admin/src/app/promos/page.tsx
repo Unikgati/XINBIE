@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ActionMenu from '@/components/ActionMenu';
 
 const mockPromos = [
   { id: '1', code: 'WELCOME10', type: 'percent', value: 10, minOrder: 50000, maxDiscount: 15000, used: 45, limit: 100, active: true, expires: '30 Apr 2026' },
@@ -27,7 +28,7 @@ export default function PromosPage() {
       <div className="page-body">
         <div className="data-card">
           <table className="data-table">
-            <thead><tr><th>Kode</th><th>Tipe</th><th>Nilai</th><th>Min. Order</th><th>Penggunaan</th><th>Expired</th><th>Status</th><th>Aksi</th></tr></thead>
+            <thead><tr><th>Kode</th><th>Tipe</th><th>Nilai</th><th>Min. Order</th><th>Penggunaan</th><th>Expired</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
             <tbody>
               {mockPromos.map(p => (
                 <tr key={p.id}>
@@ -48,10 +49,12 @@ export default function PromosPage() {
                   <td style={{ fontSize: 13, color: 'var(--text-hint)' }}>{p.expires}</td>
                   <td><span className={`badge ${p.active ? 'green' : 'gray'}`}>{p.active ? 'Aktif' : 'Expired'}</span></td>
                   <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button className="btn btn-outline btn-icon"><span className="material-symbols-outlined">edit</span></button>
-                      <button className="btn btn-danger btn-icon"><span className="material-symbols-outlined">delete</span></button>
-                    </div>
+                    <ActionMenu items={[
+                      { icon: 'edit', label: 'Edit Promo', onClick: () => {} },
+                      { icon: 'content_copy', label: 'Duplikat', onClick: () => {} },
+                      { icon: p.active ? 'pause' : 'play_arrow', label: p.active ? 'Nonaktifkan' : 'Aktifkan', onClick: () => {} },
+                      { icon: 'delete', label: 'Hapus', onClick: () => {}, danger: true },
+                    ]} />
                   </td>
                 </tr>
               ))}

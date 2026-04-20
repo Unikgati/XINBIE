@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ActionMenu from '@/components/ActionMenu';
 
 const mockBanners = [
   { id: '1', title: 'Gratis Ongkir', type: 'hero', active: true, link: 'promo/free-delivery' },
@@ -31,17 +32,20 @@ export default function BannersPage() {
               </div>
               <div style={{ padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span className={`badge ${b.type === 'hero' ? 'green' : 'orange'}`}>
-                    <span className="material-symbols-outlined">{b.type === 'hero' ? 'featured_video' : 'campaign'}</span> {b.type.toUpperCase()}
-                  </span>
-                  <span className={`badge ${b.active ? 'green' : 'gray'}`}>{b.active ? 'Aktif' : 'Nonaktif'}</span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <span className={`badge ${b.type === 'hero' ? 'green' : 'orange'}`}>
+                      <span className="material-symbols-outlined">{b.type === 'hero' ? 'featured_video' : 'campaign'}</span> {b.type.toUpperCase()}
+                    </span>
+                    <span className={`badge ${b.active ? 'green' : 'gray'}`}>{b.active ? 'Aktif' : 'Nonaktif'}</span>
+                  </div>
+                  <ActionMenu items={[
+                    { icon: 'edit', label: 'Edit Banner', onClick: () => {} },
+                    { icon: b.active ? 'visibility_off' : 'visibility', label: b.active ? 'Nonaktifkan' : 'Aktifkan', onClick: () => {} },
+                    { icon: 'delete', label: 'Hapus', onClick: () => {}, danger: true },
+                  ]} />
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-hint)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-hint)', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 16 }}>link</span> {b.link}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }}><span className="material-symbols-outlined">edit</span> Edit</button>
-                  <button className="btn btn-danger btn-icon"><span className="material-symbols-outlined">delete</span></button>
                 </div>
               </div>
             </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ActionMenu from '@/components/ActionMenu';
 
 const mockProducts = [
   { id: '1', name: 'Brokoli Segar', category: 'Sayuran', price: 15000, stock: 50, active: true, featured: true },
@@ -42,7 +43,7 @@ export default function ProductsPage() {
 
         <div className="data-card">
           <table className="data-table">
-            <thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stok</th><th>Status</th><th>Aksi</th></tr></thead>
+            <thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stok</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
             <tbody>
               {filtered.map(p => (
                 <tr key={p.id}>
@@ -71,10 +72,12 @@ export default function ProductsPage() {
                   </span></td>
                   <td><span className={`badge ${p.active ? 'green' : 'gray'}`}>{p.active ? 'Aktif' : 'Nonaktif'}</span></td>
                   <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button className="btn btn-outline btn-icon"><span className="material-symbols-outlined">edit</span></button>
-                      <button className="btn btn-danger btn-icon"><span className="material-symbols-outlined">delete</span></button>
-                    </div>
+                    <ActionMenu items={[
+                      { icon: 'edit', label: 'Edit Produk', onClick: () => {} },
+                      { icon: 'star', label: p.featured ? 'Hapus Pilihan' : 'Jadikan Pilihan', onClick: () => {} },
+                      { icon: 'visibility_off', label: p.active ? 'Nonaktifkan' : 'Aktifkan', onClick: () => {} },
+                      { icon: 'delete', label: 'Hapus', onClick: () => {}, danger: true },
+                    ]} />
                   </td>
                 </tr>
               ))}

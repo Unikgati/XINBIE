@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ActionMenu from '@/components/ActionMenu';
 
 const mockCategories = [
   { id: '1', name: 'Bahan Baku', icon: 'rice_bowl', products: 8 },
@@ -38,10 +39,11 @@ export default function CategoriesPage() {
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{c.name}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{c.products} produk</div>
               </div>
-              <div style={{ display: 'flex', gap: 4 }}>
-                <button className="btn btn-outline btn-icon"><span className="material-symbols-outlined">edit</span></button>
-                <button className="btn btn-danger btn-icon"><span className="material-symbols-outlined">delete</span></button>
-              </div>
+              <ActionMenu items={[
+                { icon: 'edit', label: 'Edit Kategori', onClick: () => {} },
+                { icon: 'visibility', label: 'Lihat Produk', onClick: () => {} },
+                { icon: 'delete', label: 'Hapus', onClick: () => {}, danger: true },
+              ]} />
             </div>
           ))}
         </div>
