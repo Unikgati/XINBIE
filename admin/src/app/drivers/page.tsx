@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ActionMenu from '@/components/ActionMenu';
 
 const mockDrivers = [
   { id: '1', name: 'Driver Ahmad', email: 'ahmad@driver.com', phone: '0812-1234-5678', status: 'approved', rating: 4.8, orders: 120, online: true },
@@ -39,7 +40,7 @@ export default function DriversPage() {
 
         <div className="data-card">
           <table className="data-table">
-            <thead><tr><th>Driver</th><th>Kontak</th><th>Rating</th><th>Pesanan</th><th>Online</th><th>Status</th><th>Aksi</th></tr></thead>
+            <thead><tr><th>Driver</th><th>Kontak</th><th>Rating</th><th>Pesanan</th><th>Online</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
             <tbody>
               {filtered.map(d => (
                 <tr key={d.id}>
@@ -55,15 +56,18 @@ export default function DriversPage() {
                   <td><span className={`online-dot ${d.online ? 'active' : 'inactive'}`} /> <span style={{ marginLeft: 6, fontSize: 13 }}>{d.online ? 'Online' : 'Offline'}</span></td>
                   <td><span className={`badge ${statusBadge[d.status]?.badge}`}><span className="material-symbols-outlined">{statusBadge[d.status]?.icon}</span> {statusBadge[d.status]?.label}</span></td>
                   <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {d.status === 'pending' && (
-                        <>
-                          <button className="btn btn-primary btn-sm"><span className="material-symbols-outlined">check</span> Approve</button>
-                          <button className="btn btn-danger btn-sm"><span className="material-symbols-outlined">close</span> Reject</button>
-                        </>
-                      )}
-                      {d.status === 'approved' && <button className="btn btn-outline btn-sm"><span className="material-symbols-outlined">description</span> Detail</button>}
-                    </div>
+                    <ActionMenu items={
+                      d.status === 'pending' ? [
+                        { icon: 'check_circle', label: 'Approve', onClick: () => {} },
+                        { icon: 'cancel', label: 'Reject', onClick: () => {}, danger: true },
+                        { icon: 'description', label: 'Lihat KTP', onClick: () => {} },
+                      ] : [
+                        { icon: 'person', label: 'Detail Driver', onClick: () => {} },
+                        { icon: 'history', label: 'Riwayat Pesanan', onClick: () => {} },
+                        { icon: 'chat', label: 'Hubungi via WA', onClick: () => {} },
+                        { icon: 'block', label: 'Suspend', onClick: () => {}, danger: true },
+                      ]
+                    } />
                   </td>
                 </tr>
               ))}

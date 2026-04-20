@@ -1,3 +1,7 @@
+'use client';
+
+import ActionMenu from '@/components/ActionMenu';
+
 const mockUsers = [
   { id: '1', name: 'Budi Santoso', email: 'budi@email.com', phone: '0812-xxxx', orders: 15, total: 'Rp 1.2jt', joined: '1 Jan 2026', active: true },
   { id: '2', name: 'Siti Rahayu', email: 'siti@email.com', phone: '0813-xxxx', orders: 8, total: 'Rp 650K', joined: '15 Feb 2026', active: true },
@@ -37,7 +41,7 @@ export default function UsersPage() {
             <div className="search-bar"><span className="material-symbols-outlined">search</span><input placeholder="Cari pelanggan..." /></div>
           </div>
           <table className="data-table">
-            <thead><tr><th>Pelanggan</th><th>Kontak</th><th>Pesanan</th><th>Total Belanja</th><th>Bergabung</th><th>Status</th></tr></thead>
+            <thead><tr><th>Pelanggan</th><th>Kontak</th><th>Pesanan</th><th>Total Belanja</th><th>Bergabung</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
             <tbody>
               {mockUsers.map(u => (
                 <tr key={u.id}>
@@ -52,6 +56,14 @@ export default function UsersPage() {
                   <td style={{ fontWeight: 700 }}>{u.total}</td>
                   <td style={{ color: 'var(--text-hint)', fontSize: 13 }}>{u.joined}</td>
                   <td><span className={`badge ${u.active ? 'green' : 'gray'}`}>{u.active ? 'Aktif' : 'Nonaktif'}</span></td>
+                  <td>
+                    <ActionMenu items={[
+                      { icon: 'person', label: 'Detail Pelanggan', onClick: () => {} },
+                      { icon: 'history', label: 'Riwayat Pesanan', onClick: () => {} },
+                      { icon: 'chat', label: 'Hubungi via WA', onClick: () => {} },
+                      { icon: 'block', label: 'Nonaktifkan', onClick: () => {}, danger: true },
+                    ]} />
+                  </td>
                 </tr>
               ))}
             </tbody>

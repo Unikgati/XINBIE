@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ActionMenu from '@/components/ActionMenu';
 
 const mockOrders = [
   { id: '1', code: 'DG-260420-1234', customer: 'Budi Santoso', phone: '0812-xxxx', items: 3, total: 88000, status: 'processing', payment: 'QRIS', driver: 'Driver A', date: '20 Apr 2026 10:30' },
@@ -49,7 +50,7 @@ export default function OrdersPage() {
         <div className="data-card">
           <table className="data-table">
             <thead>
-              <tr><th>Kode</th><th>Pelanggan</th><th>Items</th><th>Total</th><th>Pembayaran</th><th>Driver</th><th>Status</th><th>Tanggal</th></tr>
+              <tr><th>Kode</th><th>Pelanggan</th><th>Items</th><th>Total</th><th>Pembayaran</th><th>Driver</th><th>Status</th><th style={{ width: 48 }}></th></tr>
             </thead>
             <tbody>
               {filtered.map(o => (
@@ -64,7 +65,18 @@ export default function OrdersPage() {
                   <td><span className="badge gray">{o.payment}</span></td>
                   <td>{o.driver}</td>
                   <td><span className={`badge ${statusMap[o.status]?.badge}`}><span className="material-symbols-outlined">{statusMap[o.status]?.icon}</span> {statusMap[o.status]?.label}</span></td>
-                  <td style={{ color: 'var(--text-hint)', fontSize: 13 }}>{o.date}</td>
+                  <td>
+                    <ActionMenu items={[
+                      { icon: 'visibility', label: 'Detail Pesanan', onClick: () => {} },
+                      { icon: 'receipt_long', label: 'Cetak Invoice', onClick: () => {} },
+                      ...(o.status === 'processing' ? [
+                        { icon: 'local_shipping', label: 'Assign Driver', onClick: () => {} },
+                      ] : []),
+                      ...(o.status !== 'completed' && o.status !== 'cancelled' ? [
+                        { icon: 'cancel', label: 'Batalkan', onClick: () => {}, danger: true },
+                      ] : []),
+                    ]} />
+                  </td>
                 </tr>
               ))}
             </tbody>
