@@ -163,16 +163,35 @@ export default function ProductsPage() {
       formData.append('unit', formUnit || 'pcs');
       formData.append('description', formDesc);
       
-      // Variants not natively sent via formData in this simple impl unless serialized
-      // We will skip submitting variants here and focus on the product basics for now
-
+      let prodId = editingId;
       if (editingId) {
         await apiPut(`/products/${editingId}`, formData);
         toast.success('Produk berhasil diperbarui');
       } else {
-        await apiPost('/products', formData);
+        const prod = await apiPost<Product>('/products', formData);
+        prodId = prod.id;
         toast.success('Produk berhasil ditambahkan');
       }
+
+      // Handle variants mapping
+      if (prodId && formVariants.length > 0) {
+        for (const v of formVariants) {
+          const varData = new FormData();
+          varData.append('name', v.name);
+          varData.append('price', v.price);
+          varData.append('costPrice', v.costPrice || '0');
+          varData.append('stockQty', v.stockQty || '0');
+
+          if (v.tempId.includes('-')) {
+            // It's a Prisma UUID, so update it
+            await apiPut(`/variants/${v.tempId}`, varData);
+          } else {
+            // It's a new temp timestamp, create it
+            await apiPost(`/products/${prodId}/variants`, varData);
+          }
+        }
+      }
+
       setShowModal(false);
       fetchData();
     } catch (err: any) {
