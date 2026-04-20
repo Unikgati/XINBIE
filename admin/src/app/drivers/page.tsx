@@ -1,78 +1,140 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ActionMenu from '@/components/ActionMenu';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/ConfirmDialog';
+import { apiGet, apiPut } from '@/lib/api';
 
-const mockDrivers = [
-  { id: '1', name: 'Driver Ahmad', email: 'ahmad@driver.com', phone: '0812-1234-5678', status: 'approved', rating: 4.8, orders: 120, online: true },
-  { id: '2', name: 'Driver Budi', email: 'budi@driver.com', phone: '0813-2345-6789', status: 'approved', rating: 4.6, orders: 85, online: false },
-  { id: '3', name: 'Driver Candra', email: 'candra@driver.com', phone: '0857-3456-7890', status: 'pending', rating: 0, orders: 0, online: false },
-  { id: '4', name: 'Driver Deni', email: 'deni@driver.com', phone: '0878-4567-8901', status: 'rejected', rating: 0, orders: 0, online: false },
-  { id: '5', name: 'Driver Eka', email: 'eka@driver.com', phone: '0856-5678-9012', status: 'approved', rating: 4.9, orders: 200, online: true },
-];
+interface Driver {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userPhoneWa: string;
+  verificationStatus: string;
+  ratingAvg: number;
+  totalOrdersDone: number;
+  isOnline: boolean;
+  vehicleType?: string;
+  vehiclePlate?: string;
+}
 
 const statusBadge: Record<string, { label: string; badge: string; icon: string }> = {
-  approved: { label: 'Aktif', badge: 'green', icon: 'verified' },
-  pending: { label: 'Menunggu', badge: 'orange', icon: 'hourglass_top' },
-  rejected: { label: 'Ditolak', badge: 'red', icon: 'block' },
+  APPROVED: { label: 'Aktif', badge: 'green', icon: 'verified' },
+  PENDING: { label: 'Menunggu', badge: 'orange', icon: 'hourglass_top' },
+  REJECTED: { label: 'Ditolak', badge: 'red', icon: 'block' },
 };
 
 export default function DriversPage() {
-  const [filter, setFilter] = useState('all');
-  const filtered = filter === 'all' ? mockDrivers : mockDrivers.filter(d => d.status === filter);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('ALL');
+  const toast = useToast();
+  const confirm = useConfirm();
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const statusParam = filter !== 'ALL' ? `?status=${filter}` : '';
+      const res = await apiGet<Driver[]>(`/drivers${statusParam}`);
+      setDrivers(Array.isArray(res) ? res : []);
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memuat data driver');
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleVerify = async (id: string, status: 'APPROVED' | 'REJECTED', name: string) => {
+    const isApprove = status === 'APPROVED';
+    const ok = await confirm({
+      title: isApprove ? 'Approve Driver' : 'Reject Driver',
+      message: isApprove ? `Setujui "${name}" sebagai driver aktif?` : `Tolak pendaftaran "${name}"? Berikan alasan penolakan jika perlu.`,
+      confirmLabel: isApprove ? 'Approve' : 'Reject',
+      danger: !isApprove,
+    });
+    if (!ok) return;
+    try {
+      await apiPut(`/drivers/${id}/verify`, { status });
+      toast.success(`Driver "${name}" ${isApprove ? 'disetujui' : 'ditolak'}`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memproses');
+    }
+  };
+
+  const handleWhatsApp = (phone: string) => {
+    if (phone) window.open(`https://wa.me/${phone.replace(/^0/, '62')}`, '_blank');
+  };
+
+  const onlineCount = drivers.filter(d => d.isOnline).length;
 
   return (
     <>
       <div className="page-header">
         <div>
           <h1 className="page-title">Driver</h1>
-          <p className="page-subtitle">{mockDrivers.length} driver terdaftar &bull; {mockDrivers.filter(d => d.online).length} online</p>
+          <p className="page-subtitle">{drivers.length} driver terdaftar &bull; {onlineCount} online</p>
         </div>
       </div>
       <div className="page-body">
         <div className="chip-group">
-          {['all', 'pending', 'approved', 'rejected'].map(s => (
+          {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map(s => (
             <button key={s} className={`chip ${filter === s ? 'active' : ''}`} onClick={() => setFilter(s)}>
-              {s === 'all' ? 'Semua' : statusBadge[s]?.label}
+              {s === 'ALL' ? 'Semua' : statusBadge[s]?.label || s}
             </button>
           ))}
         </div>
 
         <div className="data-card">
-          <table className="data-table">
-            <thead><tr><th>Driver</th><th>Kontak</th><th>Rating</th><th>Pesanan</th><th>Online</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
-            <tbody>
-              {filtered.map(d => (
-                <tr key={d.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div className="avatar-circle">{d.name.split(' ')[1]?.[0] || 'D'}</div>
-                      <div style={{ fontWeight: 600 }}>{d.name}</div>
-                    </div>
-                  </td>
-                  <td><div style={{ fontSize: 13 }}>{d.email}</div><div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{d.phone}</div></td>
-                  <td>{d.rating > 0 ? <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="material-symbols-outlined icon-filled" style={{ fontSize: 16, color: '#F59E0B' }}>star</span> {d.rating}</span> : '-'}</td>
-                  <td>{d.orders}</td>
-                  <td><span className={`online-dot ${d.online ? 'active' : 'inactive'}`} /> <span style={{ marginLeft: 6, fontSize: 13 }}>{d.online ? 'Online' : 'Offline'}</span></td>
-                  <td><span className={`badge ${statusBadge[d.status]?.badge}`}><span className="material-symbols-outlined">{statusBadge[d.status]?.icon}</span> {statusBadge[d.status]?.label}</span></td>
-                  <td>
-                    <ActionMenu items={
-                      d.status === 'pending' ? [
-                        { icon: 'check_circle', label: 'Approve', onClick: () => {} },
-                        { icon: 'cancel', label: 'Reject', onClick: () => {}, danger: true },
-                        { icon: 'description', label: 'Lihat KTP', onClick: () => {} },
-                      ] : [
-                        { icon: 'person', label: 'Detail Driver', onClick: () => {} },
-                        { icon: 'history', label: 'Riwayat Pesanan', onClick: () => {} },
-                        { icon: 'chat', label: 'Hubungi via WA', onClick: () => {} },
-                        { icon: 'block', label: 'Suspend', onClick: () => {}, danger: true },
-                      ]
-                    } />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {loading ? (
+            <div className="loading-center"><div className="spinner" /> Memuat data driver...</div>
+          ) : drivers.length === 0 ? (
+            <div className="empty-state">
+              <span className="material-symbols-outlined">directions_car</span>
+              Belum ada driver terdaftar
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead><tr><th>Driver</th><th>Kontak</th><th>Rating</th><th>Pesanan</th><th>Online</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
+              <tbody>
+                {drivers.map(d => {
+                  const sb = statusBadge[d.verificationStatus] || { label: d.verificationStatus, badge: 'gray', icon: 'help' };
+                  return (
+                    <tr key={d.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div className="avatar-circle">{d.userName?.[0] || 'D'}</div>
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{d.userName}</div>
+                            {d.vehicleType && <div style={{ fontSize: 11, color: 'var(--text-hint)' }}>{d.vehicleType} • {d.vehiclePlate}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td><div style={{ fontSize: 13 }}>{d.userEmail}</div><div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{d.userPhoneWa}</div></td>
+                      <td>{d.ratingAvg > 0 ? <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="material-symbols-outlined icon-filled" style={{ fontSize: 16, color: '#F59E0B' }}>star</span> {d.ratingAvg.toFixed(1)}</span> : '-'}</td>
+                      <td>{d.totalOrdersDone}</td>
+                      <td><span className={`online-dot ${d.isOnline ? 'active' : 'inactive'}`} /> <span style={{ marginLeft: 6, fontSize: 13 }}>{d.isOnline ? 'Online' : 'Offline'}</span></td>
+                      <td><span className={`badge ${sb.badge}`}><span className="material-symbols-outlined">{sb.icon}</span> {sb.label}</span></td>
+                      <td>
+                        <ActionMenu items={
+                          d.verificationStatus === 'PENDING' ? [
+                            { icon: 'check_circle', label: 'Approve', onClick: () => handleVerify(d.id, 'APPROVED', d.userName) },
+                            { icon: 'cancel', label: 'Reject', onClick: () => handleVerify(d.id, 'REJECTED', d.userName), danger: true },
+                          ] : [
+                            { icon: 'chat', label: 'Hubungi via WA', onClick: () => handleWhatsApp(d.userPhoneWa) },
+                          ]
+                        } />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </>

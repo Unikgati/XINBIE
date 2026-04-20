@@ -1,29 +1,50 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import CustomSelect from '@/components/CustomSelect';
+import { useToast } from '@/components/Toast';
+import { apiGet, apiPut } from '@/lib/api';
 
-// Dynamic import — Leaflet requires window object (no SSR)
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false });
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({
-    storeName: 'Dapur Gizi', phone: '0812-3456-7890', email: 'info@dapurgizi.com',
-    address: 'Jl. Sudirman No. 15, Jakarta', lat: -6.200000, lng: 106.816666,
-    deliveryRadius: '10', baseDeliveryFee: '5000', freeDeliveryMin: '150000',
-    operationalStart: '07:00', operationalEnd: '20:00', maxOrderPerSlot: '10',
-    // Driver Commission
-    commissionType: 'HYBRID', commissionFixed: '5000', commissionPercent: '80',
-    bonusPerKm: '1500', minWithdrawal: '50000', maxWithdrawalDay: '1',
-  });
-  const update = (key: string, value: string | number) => setSettings(prev => ({ ...prev, [key]: value }));
-  const [saved, setSaved] = useState(false);
+  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await apiGet<Record<string, string>>('/settings');
+      setSettings(res || {});
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memuat pengaturan');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const update = (key: string, value: string) => setSettings(prev => ({ ...prev, [key]: value }));
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await apiPut('/settings', settings);
+      toast.success('Pengaturan berhasil disimpan');
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menyimpan');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) return <div className="loading-center"><div className="spinner" /> Memuat pengaturan...</div>;
+
+  const commType = settings.commission_type || 'HYBRID';
 
   return (
     <>
@@ -32,42 +53,19 @@ export default function SettingsPage() {
           <h1 className="page-title">Pengaturan</h1>
           <p className="page-subtitle">Konfigurasi toko dan pengiriman</p>
         </div>
-        <button className="btn btn-primary" onClick={handleSave}>
-          <span className="material-symbols-outlined">save</span> Simpan
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          <span className="material-symbols-outlined">save</span> {saving ? 'Menyimpan...' : 'Simpan'}
         </button>
       </div>
       <div className="page-body">
-        {saved && (
-          <div className="alert success" style={{ marginBottom: 16 }}>
-            <span className="material-symbols-outlined">check_circle</span> Pengaturan berhasil disimpan!
-          </div>
-        )}
-
         {/* Store Info */}
         <div className="data-card" style={{ marginBottom: 16 }}>
           <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">storefront</span> Informasi Toko</h3></div>
           <div style={{ padding: 20 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div className="form-group"><label className="form-label">Nama Toko</label><input className="form-input" value={settings.storeName} onChange={e => update('storeName', e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">Email</label><input className="form-input" value={settings.email} onChange={e => update('email', e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">WhatsApp</label><input className="form-input" value={settings.phone} onChange={e => update('phone', e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">Alamat</label><input className="form-input" value={settings.address} onChange={e => update('address', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">WhatsApp Admin</label><input className="form-input" value={settings.admin_wa || ''} onChange={e => update('admin_wa', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Versi App Min</label><input className="form-input" value={settings.app_version_min || ''} onChange={e => update('app_version_min', e.target.value)} /></div>
             </div>
-          </div>
-        </div>
-
-        {/* Location — Map Picker */}
-        <div className="data-card" style={{ marginBottom: 16 }}>
-          <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">pin_drop</span> Lokasi Gudang / Drop Point</h3></div>
-          <div style={{ padding: 20 }}>
-            <LocationPicker
-              lat={settings.lat}
-              lng={settings.lng}
-              onChange={(lat, lng) => {
-                update('lat', lat);
-                update('lng', lng);
-              }}
-            />
           </div>
         </div>
 
@@ -76,10 +74,12 @@ export default function SettingsPage() {
           <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">local_shipping</span> Pengiriman</h3></div>
           <div style={{ padding: 20 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div className="form-group"><label className="form-label">Radius Pengiriman (km)</label><input className="form-input" type="number" value={settings.deliveryRadius} onChange={e => update('deliveryRadius', e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">Biaya Dasar (Rp)</label><input className="form-input" type="number" value={settings.baseDeliveryFee} onChange={e => update('baseDeliveryFee', e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">Min. Gratis Ongkir (Rp)</label><input className="form-input" type="number" value={settings.freeDeliveryMin} onChange={e => update('freeDeliveryMin', e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">Max Order per Slot</label><input className="form-input" type="number" value={settings.maxOrderPerSlot} onChange={e => update('maxOrderPerSlot', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Radius Pengiriman (km)</label><input className="form-input" type="number" value={settings.delivery_radius_km || ''} onChange={e => update('delivery_radius_km', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Ongkir Reguler (Rp)</label><input className="form-input" type="number" value={settings.regular_delivery_fee || ''} onChange={e => update('regular_delivery_fee', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Ongkir Instant (Rp)</label><input className="form-input" type="number" value={settings.instant_delivery_fee || ''} onChange={e => update('instant_delivery_fee', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Min. Gratis Ongkir (Rp)</label><input className="form-input" type="number" value={settings.free_delivery_min || ''} onChange={e => update('free_delivery_min', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Min. Order (Rp)</label><input className="form-input" type="number" value={settings.min_order_amount || ''} onChange={e => update('min_order_amount', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Max Item per Order</label><input className="form-input" type="number" value={settings.max_order_items || ''} onChange={e => update('max_order_items', e.target.value)} /></div>
             </div>
           </div>
         </div>
@@ -96,8 +96,8 @@ export default function SettingsPage() {
               <div className="form-group">
                 <label className="form-label">Model Komisi</label>
                 <CustomSelect
-                  value={settings.commissionType}
-                  onChange={v => update('commissionType', v)}
+                  value={commType}
+                  onChange={v => update('commission_type', v)}
                   options={[
                     { value: 'FIXED', label: 'Fixed (tetap per order)' },
                     { value: 'PERCENT', label: 'Persentase dari ongkir' },
@@ -107,47 +107,35 @@ export default function SettingsPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Bonus per KM (Rp)</label>
-                <input className="form-input" type="number" value={settings.bonusPerKm} onChange={e => update('bonusPerKm', e.target.value)} />
+                <input className="form-input" type="number" value={settings.commission_bonus_per_km || ''} onChange={e => update('commission_bonus_per_km', e.target.value)} />
               </div>
-              {(settings.commissionType === 'FIXED' || settings.commissionType === 'HYBRID') && (
+              {(commType === 'FIXED' || commType === 'HYBRID') && (
                 <div className="form-group">
                   <label className="form-label">Komisi Tetap per Order (Rp)</label>
-                  <input className="form-input" type="number" value={settings.commissionFixed} onChange={e => update('commissionFixed', e.target.value)} />
+                  <input className="form-input" type="number" value={settings.commission_fixed || ''} onChange={e => update('commission_fixed', e.target.value)} />
                 </div>
               )}
-              {(settings.commissionType === 'PERCENT' || settings.commissionType === 'HYBRID') && (
+              {(commType === 'PERCENT' || commType === 'HYBRID') && (
                 <div className="form-group">
                   <label className="form-label">Komisi % dari Ongkir</label>
-                  <input className="form-input" type="number" value={settings.commissionPercent} onChange={e => update('commissionPercent', e.target.value)} />
+                  <input className="form-input" type="number" value={settings.commission_percent || ''} onChange={e => update('commission_percent', e.target.value)} />
                 </div>
               )}
               <div className="form-group">
                 <label className="form-label">Min. Pencairan (Rp)</label>
-                <input className="form-input" type="number" value={settings.minWithdrawal} onChange={e => update('minWithdrawal', e.target.value)} />
+                <input className="form-input" type="number" value={settings.min_withdrawal || ''} onChange={e => update('min_withdrawal', e.target.value)} />
               </div>
               <div className="form-group">
                 <label className="form-label">Max Pencairan / Hari</label>
-                <input className="form-input" type="number" value={settings.maxWithdrawalDay} onChange={e => update('maxWithdrawalDay', e.target.value)} />
+                <input className="form-input" type="number" value={settings.max_withdrawal_per_day || ''} onChange={e => update('max_withdrawal_per_day', e.target.value)} />
               </div>
             </div>
-            {/* Preview */}
             <div style={{ marginTop: 16, padding: 14, background: 'var(--primary-surface)', borderRadius: 'var(--radius-md)', fontSize: 13 }}>
               <strong>Preview komisi (ongkir Rp 10.000):</strong>{' '}
-              {settings.commissionType === 'FIXED' && `Rp ${parseInt(settings.commissionFixed || '0').toLocaleString('id-ID')}`}
-              {settings.commissionType === 'PERCENT' && `Rp ${Math.round(10000 * parseInt(settings.commissionPercent || '0') / 100).toLocaleString('id-ID')}`}
-              {settings.commissionType === 'HYBRID' && `Rp ${(parseInt(settings.commissionFixed || '0') + Math.round(10000 * parseInt(settings.commissionPercent || '0') / 100)).toLocaleString('id-ID')}`}
+              {commType === 'FIXED' && `Rp ${parseInt(settings.commission_fixed || '0').toLocaleString('id-ID')}`}
+              {commType === 'PERCENT' && `Rp ${Math.round(10000 * parseInt(settings.commission_percent || '0') / 100).toLocaleString('id-ID')}`}
+              {commType === 'HYBRID' && `Rp ${(parseInt(settings.commission_fixed || '0') + Math.round(10000 * parseInt(settings.commission_percent || '0') / 100)).toLocaleString('id-ID')}`}
               {' '}per order
-            </div>
-          </div>
-        </div>
-
-        {/* Operational Hours */}
-        <div className="data-card">
-          <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">schedule</span> Jam Operasional</h3></div>
-          <div style={{ padding: 20 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div className="form-group"><label className="form-label">Buka</label><input className="form-input" type="time" value={settings.operationalStart} onChange={e => update('operationalStart', e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">Tutup</label><input className="form-input" type="time" value={settings.operationalEnd} onChange={e => update('operationalEnd', e.target.value)} /></div>
             </div>
           </div>
         </div>

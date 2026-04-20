@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ActionMenu from '@/components/ActionMenu';
 import CustomSelect from '@/components/CustomSelect';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/ConfirmDialog';
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 
 interface Variant {
   id: string;
@@ -16,40 +19,24 @@ interface Variant {
 interface Product {
   id: string;
   name: string;
-  category: string;
+  description?: string;
   price: number;
   costPrice: number;
   discountPrice?: number;
-  stock: number;
-  active: boolean;
-  featured: boolean;
+  discountPercent?: number;
+  unit?: string;
+  stock?: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  category: { id: string; name: string };
   variants: Variant[];
 }
 
-const mockProducts: Product[] = [
-  { id: '1', name: 'Brokoli Segar', category: 'Sayuran', price: 15000, costPrice: 9000, stock: 50, active: true, featured: true, variants: [] },
-  { id: '2', name: 'Apel Fuji', category: 'Buah', price: 35000, costPrice: 22000, discountPrice: 29000, stock: 30, active: true, featured: false, variants: [] },
-  { id: '3', name: 'Telur Ayam', category: 'Protein', price: 28000, costPrice: 19000, stock: 200, active: true, featured: true, variants: [
-    { id: 'v1', name: 'Kecil (10 pcs)', price: 18000, costPrice: 12000, stockQty: 80 },
-    { id: 'v2', name: 'Sedang (10 pcs)', price: 22000, costPrice: 15000, stockQty: 70 },
-    { id: 'v3', name: 'Besar (10 pcs)', price: 28000, costPrice: 19000, stockQty: 50 },
-  ]},
-  { id: '4', name: 'Beras Organik', category: 'Pokok', price: 85000, costPrice: 68000, stock: 100, active: true, featured: false, variants: [
-    { id: 'v4', name: '1 kg', price: 18000, costPrice: 14000, stockQty: 50 },
-    { id: 'v5', name: '5 kg', price: 85000, costPrice: 68000, stockQty: 30 },
-    { id: 'v6', name: '25 kg', price: 395000, costPrice: 320000, stockQty: 20 },
-  ]},
-  { id: '5', name: 'Jahe Merah', category: 'Bumbu', price: 8000, costPrice: 4500, stock: 0, active: false, featured: false, variants: [] },
-  { id: '6', name: 'Jus Cold Pressed', category: 'Minuman', price: 25000, costPrice: 12000, stock: 20, active: true, featured: false, variants: [] },
-  { id: '7', name: 'Nugget Ayam', category: 'Frozen', price: 35000, costPrice: 20000, stock: 40, active: true, featured: true, variants: [
-    { id: 'v7', name: '250g', price: 18000, costPrice: 10000, stockQty: 20 },
-    { id: 'v8', name: '500g', price: 35000, costPrice: 20000, stockQty: 15 },
-    { id: 'v9', name: '1 kg', price: 65000, costPrice: 38000, stockQty: 5 },
-  ]},
-  { id: '8', name: 'Keripik Tempe', category: 'Snack', price: 12000, costPrice: 6000, stock: 60, active: true, featured: false, variants: [] },
-];
+interface Category {
+  id: string;
+  name: string;
+}
 
-const categoryIcons: Record<string, string> = { Sayuran: 'grass', Buah: 'nutrition', Protein: 'egg_alt', Pokok: 'rice_bowl', Bumbu: 'local_fire_department', Minuman: 'local_cafe', Snack: 'cookie', Frozen: 'ac_unit' };
 const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
 function calcMargin(sell: number, cost: number) {
@@ -73,12 +60,44 @@ interface FormVariant {
 }
 
 export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [formVariants, setFormVariants] = useState<FormVariant[]>([]);
-  const [productCategory, setProductCategory] = useState('Sayuran');
-  const filtered = mockProducts.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const [productCategory, setProductCategory] = useState('');
+  const [formName, setFormName] = useState('');
+  const [formPrice, setFormPrice] = useState('');
+  const [formCostPrice, setFormCostPrice] = useState('');
+  const [formDiscountPrice, setFormDiscountPrice] = useState('');
+  const [formStock, setFormStock] = useState('');
+  const [formUnit, setFormUnit] = useState('');
+  const [formDesc, setFormDesc] = useState('');
+
+  const toast = useToast();
+  const confirm = useConfirm();
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [prodRes, catRes] = await Promise.all([
+        apiGet<Product[]>('/products'),
+        apiGet<Category[]>('/categories'),
+      ]);
+      setProducts(Array.isArray(prodRes) ? prodRes : []);
+      setCategories(Array.isArray(catRes) ? catRes : []);
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memuat data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
   const toggleExpand = (id: string) => {
     setExpandedProducts(prev => {
@@ -100,9 +119,95 @@ export default function ProductsPage() {
     setFormVariants(prev => prev.map(v => v.tempId === tempId ? { ...v, [field]: value } : v));
   };
 
-  const openModal = () => {
-    setFormVariants([]);
-    setShowModal(true);
+  const resetForm = () => {
+    setFormName(''); setFormPrice(''); setFormCostPrice(''); setFormDiscountPrice('');
+    setFormStock(''); setFormUnit(''); setFormDesc(''); setFormVariants([]);
+    setProductCategory(categories[0]?.id || '');
+  };
+
+  const openModal = () => { resetForm(); setShowModal(true); };
+
+  const handleCreate = async () => {
+    if (!formName.trim() || !formPrice) { toast.error('Nama dan harga wajib diisi'); return; }
+    try {
+      const formData = new FormData();
+      formData.append('name', formName);
+      formData.append('categoryId', productCategory);
+      formData.append('price', formPrice);
+      formData.append('costPrice', formCostPrice || '0');
+      if (formDiscountPrice) formData.append('discountPrice', formDiscountPrice);
+      formData.append('stock', formStock || '0');
+      formData.append('unit', formUnit || 'pcs');
+      formData.append('description', formDesc);
+
+      await apiPost('/products', formData);
+      toast.success('Produk berhasil ditambahkan');
+      setShowModal(false);
+
+      // Create variants if any
+      // Note: variants are created separately after product creation
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menambah produk');
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: 'Hapus Produk',
+      message: `Hapus "${name}" beserta semua variannya? Aksi ini tidak bisa dibatalkan.`,
+      confirmLabel: 'Hapus',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await apiDelete(`/products/${id}`);
+      toast.success(`"${name}" berhasil dihapus`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menghapus produk');
+    }
+  };
+
+  const handleToggleActive = async (p: Product) => {
+    try {
+      const formData = new FormData();
+      formData.append('isActive', String(!p.isActive));
+      await apiPut(`/products/${p.id}`, formData);
+      toast.success(`"${p.name}" ${p.isActive ? 'dinonaktifkan' : 'diaktifkan'}`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengubah status');
+    }
+  };
+
+  const handleToggleFeatured = async (p: Product) => {
+    try {
+      const formData = new FormData();
+      formData.append('isFeatured', String(!p.isFeatured));
+      await apiPut(`/products/${p.id}`, formData);
+      toast.success(`"${p.name}" ${p.isFeatured ? 'dihapus dari' : 'dijadikan'} pilihan`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengubah status');
+    }
+  };
+
+  const handleDeleteVariant = async (variantId: string, variantName: string) => {
+    const ok = await confirm({
+      title: 'Hapus Varian',
+      message: `Hapus varian "${variantName}"?`,
+      confirmLabel: 'Hapus',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await apiDelete(`/variants/${variantId}`);
+      toast.success(`Varian "${variantName}" dihapus`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menghapus varian');
+    }
   };
 
   return (
@@ -110,7 +215,7 @@ export default function ProductsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Produk</h1>
-          <p className="page-subtitle">{mockProducts.length} produk terdaftar</p>
+          <p className="page-subtitle">{products.length} produk terdaftar</p>
         </div>
         <button className="btn btn-primary" onClick={openModal}>
           <span className="material-symbols-outlined">add</span> Tambah Produk
@@ -125,118 +230,120 @@ export default function ProductsPage() {
         </div>
 
         <div className="data-card">
-          <table className="data-table">
-            <thead><tr><th>Produk</th><th>Kategori</th><th>Harga Jual</th><th>Harga Beli</th><th>Margin</th><th>Stok</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
-            <tbody>
-              {filtered.map(p => {
-                const sellPrice = p.discountPrice || p.price;
-                const margin = calcMargin(sellPrice, p.costPrice);
-                const profit = sellPrice - p.costPrice;
-                const hasVariants = p.variants.length > 0;
-                const isExpanded = expandedProducts.has(p.id);
-                return (
-                  <React.Fragment key={p.id}>
-                    <tr style={{ cursor: hasVariants ? 'pointer' : 'default' }} onClick={() => hasVariants && toggleExpand(p.id)}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          {hasVariants && (
-                            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--text-hint)', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)' }}>
-                              chevron_right
+          {loading ? (
+            <div className="loading-center"><div className="spinner" /> Memuat data produk...</div>
+          ) : filtered.length === 0 ? (
+            <div className="empty-state">
+              <span className="material-symbols-outlined">inventory_2</span>
+              {search ? 'Tidak ada produk yang cocok' : 'Belum ada produk'}
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead><tr><th>Produk</th><th>Kategori</th><th>Harga Jual</th><th>Harga Beli</th><th>Margin</th><th>Stok</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
+              <tbody>
+                {filtered.map(p => {
+                  const sellPrice = p.discountPrice || p.price;
+                  const margin = calcMargin(sellPrice, p.costPrice || 0);
+                  const profit = sellPrice - (p.costPrice || 0);
+                  const hasVariants = p.variants && p.variants.length > 0;
+                  const isExpanded = expandedProducts.has(p.id);
+                  return (
+                    <React.Fragment key={p.id}>
+                      <tr style={{ cursor: hasVariants ? 'pointer' : 'default' }} onClick={() => hasVariants && toggleExpand(p.id)}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            {hasVariants && (
+                              <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--text-hint)', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)' }}>
+                                chevron_right
+                              </span>
+                            )}
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{p.name}</div>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                {p.isFeatured && <span className="badge green" style={{ fontSize: 10, padding: '2px 6px' }}><span className="material-symbols-outlined" style={{ fontSize: 12 }}>star</span> Pilihan</span>}
+                                {hasVariants && <span className="badge blue" style={{ fontSize: 10, padding: '2px 6px' }}><span className="material-symbols-outlined" style={{ fontSize: 12 }}>tune</span> {p.variants.length} varian</span>}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td><span className="badge gray">{p.category?.name || '-'}</span></td>
+                        <td>
+                          {p.discountPrice ? (
+                            <div>
+                              <div style={{ textDecoration: 'line-through', color: 'var(--text-hint)', fontSize: 12 }}>{fmt(p.price)}</div>
+                              <div style={{ fontWeight: 700, color: 'var(--primary-dark)' }}>{fmt(p.discountPrice)}</div>
+                            </div>
+                          ) : hasVariants ? (
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                              {fmt(Math.min(...p.variants.map(v => v.price)))} — {fmt(Math.max(...p.variants.map(v => v.price)))}
+                            </div>
+                          ) : <div style={{ fontWeight: 600 }}>{fmt(p.price)}</div>}
+                        </td>
+                        <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                          {hasVariants ? (
+                            <span>{fmt(Math.min(...p.variants.map(v => v.costPrice)))} — {fmt(Math.max(...p.variants.map(v => v.costPrice)))}</span>
+                          ) : fmt(p.costPrice || 0)}
+                        </td>
+                        <td>
+                          <div>
+                            <span className={`badge ${marginColor(margin)}`}>{margin}%</span>
+                            {!hasVariants && <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 2 }}>+{fmt(profit)}</div>}
+                          </div>
+                        </td>
+                        <td>
+                          {hasVariants ? (
+                            <span className="badge blue">
+                              <span className="material-symbols-outlined">inventory</span> {p.variants.reduce((s, v) => s + v.stockQty, 0)} total
+                            </span>
+                          ) : (
+                            <span className={`badge ${(p.stock || 0) > 0 ? 'blue' : 'red'}`}>
+                              <span className="material-symbols-outlined">{(p.stock || 0) > 0 ? 'inventory' : 'inventory_2'}</span> {(p.stock || 0) > 0 ? `${p.stock} pcs` : 'Habis'}
                             </span>
                           )}
-                          <div className="category-icon" style={{ width: 40, height: 40 }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{categoryIcons[p.category] || 'inventory_2'}</span>
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 600 }}>{p.name}</div>
-                            <div style={{ display: 'flex', gap: 4 }}>
-                              {p.featured && <span className="badge green" style={{ fontSize: 10, padding: '2px 6px' }}><span className="material-symbols-outlined" style={{ fontSize: 12 }}>star</span> Pilihan</span>}
-                              {hasVariants && <span className="badge blue" style={{ fontSize: 10, padding: '2px 6px' }}><span className="material-symbols-outlined" style={{ fontSize: 12 }}>tune</span> {p.variants.length} varian</span>}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td><span className="badge gray">{p.category}</span></td>
-                      <td>
-                        {p.discountPrice ? (
-                          <div>
-                            <div style={{ textDecoration: 'line-through', color: 'var(--text-hint)', fontSize: 12 }}>{fmt(p.price)}</div>
-                            <div style={{ fontWeight: 700, color: 'var(--primary-dark)' }}>{fmt(p.discountPrice)}</div>
-                          </div>
-                        ) : hasVariants ? (
-                          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                            {fmt(Math.min(...p.variants.map(v => v.price)))} — {fmt(Math.max(...p.variants.map(v => v.price)))}
-                          </div>
-                        ) : <div style={{ fontWeight: 600 }}>{fmt(p.price)}</div>}
-                      </td>
-                      <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                        {hasVariants ? (
-                          <span>{fmt(Math.min(...p.variants.map(v => v.costPrice)))} — {fmt(Math.max(...p.variants.map(v => v.costPrice)))}</span>
-                        ) : fmt(p.costPrice)}
-                      </td>
-                      <td>
-                        <div>
-                          <span className={`badge ${marginColor(margin)}`}>{margin}%</span>
-                          {!hasVariants && <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 2 }}>+{fmt(profit)}</div>}
-                        </div>
-                      </td>
-                      <td>
-                        {hasVariants ? (
-                          <span className="badge blue">
-                            <span className="material-symbols-outlined">inventory</span> {p.variants.reduce((s, v) => s + v.stockQty, 0)} total
-                          </span>
-                        ) : (
-                          <span className={`badge ${p.stock > 0 ? 'blue' : 'red'}`}>
-                            <span className="material-symbols-outlined">{p.stock > 0 ? 'inventory' : 'inventory_2'}</span> {p.stock > 0 ? `${p.stock} pcs` : 'Habis'}
-                          </span>
-                        )}
-                      </td>
-                      <td><span className={`badge ${p.active ? 'green' : 'gray'}`}>{p.active ? 'Aktif' : 'Nonaktif'}</span></td>
-                      <td onClick={e => e.stopPropagation()}>
-                        <ActionMenu items={[
-                          { icon: 'edit', label: 'Edit Produk', onClick: () => {} },
-                          ...(hasVariants ? [] : [{ icon: 'tune', label: 'Tambah Varian', onClick: () => {} }]),
-                          { icon: 'star', label: p.featured ? 'Hapus Pilihan' : 'Jadikan Pilihan', onClick: () => {} },
-                          { icon: 'visibility_off', label: p.active ? 'Nonaktifkan' : 'Aktifkan', onClick: () => {} },
-                          { icon: 'delete', label: 'Hapus', onClick: () => {}, danger: true },
-                        ]} />
-                      </td>
-                    </tr>
-                    {/* Variant rows */}
-                    {hasVariants && isExpanded && p.variants.map(v => {
-                      const vMargin = calcMargin(v.price, v.costPrice);
-                      const vProfit = v.price - v.costPrice;
-                      return (
-                        <tr key={v.id} style={{ background: 'var(--primary-surface)' }}>
-                          <td style={{ paddingLeft: hasVariants ? 72 : 48 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-hint)' }}>subdirectory_arrow_right</span>
-                              <span style={{ fontWeight: 500 }}>{v.name}</span>
-                            </div>
-                          </td>
-                          <td></td>
-                          <td style={{ fontWeight: 600 }}>{fmt(v.price)}</td>
-                          <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{fmt(v.costPrice)}</td>
-                          <td>
-                            <span className={`badge ${marginColor(vMargin)}`}>{vMargin}%</span>
-                            <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 2 }}>+{fmt(vProfit)}</div>
-                          </td>
-                          <td><span className="badge blue">{v.stockQty} pcs</span></td>
-                          <td></td>
-                          <td onClick={e => e.stopPropagation()}>
-                            <ActionMenu items={[
-                              { icon: 'edit', label: 'Edit Varian', onClick: () => {} },
-                              { icon: 'delete', label: 'Hapus Varian', onClick: () => {}, danger: true },
-                            ]} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+                        </td>
+                        <td><span className={`badge ${p.isActive ? 'green' : 'gray'}`}>{p.isActive ? 'Aktif' : 'Nonaktif'}</span></td>
+                        <td onClick={e => e.stopPropagation()}>
+                          <ActionMenu items={[
+                            { icon: 'star', label: p.isFeatured ? 'Hapus Pilihan' : 'Jadikan Pilihan', onClick: () => handleToggleFeatured(p) },
+                            { icon: 'visibility_off', label: p.isActive ? 'Nonaktifkan' : 'Aktifkan', onClick: () => handleToggleActive(p) },
+                            { icon: 'delete', label: 'Hapus', onClick: () => handleDelete(p.id, p.name), danger: true },
+                          ]} />
+                        </td>
+                      </tr>
+                      {hasVariants && isExpanded && p.variants.map(v => {
+                        const vMargin = calcMargin(v.price, v.costPrice);
+                        const vProfit = v.price - v.costPrice;
+                        return (
+                          <tr key={v.id} style={{ background: 'var(--primary-surface)' }}>
+                            <td style={{ paddingLeft: hasVariants ? 72 : 48 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-hint)' }}>subdirectory_arrow_right</span>
+                                <span style={{ fontWeight: 500 }}>{v.name}</span>
+                              </div>
+                            </td>
+                            <td></td>
+                            <td style={{ fontWeight: 600 }}>{fmt(v.price)}</td>
+                            <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{fmt(v.costPrice)}</td>
+                            <td>
+                              <span className={`badge ${marginColor(vMargin)}`}>{vMargin}%</span>
+                              <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 2 }}>+{fmt(vProfit)}</div>
+                            </td>
+                            <td><span className="badge blue">{v.stockQty} pcs</span></td>
+                            <td></td>
+                            <td onClick={e => e.stopPropagation()}>
+                              <ActionMenu items={[
+                                { icon: 'delete', label: 'Hapus Varian', onClick: () => handleDeleteVariant(v.id, v.name), danger: true },
+                              ]} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -248,23 +355,29 @@ export default function ProductsPage() {
               <button className="btn btn-outline btn-icon" onClick={() => setShowModal(false)}><span className="material-symbols-outlined">close</span></button>
             </div>
             <div className="modal-body">
-              <div className="form-group"><label className="form-label">Nama Produk</label><input className="form-input" placeholder="Masukkan nama produk" /></div>
-              <div className="form-group"><label className="form-label">Kategori</label><CustomSelect value={productCategory} onChange={setProductCategory} options={[{ value: 'Sayuran', label: 'Sayuran' }, { value: 'Buah', label: 'Buah' }, { value: 'Bumbu', label: 'Bumbu' }, { value: 'Protein', label: 'Protein' }, { value: 'Pokok', label: 'Pokok' }, { value: 'Minuman', label: 'Minuman' }, { value: 'Snack', label: 'Snack' }, { value: 'Frozen', label: 'Frozen' }]} /></div>
+              <div className="form-group"><label className="form-label">Nama Produk</label><input className="form-input" placeholder="Masukkan nama produk" value={formName} onChange={e => setFormName(e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Kategori</label>
+                <CustomSelect
+                  value={productCategory}
+                  onChange={setProductCategory}
+                  options={categories.map(c => ({ value: c.id, label: c.name }))}
+                  placeholder="Pilih kategori"
+                />
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                <div className="form-group"><label className="form-label">Harga Beli (Rp)</label><input className="form-input" type="number" placeholder="HPP" /></div>
-                <div className="form-group"><label className="form-label">Harga Jual (Rp)</label><input className="form-input" type="number" placeholder="0" /></div>
-                <div className="form-group"><label className="form-label">Harga Diskon (Rp)</label><input className="form-input" type="number" placeholder="Opsional" /></div>
+                <div className="form-group"><label className="form-label">Harga Beli (Rp)</label><input className="form-input" type="number" placeholder="HPP" value={formCostPrice} onChange={e => setFormCostPrice(e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Harga Jual (Rp)</label><input className="form-input" type="number" placeholder="0" value={formPrice} onChange={e => setFormPrice(e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Harga Diskon (Rp)</label><input className="form-input" type="number" placeholder="Opsional" value={formDiscountPrice} onChange={e => setFormDiscountPrice(e.target.value)} /></div>
               </div>
               <div className="alert info" style={{ fontSize: 12 }}>
                 <span className="material-symbols-outlined">info</span>
                 Harga beli hanya terlihat di admin panel. Tidak ditampilkan ke pelanggan.
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div className="form-group"><label className="form-label">Stok</label><input className="form-input" type="number" placeholder="0" /></div>
-                <div className="form-group"><label className="form-label">Satuan</label><input className="form-input" placeholder="pcs, kg, ikat..." /></div>
+                <div className="form-group"><label className="form-label">Stok</label><input className="form-input" type="number" placeholder="0" value={formStock} onChange={e => setFormStock(e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Satuan</label><input className="form-input" placeholder="pcs, kg, ikat..." value={formUnit} onChange={e => setFormUnit(e.target.value)} /></div>
               </div>
-              <div className="form-group"><label className="form-label">Deskripsi</label><textarea className="form-input" rows={3} placeholder="Deskripsi produk..." /></div>
-              <div className="form-group"><label className="form-label">Foto Produk</label><div className="upload-area"><span className="material-symbols-outlined">cloud_upload</span><div>Drag & drop atau klik untuk upload</div></div></div>
+              <div className="form-group"><label className="form-label">Deskripsi</label><textarea className="form-input" rows={3} placeholder="Deskripsi produk..." value={formDesc} onChange={e => setFormDesc(e.target.value)} /></div>
 
               {/* Variant Section */}
               <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 16, marginTop: 8 }}>
@@ -281,7 +394,7 @@ export default function ProductsPage() {
                 {formVariants.length === 0 ? (
                   <div className="alert info" style={{ fontSize: 12 }}>
                     <span className="material-symbols-outlined">info</span>
-                    Tambahkan varian jika produk memiliki pilihan ukuran, kemasan, atau tipe. Contoh: Telur Kecil / Sedang / Besar.
+                    Tambahkan varian jika produk memiliki pilihan ukuran, kemasan, atau tipe.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -320,7 +433,7 @@ export default function ProductsPage() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setShowModal(false)}>Batal</button>
-              <button className="btn btn-primary" onClick={() => setShowModal(false)}><span className="material-symbols-outlined">save</span> Simpan</button>
+              <button className="btn btn-primary" onClick={handleCreate}><span className="material-symbols-outlined">save</span> Simpan</button>
             </div>
           </div>
         </div>

@@ -1,35 +1,37 @@
 'use client';
 
 import { useState } from 'react';
-import ActionMenu from '@/components/ActionMenu';
 import CustomSelect from '@/components/CustomSelect';
-
-const mockBroadcasts = [
-  { id: '1', title: 'Promo Akhir Pekan', body: 'Diskon 20% untuk semua produk segar! Berlaku sampai Minggu.', target: 'Semua User', recipients: 1250, status: 'sent', createdAt: '2026-04-19T14:00:00' },
-  { id: '2', title: 'Driver Meeting', body: 'Rapat koordinasi driver Sabtu 20 April pukul 09:00 di kantor.', target: 'Semua Driver', recipients: 12, status: 'sent', createdAt: '2026-04-18T09:00:00' },
-  { id: '3', title: 'Maintenance Notice', body: 'Aplikasi akan maintenance pada 15 April pukul 22:00-24:00 WIB.', target: 'Semua', recipients: 1262, status: 'sent', createdAt: '2026-04-15T20:00:00' },
-  { id: '4', title: 'Menu Baru Bulan Ini', body: 'Coba pilihan menu baru kami: Nasi Gudeg, Soto Betawi, dan Rawon.', target: 'Semua User', recipients: 1248, status: 'sent', createdAt: '2026-04-10T10:00:00' },
-  { id: '5', title: 'Update Kebijakan Komisi', body: 'Mulai 1 Mei, komisi driver naik menjadi Rp 7.000 per order.', target: 'Semua Driver', recipients: 14, status: 'sent', createdAt: '2026-04-05T08:30:00' },
-];
-
-const targetLabels: Record<string, string> = {
-  all: 'Semua Pengguna',
-  all_users: 'Hanya User',
-  all_drivers: 'Hanya Driver',
-};
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/ConfirmDialog';
+import { apiPost } from '@/lib/api';
 
 export default function BroadcastPage() {
   const [showModal, setShowModal] = useState(false);
-  const [target, setTarget] = useState('all');
+  const [target, setTarget] = useState('ALL');
   const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
+  const [body, setBody] = useState('');
+  const [history, setHistory] = useState<{ id: string; title: string; body: string; target: string; sent: number; date: string }[]>([]);
+  const toast = useToast();
+  const confirm = useConfirm();
 
-  const handleSend = () => {
-    // TODO: Call POST /admin/broadcast
-    setShowModal(false);
-    setTitle('');
-    setMessage('');
-    setTarget('all');
+  const handleSend = async () => {
+    if (!title.trim() || !body.trim()) { toast.error('Judul dan isi pesan wajib diisi'); return; }
+    const ok = await confirm({
+      title: 'Kirim Broadcast',
+      message: `Kirim notifikasi "${title}" ke ${target === 'ALL' ? 'semua pengguna' : target === 'USER' ? 'pelanggan' : 'driver'}?`,
+      confirmLabel: 'Kirim',
+    });
+    if (!ok) return;
+    try {
+      const res = await apiPost<{ message: string }>('/broadcast', { title, body, target });
+      toast.success(res.message || 'Broadcast terkirim');
+      setHistory(prev => [{ id: Date.now().toString(), title, body, target, sent: 0, date: new Date().toLocaleString('id-ID') }, ...prev]);
+      setShowModal(false);
+      setTitle(''); setBody('');
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengirim broadcast');
+    }
   };
 
   return (
@@ -37,7 +39,7 @@ export default function BroadcastPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Broadcast</h1>
-          <p className="page-subtitle">{mockBroadcasts.length} broadcast terkirim</p>
+          <p className="page-subtitle">Kirim notifikasi ke pengguna</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           <span className="material-symbols-outlined">send</span> Kirim Broadcast
@@ -45,90 +47,53 @@ export default function BroadcastPage() {
       </div>
       <div className="page-body">
         <div className="data-card">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Judul</th>
-                <th>Target</th>
-                <th>Penerima</th>
-                <th>Tanggal</th>
-                <th>Status</th>
-                <th style={{ width: 48 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockBroadcasts.map(b => (
-                <tr key={b.id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{b.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-hint)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.body}</div>
-                  </td>
-                  <td>
-                    <span className={`badge ${b.target === 'Semua Driver' ? 'blue' : b.target === 'Semua User' ? 'green' : 'gray'}`}>
-                      {b.target}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: 600 }}>{b.recipients.toLocaleString('id-ID')}</td>
-                  <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                    {new Date(b.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </td>
-                  <td>
-                    <span className="badge green">
-                      <span className="material-symbols-outlined">check_circle</span> Terkirim
-                    </span>
-                  </td>
-                  <td>
-                    <ActionMenu items={[
-                      { icon: 'visibility', label: 'Lihat Detail', onClick: () => {} },
-                      { icon: 'content_copy', label: 'Kirim Ulang', onClick: () => {} },
-                    ]} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {history.length === 0 ? (
+            <div className="empty-state">
+              <span className="material-symbols-outlined">campaign</span>
+              Belum ada riwayat broadcast
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead><tr><th>Judul</th><th>Target</th><th>Tanggal</th></tr></thead>
+              <tbody>
+                {history.map(h => (
+                  <tr key={h.id}>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{h.title}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{h.body.substring(0, 60)}...</div>
+                    </td>
+                    <td><span className="badge gray">{h.target}</span></td>
+                    <td style={{ fontSize: 13 }}>{h.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
-      {/* Modal Kirim Broadcast */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
             <div className="modal-header">
               <h3><span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>campaign</span> Kirim Broadcast</h3>
               <button className="btn btn-outline btn-icon" onClick={() => setShowModal(false)}><span className="material-symbols-outlined">close</span></button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label className="form-label">Target Penerima</label>
-                <CustomSelect
-                  value={target}
-                  onChange={setTarget}
-                  options={[
-                    { value: 'all', label: 'Semua Pengguna' },
-                    { value: 'all_users', label: 'Hanya User (Pelanggan)' },
-                    { value: 'all_drivers', label: 'Hanya Driver' },
-                  ]}
-                />
+                <label className="form-label">Target</label>
+                <CustomSelect value={target} onChange={setTarget} options={[
+                  { value: 'ALL', label: 'Semua Pengguna' },
+                  { value: 'USER', label: 'Pelanggan' },
+                  { value: 'DRIVER', label: 'Driver' },
+                ]} />
               </div>
-              <div className="form-group">
-                <label className="form-label">Judul Notifikasi</label>
-                <input className="form-input" placeholder="Masukkan judul" value={title} onChange={e => setTitle(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Isi Pesan</label>
-                <textarea className="form-input" rows={4} placeholder="Tulis pesan broadcast..." value={message} onChange={e => setMessage(e.target.value)} style={{ resize: 'vertical' }} />
-              </div>
-              <div style={{ padding: 12, background: 'var(--primary-surface)', borderRadius: 'var(--radius-md)', fontSize: 12, color: 'var(--primary-dark)' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }}>info</span>
-                Notifikasi akan dikirim ke semua perangkat {targetLabels[target]?.toLowerCase() || 'pengguna'} yang terdaftar.
-              </div>
+              <div className="form-group"><label className="form-label">Judul</label><input className="form-input" placeholder="Judul notifikasi" value={title} onChange={e => setTitle(e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Isi Pesan</label><textarea className="form-input" rows={4} placeholder="Tulis pesan broadcast..." value={body} onChange={e => setBody(e.target.value)} /></div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setShowModal(false)}>Batal</button>
-              <button className="btn btn-primary" onClick={handleSend} disabled={!title.trim() || !message.trim()}>
-                <span className="material-symbols-outlined">send</span> Kirim
-              </button>
+              <button className="btn btn-primary" onClick={handleSend}><span className="material-symbols-outlined">send</span> Kirim</button>
             </div>
           </div>
         </div>

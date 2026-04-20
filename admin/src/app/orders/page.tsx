@@ -1,86 +1,142 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ActionMenu from '@/components/ActionMenu';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/ConfirmDialog';
+import { apiGet, apiPut } from '@/lib/api';
 
-const mockOrders = [
-  { id: '1', code: 'DG-260420-1234', customer: 'Budi Santoso', phone: '0812-xxxx', items: 3, total: 88000, status: 'processing', payment: 'QRIS', driver: 'Driver A', date: '20 Apr 2026 10:30' },
-  { id: '2', code: 'DG-260420-5678', customer: 'Siti Rahayu', phone: '0813-xxxx', items: 5, total: 150000, status: 'inDelivery', payment: 'COD', driver: 'Driver B', date: '20 Apr 2026 10:15' },
-  { id: '3', code: 'DG-260420-9012', customer: 'Ahmad Pratama', phone: '0857-xxxx', items: 2, total: 45000, status: 'waitingPayment', payment: 'VA', driver: '-', date: '20 Apr 2026 10:00' },
-  { id: '4', code: 'DG-260420-3456', customer: 'Dewi Anggraeni', phone: '0821-xxxx', items: 1, total: 85000, status: 'completed', payment: 'QRIS', driver: 'Driver C', date: '20 Apr 2026 09:45' },
-  { id: '5', code: 'DG-260420-7890', customer: 'Rina Wijaya', phone: '0878-xxxx', items: 4, total: 120000, status: 'cancelled', payment: 'COD', driver: '-', date: '20 Apr 2026 09:30' },
-  { id: '6', code: 'DG-260419-1111', customer: 'Hendra Gunawan', phone: '0856-xxxx', items: 6, total: 200000, status: 'completed', payment: 'QRIS', driver: 'Driver A', date: '19 Apr 2026 16:00' },
-];
+interface Order {
+  id: string;
+  code: string;
+  orderStatus: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  grandTotal: number;
+  deliveryFee: number;
+  createdAt: string;
+  user: { name: string; phoneWa: string };
+  driver: { name: string; phoneWa: string } | null;
+  items: any[];
+}
 
 const statusMap: Record<string, { label: string; badge: string; icon: string }> = {
-  waitingPayment: { label: 'Menunggu Bayar', badge: 'orange', icon: 'schedule' },
-  received: { label: 'Diterima', badge: 'blue', icon: 'inbox' },
-  processing: { label: 'Diproses', badge: 'purple', icon: 'pending' },
-  waitingDriver: { label: 'Tunggu Driver', badge: 'orange', icon: 'hail' },
-  inDelivery: { label: 'Dikirim', badge: 'green', icon: 'local_shipping' },
-  delivered: { label: 'Diantar', badge: 'green', icon: 'package_2' },
-  completed: { label: 'Selesai', badge: 'green', icon: 'check_circle' },
-  cancelled: { label: 'Batal', badge: 'red', icon: 'cancel' },
-  problem: { label: 'Masalah', badge: 'orange', icon: 'warning' },
+  WAITING_PAYMENT: { label: 'Menunggu Bayar', badge: 'orange', icon: 'schedule' },
+  RECEIVED: { label: 'Diterima', badge: 'blue', icon: 'inbox' },
+  PROCESSING: { label: 'Diproses', badge: 'purple', icon: 'pending' },
+  WAITING_DRIVER: { label: 'Tunggu Driver', badge: 'orange', icon: 'hail' },
+  IN_DELIVERY: { label: 'Dikirim', badge: 'green', icon: 'local_shipping' },
+  DELIVERED: { label: 'Diantar', badge: 'green', icon: 'package_2' },
+  COMPLETED: { label: 'Selesai', badge: 'green', icon: 'check_circle' },
+  CANCELLED: { label: 'Batal', badge: 'red', icon: 'cancel' },
+  PROBLEM: { label: 'Masalah', badge: 'orange', icon: 'warning' },
 };
 
 const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
 export default function OrdersPage() {
-  const [filter, setFilter] = useState('all');
-  const filtered = filter === 'all' ? mockOrders : mockOrders.filter(o => o.status === filter);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('ALL');
+  const toast = useToast();
+  const confirm = useConfirm();
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const statusParam = filter !== 'ALL' ? `?status=${filter}` : '';
+      const res = await apiGet<{ data: Order[] }>(`/orders${statusParam}`);
+      setOrders(res.data || []);
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memuat pesanan');
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleUpdateStatus = async (id: string, status: string, label: string) => {
+    const ok = await confirm({
+      title: `Ubah Status ke "${label}"`,
+      message: `Yakin ingin mengubah status pesanan ini?`,
+      confirmLabel: 'Ya, Ubah',
+      danger: status === 'CANCELLED',
+    });
+    if (!ok) return;
+    try {
+      await apiPut(`/orders/${id}/status`, { status });
+      toast.success(`Status diubah ke "${label}"`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengubah status');
+    }
+  };
 
   return (
     <>
       <div className="page-header">
         <div>
           <h1 className="page-title">Pesanan</h1>
-          <p className="page-subtitle">{mockOrders.length} total pesanan</p>
+          <p className="page-subtitle">{orders.length} pesanan</p>
         </div>
       </div>
       <div className="page-body">
         <div className="chip-group">
-          {['all', 'waitingPayment', 'processing', 'inDelivery', 'completed', 'cancelled'].map(s => (
+          {['ALL', 'WAITING_PAYMENT', 'PROCESSING', 'IN_DELIVERY', 'COMPLETED', 'CANCELLED'].map(s => (
             <button key={s} className={`chip ${filter === s ? 'active' : ''}`} onClick={() => setFilter(s)}>
-              {s === 'all' ? 'Semua' : statusMap[s]?.label}
+              {s === 'ALL' ? 'Semua' : statusMap[s]?.label || s}
             </button>
           ))}
         </div>
 
         <div className="data-card">
-          <table className="data-table">
-            <thead>
-              <tr><th>Kode</th><th>Pelanggan</th><th>Items</th><th>Total</th><th>Pembayaran</th><th>Driver</th><th>Status</th><th style={{ width: 48 }}></th></tr>
-            </thead>
-            <tbody>
-              {filtered.map(o => (
-                <tr key={o.id}>
-                  <td style={{ fontWeight: 600 }}>{o.code}</td>
-                  <td>
-                    <div>{o.customer}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{o.phone}</div>
-                  </td>
-                  <td>{o.items} item</td>
-                  <td style={{ fontWeight: 700 }}>{fmt(o.total)}</td>
-                  <td><span className="badge gray">{o.payment}</span></td>
-                  <td>{o.driver}</td>
-                  <td><span className={`badge ${statusMap[o.status]?.badge}`}><span className="material-symbols-outlined">{statusMap[o.status]?.icon}</span> {statusMap[o.status]?.label}</span></td>
-                  <td>
-                    <ActionMenu items={[
-                      { icon: 'visibility', label: 'Detail Pesanan', onClick: () => {} },
-                      { icon: 'receipt_long', label: 'Cetak Invoice', onClick: () => {} },
-                      ...(o.status === 'processing' ? [
-                        { icon: 'local_shipping', label: 'Assign Driver', onClick: () => {} },
-                      ] : []),
-                      ...(o.status !== 'completed' && o.status !== 'cancelled' ? [
-                        { icon: 'cancel', label: 'Batalkan', onClick: () => {}, danger: true },
-                      ] : []),
-                    ]} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {loading ? (
+            <div className="loading-center"><div className="spinner" /> Memuat pesanan...</div>
+          ) : orders.length === 0 ? (
+            <div className="empty-state">
+              <span className="material-symbols-outlined">receipt_long</span>
+              Belum ada pesanan
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr><th>Kode</th><th>Pelanggan</th><th>Items</th><th>Total</th><th>Pembayaran</th><th>Driver</th><th>Status</th><th style={{ width: 48 }}></th></tr>
+              </thead>
+              <tbody>
+                {orders.map(o => {
+                  const sm = statusMap[o.orderStatus] || { label: o.orderStatus, badge: 'gray', icon: 'help' };
+                  return (
+                    <tr key={o.id}>
+                      <td style={{ fontWeight: 600 }}>{o.code}</td>
+                      <td>
+                        <div>{o.user?.name || '-'}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{o.user?.phoneWa || ''}</div>
+                      </td>
+                      <td>{o.items?.length || 0} item</td>
+                      <td style={{ fontWeight: 700 }}>{fmt(o.grandTotal)}</td>
+                      <td><span className="badge gray">{o.paymentMethod}</span></td>
+                      <td>{o.driver?.name || '-'}</td>
+                      <td><span className={`badge ${sm.badge}`}><span className="material-symbols-outlined">{sm.icon}</span> {sm.label}</span></td>
+                      <td>
+                        <ActionMenu items={[
+                          ...(o.orderStatus === 'RECEIVED' ? [
+                            { icon: 'pending', label: 'Proses', onClick: () => handleUpdateStatus(o.id, 'PROCESSING', 'Diproses') },
+                          ] : []),
+                          ...(o.orderStatus === 'PROCESSING' ? [
+                            { icon: 'local_shipping', label: 'Siap Kirim', onClick: () => handleUpdateStatus(o.id, 'WAITING_DRIVER', 'Tunggu Driver') },
+                          ] : []),
+                          ...(!['COMPLETED', 'CANCELLED'].includes(o.orderStatus) ? [
+                            { icon: 'cancel', label: 'Batalkan', onClick: () => handleUpdateStatus(o.id, 'CANCELLED', 'Batal'), danger: true },
+                          ] : []),
+                        ]} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </>

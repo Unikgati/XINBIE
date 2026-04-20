@@ -1,54 +1,97 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import ActionMenu from '@/components/ActionMenu';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/ConfirmDialog';
+import { apiGet, apiPut } from '@/lib/api';
 
-const mockUsers = [
-  { id: '1', name: 'Budi Santoso', email: 'budi@email.com', phone: '0812-xxxx', orders: 15, total: 'Rp 1.2jt', joined: '1 Jan 2026', active: true },
-  { id: '2', name: 'Siti Rahayu', email: 'siti@email.com', phone: '0813-xxxx', orders: 8, total: 'Rp 650K', joined: '15 Feb 2026', active: true },
-  { id: '3', name: 'Ahmad Pratama', email: 'ahmad@email.com', phone: '0857-xxxx', orders: 3, total: 'Rp 180K', joined: '1 Mar 2026', active: true },
-  { id: '4', name: 'Dewi Anggraeni', email: 'dewi@email.com', phone: '0821-xxxx', orders: 22, total: 'Rp 2.5jt', joined: '10 Dec 2025', active: true },
-  { id: '5', name: 'Rina Wijaya', email: 'rina@email.com', phone: '0878-xxxx', orders: 0, total: 'Rp 0', joined: '18 Apr 2026', active: false },
-];
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phoneWa: string;
+  isActive: boolean;
+  createdAt: string;
+  avatarUrl?: string;
+}
 
 export default function UsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+  const confirm = useConfirm();
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await apiGet<{ data: User[] }>('/users');
+      setUsers(res.data || []);
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memuat data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleToggle = async (u: User) => {
+    const action = u.isActive ? 'Nonaktifkan' : 'Aktifkan';
+    const ok = await confirm({
+      title: `${action} User`,
+      message: `${action} akun "${u.name}"?${u.isActive ? ' User tidak bisa login setelah dinonaktifkan.' : ''}`,
+      confirmLabel: action,
+      danger: u.isActive,
+    });
+    if (!ok) return;
+    try {
+      await apiPut(`/users/${u.id}/toggle`, {});
+      toast.success(`"${u.name}" berhasil di${action.toLowerCase()}`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengubah status');
+    }
+  };
+
   return (
     <>
       <div className="page-header">
         <div>
           <h1 className="page-title">Pelanggan</h1>
-          <p className="page-subtitle">{mockUsers.length} pelanggan terdaftar &bull; {mockUsers.filter(u => u.active).length} aktif</p>
+          <p className="page-subtitle">{users.length} pelanggan terdaftar</p>
         </div>
       </div>
       <div className="page-body">
         <div className="data-card">
-          <table className="data-table">
-            <thead><tr><th>Pelanggan</th><th>Kontak</th><th>Pesanan</th><th>Total Belanja</th><th>Bergabung</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
-            <tbody>
-              {mockUsers.map(u => (
-                <tr key={u.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div className="avatar-circle">{u.name.split(' ').map(n => n[0]).join('')}</div>
-                      <div style={{ fontWeight: 600 }}>{u.name}</div>
-                    </div>
-                  </td>
-                  <td><div style={{ fontSize: 13 }}>{u.email}</div><div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{u.phone}</div></td>
-                  <td>{u.orders}</td>
-                  <td style={{ fontWeight: 700 }}>{u.total}</td>
-                  <td style={{ color: 'var(--text-hint)', fontSize: 13 }}>{u.joined}</td>
-                  <td><span className={`badge ${u.active ? 'green' : 'gray'}`}>{u.active ? 'Aktif' : 'Nonaktif'}</span></td>
-                  <td>
-                    <ActionMenu items={[
-                      { icon: 'person', label: 'Detail Pelanggan', onClick: () => {} },
-                      { icon: 'history', label: 'Riwayat Pesanan', onClick: () => {} },
-                      { icon: 'chat', label: 'Hubungi via WA', onClick: () => {} },
-                      { icon: 'block', label: 'Nonaktifkan', onClick: () => {}, danger: true },
-                    ]} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {loading ? (
+            <div className="loading-center"><div className="spinner" /> Memuat data pelanggan...</div>
+          ) : users.length === 0 ? (
+            <div className="empty-state">
+              <span className="material-symbols-outlined">group</span>
+              Belum ada pelanggan terdaftar
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead><tr><th>Nama</th><th>Email</th><th>WhatsApp</th><th>Bergabung</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u.id}>
+                    <td style={{ fontWeight: 600 }}>{u.name}</td>
+                    <td style={{ fontSize: 13 }}>{u.email}</td>
+                    <td style={{ fontSize: 13 }}>{u.phoneWa || '-'}</td>
+                    <td style={{ fontSize: 13 }}>{new Date(u.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                    <td><span className={`badge ${u.isActive ? 'green' : 'red'}`}>{u.isActive ? 'Aktif' : 'Nonaktif'}</span></td>
+                    <td>
+                      <ActionMenu items={[
+                        { icon: u.isActive ? 'person_off' : 'person', label: u.isActive ? 'Nonaktifkan' : 'Aktifkan', onClick: () => handleToggle(u), danger: u.isActive },
+                      ]} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </>
