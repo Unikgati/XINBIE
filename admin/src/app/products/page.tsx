@@ -83,10 +83,10 @@ export default function ProductsPage() {
     try {
       setLoading(true);
       const [prodRes, catRes] = await Promise.all([
-        apiGet<Product[]>('/products'),
+        apiGet<any>('/products?limit=100'), // Explicitly pass 100 limit since pagination wrapper is used
         apiGet<Category[]>('/categories'),
       ]);
-      setProducts(Array.isArray(prodRes) ? prodRes : []);
+      setProducts(prodRes?.data ? prodRes.data : Array.isArray(prodRes) ? prodRes : []);
       setCategories(Array.isArray(catRes) ? catRes : []);
     } catch (err: any) {
       toast.error(err.message || 'Gagal memuat data');
