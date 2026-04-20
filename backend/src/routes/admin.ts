@@ -16,6 +16,12 @@ router.post('/products', upload.array('images', 5), admin.adminCreateProduct);
 router.put('/products/:id', upload.array('images', 5), admin.adminUpdateProduct);
 router.delete('/products/:id', admin.adminDeleteProduct);
 
+// Product Variants
+router.get('/products/:productId/variants', admin.adminGetVariants);
+router.post('/products/:productId/variants', upload.single('image'), admin.adminCreateVariant);
+router.put('/variants/:id', upload.single('image'), admin.adminUpdateVariant);
+router.delete('/variants/:id', admin.adminDeleteVariant);
+
 // Categories
 router.get('/categories', admin.adminGetCategories);
 router.post('/categories', upload.single('icon'), admin.adminCreateCategory);

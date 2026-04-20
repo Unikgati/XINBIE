@@ -85,7 +85,11 @@ export async function adminGetProducts(req: AuthRequest, res: Response, next: Ne
       prisma.product.findMany({
         where, skip, take: parseInt(limit as string),
         orderBy: { createdAt: 'desc' },
-        include: { category: { select: { name: true } }, _count: { select: { orderItems: true } } },
+        include: {
+          category: { select: { name: true } },
+          variants: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } },
+          _count: { select: { orderItems: true } },
+        },
       }),
       prisma.product.count({ where }),
     ]);
@@ -143,6 +147,70 @@ export async function adminDeleteProduct(req: AuthRequest, res: Response, next: 
       data: { isActive: false },
     });
     res.json({ message: 'Produk dinonaktifkan' });
+  } catch (err) { next(err); }
+}
+
+// ═══════════════════════════════════════
+// Admin Product Variants CRUD
+// ═══════════════════════════════════════
+
+export async function adminGetVariants(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const variants = await prisma.productVariant.findMany({
+      where: { productId: req.params.productId },
+      orderBy: { sortOrder: 'asc' },
+    });
+    res.json(variants);
+  } catch (err) { next(err); }
+}
+
+export async function adminCreateVariant(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    let imageUrl: string | undefined;
+    if (req.file) imageUrl = await processAndUploadImage(req.file, 'variants');
+
+    const variant = await prisma.productVariant.create({
+      data: {
+        productId: req.params.productId,
+        name: req.body.name,
+        sku: req.body.sku || null,
+        price: parseInt(req.body.price) || 0,
+        costPrice: parseInt(req.body.costPrice) || 0,
+        priceAddition: parseInt(req.body.priceAddition) || 0,
+        stockQty: parseInt(req.body.stockQty) || 0,
+        imageUrl,
+        sortOrder: parseInt(req.body.sortOrder) || 0,
+      },
+    });
+    res.status(201).json(variant);
+  } catch (err) { next(err); }
+}
+
+export async function adminUpdateVariant(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const data: any = { ...req.body };
+    if (req.file) data.imageUrl = await processAndUploadImage(req.file, 'variants');
+    if (data.price) data.price = parseInt(data.price);
+    if (data.costPrice) data.costPrice = parseInt(data.costPrice);
+    if (data.priceAddition) data.priceAddition = parseInt(data.priceAddition);
+    if (data.stockQty) data.stockQty = parseInt(data.stockQty);
+    if (data.sortOrder) data.sortOrder = parseInt(data.sortOrder);
+
+    const variant = await prisma.productVariant.update({
+      where: { id: req.params.id },
+      data,
+    });
+    res.json(variant);
+  } catch (err) { next(err); }
+}
+
+export async function adminDeleteVariant(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    await prisma.productVariant.update({
+      where: { id: req.params.id },
+      data: { isActive: false },
+    });
+    res.json({ message: 'Varian dinonaktifkan' });
   } catch (err) { next(err); }
 }
 
