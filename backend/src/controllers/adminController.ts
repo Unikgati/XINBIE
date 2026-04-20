@@ -98,6 +98,29 @@ export async function adminGetProducts(req: AuthRequest, res: Response, next: Ne
   } catch (err) { next(err); }
 }
 
+const parseProductData = (body: any) => {
+  const data = { ...body };
+  // Remap 'stock' to 'stockQty'
+  if (data.stock !== undefined) {
+    data.stockQty = parseInt(data.stock) || 0;
+    delete data.stock;
+  }
+  // Convert numbers
+  if (data.price !== undefined) data.price = parseInt(data.price) || 0;
+  if (data.costPrice !== undefined) data.costPrice = parseInt(data.costPrice) || 0;
+  if (data.discountPrice !== undefined) data.discountPrice = parseInt(data.discountPrice) || null;
+  if (data.discountPercent !== undefined) data.discountPercent = parseInt(data.discountPercent) || null;
+  if (data.weightGram !== undefined) data.weightGram = parseInt(data.weightGram) || null;
+  if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 1;
+  
+  // Convert booleans
+  if (data.isActive !== undefined) data.isActive = String(data.isActive) === 'true';
+  if (data.isFeatured !== undefined) data.isFeatured = String(data.isFeatured) === 'true';
+  if (data.isUnlimitedStock !== undefined) data.isUnlimitedStock = String(data.isUnlimitedStock) === 'true';
+
+  return data;
+};
+
 export async function adminCreateProduct(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     let images: string[] = [];
@@ -105,14 +128,10 @@ export async function adminCreateProduct(req: AuthRequest, res: Response, next: 
       images = await processAndUploadImages(req.files, 'products');
     }
 
-    const product = await prisma.product.create({
-      data: {
-        ...req.body,
-        images,
-        price: parseInt(req.body.price),
-        costPrice: req.body.costPrice ? parseInt(req.body.costPrice) : 0,
-      },
-    });
+    const data = parseProductData(req.body);
+    data.images = images;
+
+    const product = await prisma.product.create({ data });
 
     res.status(201).json(product);
   } catch (err) { next(err); }
@@ -125,11 +144,8 @@ export async function adminUpdateProduct(req: AuthRequest, res: Response, next: 
       images = await processAndUploadImages(req.files, 'products');
     }
 
-    const data: any = { ...req.body };
+    const data = parseProductData(req.body);
     if (images) data.images = images;
-    if (data.price) data.price = parseInt(data.price);
-    if (data.costPrice) data.costPrice = parseInt(data.costPrice);
-    if (data.discountPrice) data.discountPrice = parseInt(data.discountPrice);
 
     const product = await prisma.product.update({
       where: { id: req.params.id },
