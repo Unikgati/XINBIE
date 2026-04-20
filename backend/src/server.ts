@@ -27,7 +27,7 @@ const server = createServer(app);
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: [config.adminUrl, 'http://localhost:3000'], credentials: true }));
+app.use(cors({ origin: (origin, callback) => callback(null, origin || '*'), credentials: true }));
 app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
