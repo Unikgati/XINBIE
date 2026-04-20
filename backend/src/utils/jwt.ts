@@ -1,14 +1,16 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 
+import crypto from 'crypto';
+
 export function generateAccessToken(userId: string, role: string): string {
-  return jwt.sign({ userId, role }, config.jwt.secret, {
+  return jwt.sign({ userId, role, jti: crypto.randomUUID() }, config.jwt.secret, {
     expiresIn: config.jwt.accessExpiry as any,
   });
 }
 
 export function generateRefreshToken(userId: string, role: string): string {
-  return jwt.sign({ userId, role }, config.jwt.secret, {
+  return jwt.sign({ userId, role, jti: crypto.randomUUID() }, config.jwt.secret, {
     expiresIn: config.jwt.refreshExpiry as any,
   });
 }
