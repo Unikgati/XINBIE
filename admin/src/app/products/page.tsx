@@ -323,36 +323,16 @@ export default function ProductsPage() {
                               <div style={{ textDecoration: 'line-through', color: 'var(--text-hint)', fontSize: 12 }}>{fmt(p.price)}</div>
                               <div style={{ fontWeight: 700, color: 'var(--primary-dark)' }}>{fmt(p.discountPrice)}</div>
                             </div>
-                          ) : hasVariants ? (
-                            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                              {(() => {
-                                const vals = p.variants.map(v => v.price);
-                                const min = Math.min(...vals); const max = Math.max(...vals);
-                                return min === max ? <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{fmt(min)}</span> : `${fmt(min)} — ${fmt(max)}`;
-                              })()}
-                            </div>
                           ) : <div style={{ fontWeight: 600 }}>{fmt(p.price)}</div>}
                         </td>
                         <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                          {hasVariants ? (
-                            <span>
-                              {(() => {
-                                const vals = p.variants.map(v => v.costPrice);
-                                const min = Math.min(...vals); const max = Math.max(...vals);
-                                return min === max ? fmt(min) : `${fmt(min)} — ${fmt(max)}`;
-                              })()}
-                            </span>
-                          ) : fmt(p.costPrice || 0)}
+                          {fmt(p.costPrice || 0)}
                         </td>
                         <td>
                           <div>
                             <span className={`badge ${marginColor(margin)}`}>{margin}%</span>
                             <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 2 }}>
-                              {hasVariants ? (() => {
-                                const profits = p.variants.map(v => v.price - v.costPrice);
-                                const minP = Math.min(...profits); const maxP = Math.max(...profits);
-                                return minP === maxP ? `+${fmt(minP)}` : `+${fmt(minP)} — +${fmt(maxP)}`;
-                              })() : `+${fmt(profit)}`}
+                              +{fmt(profit)}
                             </div>
                           </div>
                         </td>
