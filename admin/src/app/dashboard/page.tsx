@@ -74,24 +74,36 @@ export default function DashboardPage() {
       <div className="page-body">
         <div className="stat-grid">
           <div className="stat-card">
-            <div className="stat-card-header"><span className="stat-card-label">Revenue Bulan Ini</span><div className="stat-card-icon blue"><span className="material-symbols-outlined">payments</span></div></div>
-            <div className="stat-card-value">{fmt(stats.monthRevenue)}</div>
-            <div className="stat-card-change positive">{stats.monthOrders} pesanan bulan ini</div>
+            <div className="stat-icon blue"><span className="material-symbols-outlined">payments</span></div>
+            <div>
+              <div className="stat-label">Revenue Bulan Ini</div>
+              <div className="stat-value">{fmt(stats.monthRevenue)}</div>
+              <div className="stat-change up">{stats.monthOrders} pesanan bulan ini</div>
+            </div>
           </div>
           <div className="stat-card">
-            <div className="stat-card-header"><span className="stat-card-label">Gross Profit</span><div className="stat-card-icon green"><span className="material-symbols-outlined">trending_up</span></div></div>
-            <div className="stat-card-value">{fmt(stats.grossProfit)}</div>
-            <div className="stat-card-change positive">Margin {stats.marginPercent}%</div>
+            <div className="stat-icon green"><span className="material-symbols-outlined">trending_up</span></div>
+            <div>
+              <div className="stat-label">Gross Profit</div>
+              <div className="stat-value">{fmt(stats.grossProfit)}</div>
+              <div className="stat-change up">Margin {stats.marginPercent}%</div>
+            </div>
           </div>
           <div className="stat-card">
-            <div className="stat-card-header"><span className="stat-card-label">Pesanan Hari Ini</span><div className="stat-card-icon orange"><span className="material-symbols-outlined">shopping_cart</span></div></div>
-            <div className="stat-card-value">{stats.todayOrders}</div>
-            <div className="stat-card-change">{stats.activeOrders} sedang aktif</div>
+            <div className="stat-icon orange"><span className="material-symbols-outlined">shopping_cart</span></div>
+            <div>
+              <div className="stat-label">Pesanan Hari Ini</div>
+              <div className="stat-value">{stats.todayOrders}</div>
+              <div className="stat-change">{stats.activeOrders} sedang aktif</div>
+            </div>
           </div>
           <div className="stat-card">
-            <div className="stat-card-header"><span className="stat-card-label">Pelanggan</span><div className="stat-card-icon purple"><span className="material-symbols-outlined">group</span></div></div>
-            <div className="stat-card-value">{stats.totalUsers}</div>
-            <div className="stat-card-change">{stats.totalDrivers} driver • {stats.totalProducts} produk</div>
+            <div className="stat-icon purple"><span className="material-symbols-outlined">group</span></div>
+            <div>
+              <div className="stat-label">Pelanggan</div>
+              <div className="stat-value">{stats.totalUsers}</div>
+              <div className="stat-change">{stats.totalDrivers} driver • {stats.totalProducts} produk</div>
+            </div>
           </div>
         </div>
 
