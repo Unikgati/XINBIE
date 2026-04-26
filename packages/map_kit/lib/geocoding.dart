@@ -8,7 +8,7 @@ class Geocoding {
       : _nominatimUrl = nominatimUrl ?? 'https://nominatim.openstreetmap.org';
 
   final String _nominatimUrl;
-  final _dio = Dio();
+  final _dio = Dio(BaseOptions(headers: {'User-Agent': 'com.dapurgizi.app'}));
 
   /// Reverse geocode: LatLng → address string.
   Future<String?> reverseGeocode(LatLng point) async {

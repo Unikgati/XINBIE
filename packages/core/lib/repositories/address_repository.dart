@@ -29,10 +29,10 @@ class AddressRepository {
     final response = await _api.post(ApiEndpoints.addresses, data: {
       'label': label,
       'recipientName': recipientName,
-      'phone': phone,
+      'phoneWa': phone,
       'fullAddress': fullAddress,
-      if (latitude != null) 'latitude': latitude,
-      if (longitude != null) 'longitude': longitude,
+      if (latitude != null) 'lat': latitude,
+      if (longitude != null) 'lng': longitude,
       if (notes != null) 'notes': notes,
       'isPrimary': isPrimary,
     });

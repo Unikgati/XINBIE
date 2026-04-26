@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ui_kit/ui_kit.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -9,25 +10,27 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
+class _OnboardingPageData {
+  final String mascot;
+  final String title;
+  final String subtitle;
+  _OnboardingPageData(this.mascot, this.title, this.subtitle);
+}
+
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
   int _page = 0;
 
-  final _pages = const [
-    _OnboardingPage(
-      icon: Icons.eco,
-      title: 'Bahan Segar & Berkualitas',
-      description: 'Pilihan sayur, buah, dan bahan dapur segar langsung dari petani pilihan',
+  final _pages = [
+    _OnboardingPageData(
+      'assets/images/mascot.png',
+      'Hi, Selamat Datang!',
+      'Pesan bahan baku, snack, dan minuman dengan mudah untuk dapur Anda.',
     ),
-    _OnboardingPage(
-      icon: Icons.local_shipping,
-      title: 'Antartar Cepat',
-      description: 'Diantar langsung ke rumah dengan jadwal yang bisa kamu pilih',
-    ),
-    _OnboardingPage(
-      icon: Icons.favorite,
-      title: 'Hidup Lebih Sehat',
-      description: 'Mulai pola makan sehat dengan bahan dapur bergizi setiap hari',
+    _OnboardingPageData(
+      'assets/images/mascot_2.png',
+      'Bahan Berkualitas',
+      'Pilihan sayur, buah, dan bahan dapur terbaik langsung dari petani pilihan.',
     ),
   ];
 
@@ -39,141 +42,171 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomSheetHeight = MediaQuery.of(context).size.height * 0.45;
+
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.onboardingGradient),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Skip button
-              Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: () => context.go('/login'),
-                  child: Text(
-                    'Lewati',
-                    style: AppTypography.labelLarge.copyWith(
-                      color: AppColors.textOnPrimary.withValues(alpha: 0.8),
-                    ),
+      body: Stack(
+        children: [
+          // Layer 1: Gradient Background
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: AppColors.onboardingGradient,
+            ),
+          ),
+
+          // Logo at top left
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 24, left: 24),
+                child: SvgPicture.asset(
+                  'assets/images/logo.svg',
+                  height: 32, // Ukuran logo dikecilkan
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+
+          // Layer 2: Sliding Mascot (Behind the bottom sheet)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: bottomSheetHeight - 60, // Membiarkan maskot tenggelam 60px di belakang sheet putih
+            child: PageView.builder(
+              controller: _controller,
+              onPageChanged: (i) => setState(() => _page = i),
+              itemCount: _pages.length,
+              itemBuilder: (context, index) {
+                return Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Image.asset(
+                    _pages[index].mascot,
+                    height: bottomSheetHeight, // Reuse the calculated MediaQuery value (0.45 height)
+                    fit: BoxFit.contain,
+                    gaplessPlayback: true, // Prevents flickering when paging back
                   ),
-                ),
-              ),
+                );
+              },
+            ),
+          ),
 
-              // Pages
-              Expanded(
-                child: PageView.builder(
-                  controller: _controller,
-                  onPageChanged: (i) => setState(() => _page = i),
-                  itemCount: _pages.length,
-                  itemBuilder: (_, i) => _pages[i],
-                ),
+          // Layer 3: Fixed White Bottom Sheet with Text & Actions
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: bottomSheetHeight,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
               ),
-
-              // Dots + Button
-              Padding(
-                padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(32, 40, 32, 40),
+              child: SafeArea(
+                top: false,
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Dot indicators
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(
-                        _pages.length,
-                        (i) => AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          height: 8,
-                          width: _page == i ? 24 : 8,
-                          decoration: BoxDecoration(
-                            color: _page == i
-                                ? AppColors.textOnPrimary
-                                : AppColors.textOnPrimary.withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+                    // Text Area (Crossfade Animated)
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Column(
+                          key: ValueKey<int>(_page),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _pages[_page].title,
+                              style: AppTypography.h1.copyWith(
+                                color: AppColors.textGreeting,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                height: 1.2,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _pages[_page].subtitle,
+                              style: AppTypography.bodyLarge.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
 
-                    // Action button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (_page < _pages.length - 1) {
-                            _controller.nextPage(
-                              duration: const Duration(milliseconds: 400),
-                              curve: Curves.easeInOut,
-                            );
-                          } else {
-                            context.go('/login');
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.surface,
-                          foregroundColor: AppColors.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                    // Setup actions (Dots & Button)
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Dots Slider
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            _pages.length,
+                            (i) => AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              height: 8,
+                              width: _page == i ? 24 : 8,
+                              decoration: BoxDecoration(
+                                color: _page == i
+                                    ? AppColors.primaryAction
+                                    : AppColors.primaryLight.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
                           ),
                         ),
-                        child: Text(
-                          _page < _pages.length - 1 ? 'Lanjut' : 'Mulai Belanja',
-                          style: AppTypography.button.copyWith(color: AppColors.primary),
+                        const SizedBox(height: 32),
+
+                        // Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: () {
+                              if (_page < _pages.length - 1) {
+                                _controller.nextPage(
+                                  duration: const Duration(milliseconds: 400),
+                                  curve: Curves.easeInOut,
+                                );
+                              } else {
+                                context.go('/home');
+                              }
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.primaryAction,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                              ),
+                              splashFactory: NoSplash.splashFactory,
+                              overlayColor: Colors.white.withValues(alpha: 0.1),
+                            ),
+                            child: Text(
+                              _page < _pages.length - 1 ? 'Lanjut' : 'Mulai Belanja',
+                              style: AppTypography.button.copyWith(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OnboardingPage extends StatelessWidget {
-  const _OnboardingPage({
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 140,
-            height: 140,
-            decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 72, color: AppColors.textOnPrimary),
-          ),
-          const SizedBox(height: 48),
-          Text(
-            title,
-            style: AppTypography.h2.copyWith(color: AppColors.textOnPrimary),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            description,
-            style: AppTypography.bodyLarge.copyWith(
-              color: AppColors.textOnPrimary.withValues(alpha: 0.9),
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

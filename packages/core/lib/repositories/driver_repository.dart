@@ -105,6 +105,24 @@ class DriverRepository {
     });
     return response.data as Map<String, dynamic>;
   }
+
+  Future<Map<String, dynamic>> getWallet() async {
+    final response = await _api.get(ApiEndpoints.driverWallet);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<void> requestWithdrawal(int amount) async {
+    await _api.post(ApiEndpoints.driverWithdrawal, data: {'amount': amount});
+  }
+
+  Future<Map<String, dynamic>> getBankInfo() async {
+    final response = await _api.get(ApiEndpoints.driverBank);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<void> updateBankInfo(Map<String, dynamic> data) async {
+    await _api.put(ApiEndpoints.driverBank, data: data);
+  }
 }
 
 final driverRepositoryProvider = Provider<DriverRepository>((ref) {

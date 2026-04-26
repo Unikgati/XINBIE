@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import ActionMenu from '@/components/ActionMenu';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { TableSkeleton } from '@/components/Skeleton';
+import { Pagination } from '@/components/Pagination';
 import { apiGet, apiPut } from '@/lib/api';
 
 interface User {
@@ -19,20 +21,23 @@ interface User {
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const toast = useToast();
   const confirm = useConfirm();
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiGet<{ data: User[] }>('/users');
+      const res = await apiGet<{ data: User[], meta: any }>(`/users?limit=20&page=${page}`);
       setUsers(res.data || []);
+      setTotalPages(res.meta?.totalPages || 1);
     } catch (err: any) {
       toast.error(err.message || 'Gagal memuat data');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -65,13 +70,14 @@ export default function UsersPage() {
       <div className="page-body">
         <div className="data-card">
           {loading ? (
-            <div className="loading-center"><div className="spinner" /> Memuat data pelanggan...</div>
+            <TableSkeleton rows={8} columns={5} />
           ) : users.length === 0 ? (
             <div className="empty-state">
               <span className="material-symbols-outlined">group</span>
               Belum ada pelanggan terdaftar
             </div>
           ) : (
+            <div className="table-responsive">
             <table className="data-table">
               <thead><tr><th>Nama</th><th>Email</th><th>WhatsApp</th><th>Bergabung</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
               <tbody>
@@ -91,6 +97,11 @@ export default function UsersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
+          )}
+          
+          {!loading && users.length > 0 && totalPages > 1 && (
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
           )}
         </div>
       </div>

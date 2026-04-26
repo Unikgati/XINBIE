@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ui_kit/ui_kit.dart';
+import 'package:core/core.dart';
 import 'package:core/utils/validators.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -28,16 +30,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _register() {
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    // TODO: Call auth repository
-    Future.delayed(const Duration(seconds: 1), () {
+    
+    try {
+      await ref.read(authRepositoryProvider).register(
+        name: _nameCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text,
+      );
+      
+      if (mounted) {
+        final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+        final redirectParam = redirect != null ? '&redirect=${Uri.encodeComponent(redirect)}' : '';
+        context.push('/otp?email=${_emailCtrl.text.trim()}&type=verification$redirectParam');
+      }
+    } catch (e) {
+      if (mounted) {
+        String errMsg = 'Terjadi kesalahan, silakan coba lagi.';
+        if (e.toString().contains('DioException') || e is ApiException) {
+          if (e.toString().contains('timeout')) {
+            errMsg = 'Koneksi terputus. Periksa internet Anda.';
+          } else if (e is ApiException) {
+            errMsg = e.message;
+          } else {
+             errMsg = 'Gagal terhubung ke server.';
+          }
+        } else {
+          errMsg = e.toString();
+        }
+
+        DgSnackbar.showError(context, message: errMsg);
+      }
+    } finally {
       if (mounted) {
         setState(() => _loading = false);
-        context.push('/otp?email=${_emailCtrl.text}&type=verification');
       }
-    });
+    }
   }
 
   @override

@@ -17,14 +17,44 @@ class DgStatusBadge extends StatelessWidget {
         color: _bgColor,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        '${status.emoji} ${status.label}',
-        style: AppTypography.labelSmall.copyWith(
-          color: _textColor,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_icon, color: _textColor, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            status.label,
+            style: AppTypography.labelSmall.copyWith(
+              color: _textColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  IconData get _icon {
+    switch (status) {
+      case OrderStatus.waitingPayment:
+        return Icons.account_balance_wallet_outlined;
+      case OrderStatus.received:
+        return Icons.receipt_long_outlined;
+      case OrderStatus.processing:
+        return Icons.inventory_2_outlined;
+      case OrderStatus.waitingDriver:
+        return Icons.two_wheeler_outlined;
+      case OrderStatus.inDelivery:
+        return Icons.local_shipping_outlined;
+      case OrderStatus.delivered:
+        return Icons.where_to_vote_outlined;
+      case OrderStatus.completed:
+        return Icons.check_circle_outline;
+      case OrderStatus.cancelled:
+        return Icons.cancel_outlined;
+      case OrderStatus.problem:
+        return Icons.error_outline;
+    }
   }
 
   Color get _bgColor {

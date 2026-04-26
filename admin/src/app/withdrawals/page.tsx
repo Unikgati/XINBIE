@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import ActionMenu from '@/components/ActionMenu';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { TableSkeleton } from '@/components/Skeleton';
+import { Pagination } from '@/components/Pagination';
 import { apiGet, apiPut } from '@/lib/api';
 
 type WStatus = 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED';
@@ -34,15 +36,18 @@ export default function WithdrawalsPage() {
   const [activeTab, setActiveTab] = useState<WStatus | 'ALL'>('ALL');
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const toast = useToast();
   const confirm = useConfirm();
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const statusParam = activeTab !== 'ALL' ? `?status=${activeTab}` : '';
-      const res = await apiGet<{ data: Withdrawal[]; meta: { total: number } }>(`/withdrawals${statusParam}`);
+      const statusParam = activeTab !== 'ALL' ? `&status=${activeTab}` : '';
+      const res = await apiGet<{ data: Withdrawal[]; meta: { total: number, totalPages?: number } }>(`/withdrawals?limit=20&page=${page}${statusParam}`);
       setWithdrawals(res.data);
+      setTotalPages(res.meta?.totalPages || 1);
     } catch (err: any) {
       toast.error(err.message || 'Gagal memuat data pencairan');
     } finally {
@@ -98,13 +103,14 @@ export default function WithdrawalsPage() {
 
         <div className="data-card">
           {loading ? (
-            <div className="loading-center"><div className="spinner" /> Memuat data...</div>
+            <TableSkeleton rows={8} columns={7} />
           ) : withdrawals.length === 0 ? (
             <div className="empty-state">
               <span className="material-symbols-outlined">account_balance_wallet</span>
               Belum ada permintaan pencairan
             </div>
           ) : (
+            <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr>
@@ -153,6 +159,11 @@ export default function WithdrawalsPage() {
                 })}
               </tbody>
             </table>
+            </div>
+          )}
+          
+          {!loading && withdrawals.length > 0 && totalPages > 1 && (
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
           )}
         </div>
       </div>

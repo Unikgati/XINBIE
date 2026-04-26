@@ -6,6 +6,10 @@ import { generateAccessToken, generateRefreshToken, verifyToken } from '../utils
 import { generateOtp } from '../utils/helpers';
 import { AppError } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/auth';
+import { sendOTP } from '../utils/mailer';
+import redis from '../config/redis';
+import { AuthRequest } from '../middleware/auth';
+import { sendOTP } from '../utils/mailer';
 
 // POST /api/auth/register
 export async function register(req: Request, res: Response, next: NextFunction) {
@@ -16,27 +20,28 @@ export async function register(req: Request, res: Response, next: NextFunction) 
     if (existing) throw new AppError('Email sudah terdaftar', 409);
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword },
-    });
 
     // Generate OTP
     const otp = generateOtp();
-    await prisma.otpCode.create({
-      data: {
-        userId: user.id,
-        code: otp,
-        type: 'EMAIL_VERIFICATION',
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
-      },
-    });
 
-    // TODO: Send OTP via email
+    // Store in Redis (valid for 10 minutes)
+    const pendingData = {
+      name,
+      email,
+      password: hashedPassword,
+      otp,
+      attempts: 0
+    };
+    
+    await redis.setex(`register:${email}`, 600, JSON.stringify(pendingData));
+
+    // Send OTP via email
+    await sendOTP(email, otp, 'EMAIL_VERIFICATION');
     console.log(`📧 OTP for ${email}: ${otp}`);
 
     res.status(201).json({
       message: 'Registrasi berhasil. Cek email untuk verifikasi.',
-      email: user.email,
+      email,
     });
   } catch (err) { next(err); }
 }
@@ -46,40 +51,40 @@ export async function verifyEmail(req: Request, res: Response, next: NextFunctio
   try {
     const { email, otp } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) throw new AppError('User tidak ditemukan', 404);
+    const pendingStr = await redis.get(`register:${email}`);
+    if (!pendingStr) throw new AppError('Sesi pendaftaran kadaluarsa atau tidak ditemukan, silakan daftar ulang', 400);
 
-    const otpRecord = await prisma.otpCode.findFirst({
-      where: {
-        userId: user.id,
-        type: 'EMAIL_VERIFICATION',
-        usedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const pendingData = JSON.parse(pendingStr);
 
-    if (!otpRecord) throw new AppError('OTP expired atau tidak ditemukan', 400);
-    if (otpRecord.attempts >= 5) throw new AppError('Terlalu banyak percobaan', 429);
+    if (pendingData.attempts >= 5) {
+      await redis.del(`register:${email}`);
+      throw new AppError('Terlalu banyak percobaan OTP, silakan daftar ulang', 429);
+    }
 
-    if (otpRecord.code !== otp) {
-      await prisma.otpCode.update({
-        where: { id: otpRecord.id },
-        data: { attempts: { increment: 1 } },
-      });
+    if (pendingData.otp !== otp) {
+      pendingData.attempts += 1;
+      await redis.setex(`register:${email}`, 600, JSON.stringify(pendingData));
       throw new AppError('OTP salah', 400);
     }
 
-    await prisma.$transaction([
-      prisma.otpCode.update({
-        where: { id: otpRecord.id },
-        data: { usedAt: new Date() },
-      }),
-      prisma.user.update({
-        where: { id: user.id },
-        data: { emailVerifiedAt: new Date() },
-      }),
-    ]);
+    // Check if user somehow registered in the meantime
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (user) {
+      await redis.del(`register:${email}`);
+      throw new AppError('Email sudah terdaftar', 409);
+    }
+
+    // Insert to DB
+    user = await prisma.user.create({
+      data: { 
+        name: pendingData.name, 
+        email: pendingData.email, 
+        password: pendingData.password,
+        emailVerifiedAt: new Date()
+      },
+    });
+
+    await redis.del(`register:${email}`);
 
     const accessToken = generateAccessToken(user.id, user.role);
     const refreshToken = generateRefreshToken(user.id, user.role);
@@ -142,9 +147,15 @@ export async function googleAuth(req: Request, res: Response, next: NextFunction
     if (!user) {
       user = await prisma.user.findUnique({ where: { email } });
       if (user) {
+        const updateData: any = { googleId, emailVerifiedAt: new Date() };
+        // Hanya ganti foto profil ke bawaan Google JIKA foto saat ini kosong
+        if (!user.avatarUrl) {
+          updateData.avatarUrl = avatarUrl;
+        }
+        
         user = await prisma.user.update({
           where: { id: user.id },
-          data: { googleId, avatarUrl, emailVerifiedAt: new Date() },
+          data: updateData,
         });
       } else {
         user = await prisma.user.create({
@@ -224,8 +235,48 @@ export async function forgotPassword(req: Request, res: Response, next: NextFunc
       },
     });
 
+    await sendOTP(email, otp, 'PASSWORD_RESET');
     console.log(`📧 Password reset OTP for ${email}: ${otp}`);
     res.json({ message: 'Jika email terdaftar, OTP akan dikirim' });
+  } catch (err) { next(err); }
+}
+
+// POST /api/auth/verify-reset-otp
+export async function verifyResetOtp(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new AppError('User tidak ditemukan', 404);
+
+    const otpRecord = await prisma.otpCode.findFirst({
+      where: {
+        userId: user.id,
+        type: 'PASSWORD_RESET',
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!otpRecord) {
+      throw new AppError('OTP tidak valid atau sudah kadaluarsa', 400);
+    }
+
+    if (otpRecord.attempts >= 5) {
+      throw new AppError('Terlalu banyak percobaan salah. Silakan minta OTP baru.', 429);
+    }
+
+    if (otpRecord.code !== otp) {
+      await prisma.otpCode.update({
+        where: { id: otpRecord.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new AppError('OTP salah', 400);
+    }
+
+    // If valid, just return success so frontend can proceed to the reset password screen
+    res.json({ message: 'OTP valid' });
   } catch (err) { next(err); }
 }
 
@@ -247,7 +298,21 @@ export async function resetPassword(req: Request, res: Response, next: NextFunct
       orderBy: { createdAt: 'desc' },
     });
 
-    if (!otpRecord || otpRecord.code !== otp) throw new AppError('OTP tidak valid', 400);
+    if (!otpRecord) {
+      throw new AppError('OTP tidak valid atau sudah kadaluarsa', 400);
+    }
+
+    if (otpRecord.attempts >= 5) {
+      throw new AppError('Terlalu banyak percobaan salah. Silakan minta OTP baru.', 429);
+    }
+
+    if (otpRecord.code !== otp) {
+      await prisma.otpCode.update({
+        where: { id: otpRecord.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new AppError('OTP salah', 400);
+    }
 
     const hashed = await bcrypt.hash(password, 12);
 
@@ -265,22 +330,42 @@ export async function resetPassword(req: Request, res: Response, next: NextFunct
 export async function resendOtp(req: Request, res: Response, next: NextFunction) {
   try {
     const { email, type } = req.body;
+    
+    if (type !== 'password_reset') {
+      // It's for EMAIL_VERIFICATION -> Check Redis
+      const pendingStr = await redis.get(`register:${email}`);
+      if (!pendingStr) {
+        throw new AppError('Sesi pendaftaran tidak ditemukan atau sudah kadaluarsa', 404);
+      }
+      
+      const pendingData = JSON.parse(pendingStr);
+      const otp = generateOtp();
+      pendingData.otp = otp;
+      
+      await redis.setex(`register:${email}`, 600, JSON.stringify(pendingData));
+      await sendOTP(email, otp, 'EMAIL_VERIFICATION');
+      
+      console.log(`📧 Resend OTP (Registration) for ${email}: ${otp}`);
+      return res.json({ message: 'OTP baru telah dikirim' });
+    }
+
+    // It's for PASSWORD_RESET -> Check PostgreSQL
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) throw new AppError('User tidak ditemukan', 404);
 
-    const otpType = type === 'password_reset' ? 'PASSWORD_RESET' : 'EMAIL_VERIFICATION';
     const otp = generateOtp();
 
     await prisma.otpCode.create({
       data: {
         userId: user.id,
         code: otp,
-        type: otpType as any,
+        type: 'PASSWORD_RESET',
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       },
     });
 
-    console.log(`📧 Resend OTP for ${email}: ${otp}`);
+    await sendOTP(email, otp, 'PASSWORD_RESET');
+    console.log(`📧 Resend OTP (Password Reset) for ${email}: ${otp}`);
     res.json({ message: 'OTP baru telah dikirim' });
   } catch (err) { next(err); }
 }
@@ -291,6 +376,32 @@ export async function getMe(req: AuthRequest, res: Response, next: NextFunction)
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user) throw new AppError('User tidak ditemukan', 404);
     res.json(sanitizeUser(user));
+  } catch (err) { next(err); }
+}
+
+// PUT /api/auth/profile
+export async function updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { name, phoneWa } = req.body;
+    let avatarUrl: string | undefined;
+
+    console.log(`[updateProfile] req.file:`, req.file ? `File present (${req.file.mimetype})` : 'No file');
+
+    if (req.file) {
+      const { processAndUploadImage } = await import('../middleware/upload');
+      avatarUrl = await processAndUploadImage(req.file, 'avatars');
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: {
+        ...(name && { name }),
+        ...(phoneWa && { phoneWa }),
+        ...(avatarUrl && { avatarUrl }),
+      },
+    });
+
+    res.json(sanitizeUser(updated));
   } catch (err) { next(err); }
 }
 

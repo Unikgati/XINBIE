@@ -1,80 +1,153 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../providers/user_providers.dart';
 import 'package:ui_kit/ui_kit.dart';
+import 'package:core/core.dart';
 
-class NotificationScreen extends StatelessWidget {
+class NotificationScreen extends ConsumerWidget {
   const NotificationScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Notifikasi'),
-        actions: [
-          TextButton(
-            onPressed: () {},
-            child: Text('Baca Semua', style: AppTypography.bodySmall.copyWith(color: AppColors.primary)),
-          ),
-        ],
+        centerTitle: true,
+        title: Text(
+          'Notifikasi',
+          style: AppTypography.h3.copyWith(color: AppColors.primaryDark),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.textSecondary),
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: _mockNotifs.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (_, i) {
-          final n = _mockNotifs[i];
-          return Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: n.isRead ? AppColors.surface : AppColors.primarySurface.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-              boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 2)],
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(
-                    color: n.iconColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
+      body: authState.when(
+        data: (isLoggedIn) {
+          if (!isLoggedIn) {
+            return Center(
+              child: DgEmptyState(
+                icon: Icons.notifications_off_outlined,
+                title: 'Belum Masuk',
+                subtitle: 'Yuk masuk atau daftar akun dulu biar tidak ketinggalan info promo dan pesananmu!',
+                actionLabel: 'Masuk Sekarang',
+                onAction: () => context.push('/login'),
+              ),
+            );
+          }
+          final notifsAsync = ref.watch(notificationsProvider);
+
+          return notifsAsync.when(
+            data: (notifs) {
+              if (notifs.isEmpty) {
+                return Center(
+                  child: DgEmptyState(
+                    icon: Icons.notifications_none,
+                    title: 'Belum ada notifikasi',
+                    subtitle: 'Yuk mulai belanja bahan dapur sehat!',
                   ),
-                  child: Icon(n.icon, color: n.iconColor, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(n.title, style: AppTypography.labelLarge),
-                      const SizedBox(height: 2),
-                      Text(n.body, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary), maxLines: 2),
-                      const SizedBox(height: 4),
-                      Text(n.time, style: AppTypography.caption.copyWith(color: AppColors.textHint)),
-                    ],
+                );
+              }
+              
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${notifs.length} Notifikasi',
+                          style: AppTypography.labelLarge.copyWith(
+                            color: AppColors.primaryDark,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            // TODO: implement mark all as read API call
+                          },
+                          child: Text(
+                            'Baca Semua',
+                            style: AppTypography.labelLarge.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                if (!n.isRead) Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
-              ],
-            ),
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      itemCount: notifs.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (_, i) {
+                        final n = notifs[i];
+                        
+                        IconData iconData = Icons.notifications;
+                        Color iconColor = AppColors.info;
+                        
+                        if (n.type.toUpperCase() == 'PROMO') {
+                          iconData = Icons.local_offer;
+                          iconColor = AppColors.warning;
+                        } else if (n.type.toUpperCase() == 'ORDER_UPDATE') {
+                          iconData = Icons.local_shipping;
+                          iconColor = AppColors.primary;
+                        } else if (n.type.toUpperCase() == 'PAYMENT') {
+                          iconData = Icons.receipt;
+                          iconColor = AppColors.success;
+                        }
+                        
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: n.isRead ? AppColors.surface : AppColors.primarySurface.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                            boxShadow: [BoxShadow(color: AppColors.shadow.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 40, height: 40,
+                                decoration: BoxDecoration(
+                                  color: iconColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(iconData, color: iconColor, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(n.title, style: AppTypography.labelLarge),
+                                    const SizedBox(height: 2),
+                                    Text(n.body, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary), maxLines: 2),
+                                    const SizedBox(height: 4),
+                                    Text(DateFormatter.relative(n.createdAt), style: AppTypography.caption.copyWith(color: AppColors.textHint)),
+                                  ],
+                                ),
+                              ),
+                              if (!n.isRead) Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+            loading: () => DgShimmer.notificationList(),
+            error: (err, _) => Center(child: Text('Gagal memuat notifikasi: $err')),
           );
         },
+        loading: () => DgShimmer.notificationList(),
+        error: (err, _) => Center(child: Text('Terjadi kesalahan: $err')),
       ),
     );
   }
 }
-
-class _NotifData {
-  final String title, body, time;
-  final IconData icon;
-  final Color iconColor;
-  final bool isRead;
-  const _NotifData(this.title, this.body, this.time, this.icon, this.iconColor, this.isRead);
-}
-
-final _mockNotifs = [
-  const _NotifData('Pesanan Dikirim 🚀', 'Pesanan DG-260420-1234 sedang dalam perjalanan', '5 menit lalu', Icons.local_shipping, AppColors.primary, false),
-  const _NotifData('Pembayaran Berhasil', 'Pembayaran Rp 88.000 untuk pesanan DG-260420-1234 berhasil', '30 menit lalu', Icons.check_circle, AppColors.success, false),
-  const _NotifData('Promo Spesial! 🎉', 'Gunakan kode WELCOME10 untuk diskon 10% pesanan pertama', '2 jam lalu', Icons.local_offer, AppColors.warning, true),
-  const _NotifData('Pesanan Selesai', 'Pesanan DG-260419-9999 telah selesai. Terima kasih!', 'Kemarin', Icons.check_circle_outline, AppColors.info, true),
-];

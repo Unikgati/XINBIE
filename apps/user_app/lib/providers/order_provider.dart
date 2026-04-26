@@ -10,7 +10,7 @@ final activeOrdersProvider = FutureProvider<List<Order>>((ref) async {
 /// Order history (completed/cancelled)
 final orderHistoryProvider = FutureProvider<List<Order>>((ref) async {
   final repo = ref.watch(orderRepositoryProvider);
-  return repo.getOrders(status: 'completed');
+  return repo.getOrders(status: 'history');
 });
 
 /// Single order detail

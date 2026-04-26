@@ -19,3 +19,5 @@ export 'widgets/dg_shimmer.dart';
 export 'widgets/dg_empty_state.dart';
 export 'widgets/dg_status_badge.dart';
 export 'widgets/dg_category_chip.dart';
+export 'widgets/dg_discount_badge.dart';
+export 'widgets/dg_snackbar.dart';

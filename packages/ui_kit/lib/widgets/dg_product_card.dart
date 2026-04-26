@@ -4,7 +4,9 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import 'dg_badge.dart';
+import 'dg_shimmer.dart';
 import 'dg_quantity_selector.dart';
+import 'dg_discount_badge.dart';
 
 /// Product card matching DapurGizi UI design.
 /// White card, rounded-16, discount badge, unit pill, inline qty selector.
@@ -19,6 +21,8 @@ class DgProductCard extends StatelessWidget {
     this.discountPercent,
     this.quantity = 0,
     this.isOutOfStock = false,
+    this.variantCount = 0,
+    this.hasMultiplePrices = false,
     this.onTap,
     this.onAddToCart,
     this.onQuantityChanged,
@@ -32,6 +36,8 @@ class DgProductCard extends StatelessWidget {
   final int? discountPercent;
   final int quantity;
   final bool isOutOfStock;
+  final int variantCount;
+  final bool hasMultiplePrices;
   final VoidCallback? onTap;
   final VoidCallback? onAddToCart;
   final ValueChanged<int>? onQuantityChanged;
@@ -56,6 +62,7 @@ class DgProductCard extends StatelessWidget {
           ],
         ),
         child: Stack(
+          clipBehavior: Clip.none,
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,9 +78,7 @@ class DgProductCard extends StatelessWidget {
                         ? CachedNetworkImage(
                             imageUrl: imageUrl!,
                             fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(
-                              color: AppColors.background,
-                            ),
+                            placeholder: (_, __) => const DgShimmer(),
                             errorWidget: (_, __, ___) => Container(
                               color: AppColors.background,
                               child: const Icon(Icons.image_not_supported),
@@ -91,66 +96,87 @@ class DgProductCard extends StatelessWidget {
                 ),
 
                 // Info
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.cardPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Name
-                      Text(
-                        name,
-                        style: AppTypography.labelLarge.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-
-                      // Price
-                      if (_hasDiscount) ...[
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.cardPadding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Name
                         Text(
-                          'Rp ${_formatNumber(price)}',
-                          style: AppTypography.priceStrikethrough.copyWith(
-                            color: AppColors.priceStrikethrough,
+                          name,
+                          style: AppTypography.labelLarge.copyWith(
+                            color: AppColors.primaryDark,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                      Text(
-                        'Rp ${_formatNumber(_displayPrice)}',
-                        style: AppTypography.priceActive.copyWith(
-                          color: AppColors.priceActive,
+                        const SizedBox(height: 2),
+
+                        // Price
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.end,
+                          spacing: 6,
+                          children: [
+                            Text(
+                              'Rp ${_formatNumber(_displayPrice)}',
+                              style: AppTypography.labelLarge.copyWith(
+                                color: AppColors.primaryDark,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            if (_hasDiscount && !hasMultiplePrices) ...[
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Text(
+                                  'Rp ${_formatNumber(price)}',
+                                  style: AppTypography.caption.copyWith(
+                                    color: AppColors.priceStrikethrough,
+                                    decoration: TextDecoration.lineThrough,
+                                    decorationColor: AppColors.priceStrikethrough,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                      ),
 
-                      const SizedBox(height: 8),
+                        const Spacer(),
 
-                      // Unit badge + quantity selector row
+                        // Unit badge + quantity selector row
                       Row(
                         children: [
                           // Unit badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.border),
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusSm),
-                            ),
-                            child: Text(
-                              '/$unit',
-                              style: AppTypography.caption.copyWith(
-                                color: AppColors.textSecondary,
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: AppColors.border),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  '/$unit',
+                                  style: AppTypography.caption.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 8),
 
                           // Quantity selector or Add button
                           if (!isOutOfStock) ...[
-                            if (quantity > 0)
+                            if (quantity > 0 && variantCount == 0)
                               DgQuantitySelector(
                                 quantity: quantity,
                                 onChanged: onQuantityChanged,
@@ -164,17 +190,43 @@ class DgProductCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                ),
               ],
             ),
 
             // Discount badge
             if (_hasDiscount && discountPercent != null)
               Positioned(
-                top: 8,
-                right: 8,
-                child: DgBadge(
-                  label: '-$discountPercent%',
-                  color: AppColors.discountBadge,
+                top: 12,
+                left: -6,
+                child: DgDiscountBadge(discountPercent: discountPercent!),
+              ),
+
+            // Variant badge at top right
+            if (variantCount > 0)
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '$variantCount Varian',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
 
@@ -214,16 +266,18 @@ class DgProductCard extends StatelessWidget {
     );
   }
 
+  static final _priceRegex = RegExp(r'(\d)(?=(\d{3})+(?!\d))');
+
   String _formatNumber(int n) {
     return n.toString().replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+          _priceRegex,
           (m) => '${m[1]}.',
         );
   }
 }
 
 class _AddButton extends StatelessWidget {
-  const _AddButton({this.onTap});
+  const _AddButton({super.key, this.onTap});
   final VoidCallback? onTap;
 
   @override
@@ -233,9 +287,9 @@ class _AddButton extends StatelessWidget {
       child: Container(
         width: 32,
         height: 32,
-        decoration: const BoxDecoration(
-          color: AppColors.primary,
-          shape: BoxShape.circle,
+        decoration: BoxDecoration(
+          color: AppColors.primaryAction,
+          borderRadius: BorderRadius.circular(8),
         ),
         child: const Icon(
           Icons.add,

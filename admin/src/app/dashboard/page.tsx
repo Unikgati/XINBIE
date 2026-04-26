@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/Toast';
+import { useRouter } from 'next/navigation';
+import { TableSkeleton, StatCardSkeleton } from '@/components/Skeleton';
+import { getSocket } from '@/lib/socket';
 import { apiGet } from '@/lib/api';
 
 interface DashboardData {
@@ -31,7 +34,7 @@ interface DashboardData {
 const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
 const statusMap: Record<string, { label: string; badge: string }> = {
-  WAITING_PAYMENT: { label: 'Menunggu', badge: 'orange' },
+  WAITING_PAYMENT: { label: 'Menunggu Bayar', badge: 'orange' },
   RECEIVED: { label: 'Diterima', badge: 'blue' },
   PROCESSING: { label: 'Diproses', badge: 'purple' },
   IN_DELIVERY: { label: 'Dikirim', badge: 'green' },
@@ -42,6 +45,7 @@ const statusMap: Record<string, { label: string; badge: string }> = {
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
   const toast = useToast();
 
   const fetchData = useCallback(async () => {
@@ -58,7 +62,50 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  if (loading) return <div className="loading-center"><div className="spinner" /> Memuat dashboard...</div>;
+  // Auto-refresh when order changes via WebSocket
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onNew = () => { fetchData(); };
+    const onStatusUpdate = (ev: { orderId: string; status: string }) => {
+      setData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          recentOrders: prev.recentOrders.map(o =>
+            o.id === ev.orderId ? { ...o, orderStatus: ev.status } : o
+          ),
+        };
+      });
+    };
+
+    socket.on('order:new', onNew);
+    socket.on('order:statusUpdate', onStatusUpdate);
+    return () => { socket.off('order:new', onNew); socket.off('order:statusUpdate', onStatusUpdate); };
+  }, [fetchData]);
+
+  if (loading) {
+    return (
+      <>
+        <div className="page-header">
+          <div><h1 className="page-title">Dashboard</h1><p className="page-subtitle">Overview bisnis Dapur Gizi</p></div>
+        </div>
+        <div className="page-body">
+          <div className="stat-grid">
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </div>
+          <div className="data-card" style={{ marginTop: 16 }}>
+            <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">receipt_long</span> Pesanan Terbaru</h3></div>
+            <TableSkeleton rows={5} columns={5} />
+          </div>
+        </div>
+      </>
+    );
+  }
   if (!data) return null;
 
   const { stats, recentOrders } = data;
@@ -74,7 +121,7 @@ export default function DashboardPage() {
       <div className="page-body">
         <div className="stat-grid">
           <div className="stat-card">
-            <div className="stat-icon blue"><span className="material-symbols-outlined">payments</span></div>
+            <div className="stat-icon green"><span className="material-symbols-outlined">payments</span></div>
             <div>
               <div className="stat-label">Revenue Bulan Ini</div>
               <div className="stat-value">{fmt(stats.monthRevenue)}</div>
@@ -90,7 +137,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon orange"><span className="material-symbols-outlined">shopping_cart</span></div>
+            <div className="stat-icon green"><span className="material-symbols-outlined">shopping_cart</span></div>
             <div>
               <div className="stat-label">Pesanan Hari Ini</div>
               <div className="stat-value">{stats.todayOrders}</div>
@@ -98,7 +145,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon purple"><span className="material-symbols-outlined">group</span></div>
+            <div className="stat-icon green"><span className="material-symbols-outlined">group</span></div>
             <div>
               <div className="stat-label">Pelanggan</div>
               <div className="stat-value">{stats.totalUsers}</div>
@@ -125,7 +172,7 @@ export default function DashboardPage() {
                 {recentOrders.map(o => {
                   const sm = statusMap[o.orderStatus] || { label: o.orderStatus, badge: 'gray' };
                   return (
-                    <tr key={o.id}>
+                    <tr key={o.id} onClick={() => router.push(`/orders/${o.id}`)} style={{ cursor: 'pointer' }} title="Klik untuk lihat detail">
                       <td style={{ fontWeight: 600 }}>{o.code}</td>
                       <td>{o.userName}</td>
                       <td style={{ fontWeight: 600 }}>{fmt(o.grandTotal)}</td>

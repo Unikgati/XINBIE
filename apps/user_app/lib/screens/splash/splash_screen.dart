@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_kit/ui_kit.dart';
+import '../../providers/auth_provider.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeIn;
@@ -30,13 +33,20 @@ class _SplashScreenState extends State<SplashScreen>
     );
     _controller.forward();
 
-    // Navigate after delay
-    Future.delayed(const Duration(seconds: 2), () {
+    _checkAuthAndNavigate();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    // Wait for minimum splash duration
+    await Future.delayed(const Duration(seconds: 2));
+    
+    if (mounted) {
+      await ref.read(authNotifierProvider.notifier).checkAuthStatus();
       if (mounted) {
-        // TODO: Check if user has seen onboarding & is logged in
+        // GoRouter redirect will handle moving to /home if authenticated
         context.go('/onboarding');
       }
-    });
+    }
   }
 
   @override
@@ -48,54 +58,16 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.heroGradient),
-        child: Center(
-          child: FadeTransition(
-            opacity: _fadeIn,
-            child: ScaleTransition(
-              scale: _scale,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Logo icon
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.eco,
-                      size: 56,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Dapur Gizi',
-                    style: AppTypography.h1.copyWith(
-                      color: AppColors.textOnPrimary,
-                      fontSize: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Belanja Sehat, Hidup Lebih Baik',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textOnPrimary.withValues(alpha: 0.9),
-                    ),
-                  ),
-                ],
-              ),
+      backgroundColor: Colors.white,
+      body: Center(
+        child: FadeTransition(
+          opacity: _fadeIn,
+          child: ScaleTransition(
+            scale: _scale,
+            child: SvgPicture.asset(
+              'assets/images/logo.svg',
+              width: 200,
+              fit: BoxFit.contain,
             ),
           ),
         ),

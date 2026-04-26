@@ -29,6 +29,7 @@ router.put('/categories/:id', upload.single('icon'), admin.adminUpdateCategory);
 
 // Orders
 router.get('/orders', admin.adminGetOrders);
+router.get('/orders/:id', admin.adminGetOrderDetail);
 router.put('/orders/:id/status', admin.adminUpdateOrderStatus);
 
 // Drivers
@@ -59,6 +60,13 @@ router.put('/promos/:id', admin.adminUpdatePromo);
 // Settings
 router.get('/settings', admin.adminGetSettings);
 router.put('/settings', admin.adminUpdateSettings);
+
+// Delivery Slots
+router.get('/delivery-slots', admin.adminGetDeliverySlots);
+router.post('/delivery-slots', admin.adminCreateDeliverySlot);
+router.put('/delivery-slots/day/:day', admin.adminUpdateDeliverySlotsByDay);
+router.put('/delivery-slots/:id', admin.adminUpdateDeliverySlot);
+router.delete('/delivery-slots/:id', admin.adminDeleteDeliverySlot);
 
 // Broadcast
 router.post('/broadcast', admin.adminBroadcast);

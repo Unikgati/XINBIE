@@ -14,11 +14,12 @@ void main() {
   runApp(const ProviderScope(child: DapurGiziDriverApp()));
 }
 
-class DapurGiziDriverApp extends StatelessWidget {
+class DapurGiziDriverApp extends ConsumerWidget {
   const DapurGiziDriverApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'Dapur Gizi Driver',
       debugShowCheckedModeBanner: false,

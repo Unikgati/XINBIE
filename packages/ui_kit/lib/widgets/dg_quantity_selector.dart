@@ -22,9 +22,9 @@ class DgQuantitySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? 28.0 : 36.0;
-    final iconSize = compact ? 16.0 : 20.0;
-    final fontSize = compact ? 13.0 : 15.0;
+    final size = compact ? 32.0 : 40.0;
+    final iconSize = compact ? 20.0 : 24.0;
+    final fontSize = compact ? 14.0 : 16.0;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -36,23 +36,35 @@ class DgQuantitySelector extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: AppColors.primary,
+              color: AppColors.primaryAction,
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             ),
             child: Icon(Icons.remove, color: AppColors.textOnPrimary, size: iconSize),
           ),
         ),
 
+        const SizedBox(width: 4),
+
         // Quantity
-        SizedBox(
-          width: compact ? 32 : 40,
+        Container(
+          width: compact ? 28 : 40,
+          height: size,
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.primaryAction, width: 1.5),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          ),
           child: Center(
             child: Text(
               '$quantity',
-              style: AppTypography.labelLarge.copyWith(fontSize: fontSize),
+              style: AppTypography.labelLarge.copyWith(
+                fontSize: fontSize,
+                color: AppColors.primaryDark,
+              ),
             ),
           ),
         ),
+
+        const SizedBox(width: 4),
 
         // Plus
         GestureDetector(
@@ -61,7 +73,7 @@ class DgQuantitySelector extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: AppColors.primary,
+              color: AppColors.primaryAction,
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             ),
             child: Icon(Icons.add, color: AppColors.textOnPrimary, size: iconSize),

@@ -1,41 +1,97 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pinput/pinput.dart';
 import 'package:ui_kit/ui_kit.dart';
+import 'package:core/core.dart';
+import '../../providers/user_providers.dart';
+import '../../providers/auth_provider.dart';
 
-class OtpScreen extends StatefulWidget {
+class OtpScreen extends ConsumerStatefulWidget {
   const OtpScreen({super.key, required this.email, required this.type});
   final String email;
   final String type;
 
   @override
-  State<OtpScreen> createState() => _OtpScreenState();
+  ConsumerState<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _OtpScreenState extends State<OtpScreen> {
-  final _controllers = List.generate(6, (_) => TextEditingController());
-  final _focusNodes = List.generate(6, (_) => FocusNode());
+class _OtpScreenState extends ConsumerState<OtpScreen> {
+  final _pinController = TextEditingController();
+  final _focusNode = FocusNode();
   bool _loading = false;
 
   @override
   void dispose() {
-    for (final c in _controllers) { c.dispose(); }
-    for (final f in _focusNodes) { f.dispose(); }
+    _pinController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
-  String get _otp => _controllers.map((c) => c.text).join();
-
-  void _verify() {
-    if (_otp.length != 6) return;
+  Future<void> _verify() async {
+    final otp = _pinController.text;
+    if (otp.length != 6) return;
     setState(() => _loading = true);
-    // TODO: Call verify OTP API
-    Future.delayed(const Duration(seconds: 1), () {
+    
+    try {
+      if (widget.type == 'verification') {
+        await ref.read(authRepositoryProvider).verifyEmail(
+          email: widget.email,
+          otp: otp,
+        );
+        if (mounted) {
+          DgSnackbar.showSuccess(context, message: 'Verifikasi berhasil! Masuk ke beranda...');
+          
+          ref.invalidate(authStateProvider);
+          ref.invalidate(currentUserProvider);
+          
+          await ref.read(authNotifierProvider.notifier).checkAuthStatus();
+          
+          await Future.delayed(const Duration(seconds: 2));
+          if (mounted) {
+            final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+            if (redirect != null && redirect.isNotEmpty) {
+              context.go(Uri.decodeComponent(redirect));
+            } else {
+              context.go('/home');
+            }
+          }
+        }
+      } else if (widget.type == 'password_reset') {
+        await ref.read(authRepositoryProvider).verifyResetOtp(
+          email: widget.email,
+          otp: otp,
+        );
+        if (mounted) {
+          context.push('/reset-password?email=${widget.email}&otp=$otp');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        String errMsg = 'Terjadi kesalahan, silakan coba lagi.';
+        if (e.toString().contains('DioException') || e is ApiException) {
+          if (e.toString().contains('timeout')) {
+            errMsg = 'Koneksi terputus. Periksa internet Anda.';
+          } else if (e is ApiException) {
+            errMsg = e.message;
+          } else {
+             errMsg = 'Gagal terhubung ke server.';
+          }
+        } else {
+          errMsg = e.toString();
+        }
+
+        // Clean up "Exception: " if present
+        errMsg = errMsg.replaceAll('Exception: ', '');
+
+        DgSnackbar.showError(context, message: errMsg);
+      }
+    } finally {
       if (mounted) {
         setState(() => _loading = false);
-        context.go('/home');
       }
-    });
+    }
   }
 
   @override
@@ -75,47 +131,30 @@ class _OtpScreenState extends State<OtpScreen> {
               const SizedBox(height: 40),
 
               // OTP fields
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(6, (i) {
-                  return Container(
-                    width: 48,
-                    height: 56,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    child: TextFormField(
-                      controller: _controllers[i],
-                      focusNode: _focusNodes[i],
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(1),
-                      ],
-                      style: AppTypography.h3,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        if (value.isNotEmpty && i < 5) {
-                          _focusNodes[i + 1].requestFocus();
-                        }
-                        if (value.isEmpty && i > 0) {
-                          _focusNodes[i - 1].requestFocus();
-                        }
-                        if (_otp.length == 6) _verify();
-                      },
-                    ),
-                  );
-                }),
+              Pinput(
+                length: 6,
+                controller: _pinController,
+                focusNode: _focusNode,
+                defaultPinTheme: PinTheme(
+                  width: 56,
+                  height: 64,
+                  textStyle: AppTypography.h3,
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                focusedPinTheme: PinTheme(
+                  width: 56,
+                  height: 64,
+                  textStyle: AppTypography.h3,
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary, width: 2),
+                  ),
+                ),
+                onCompleted: (_) => _verify(),
               ),
               const SizedBox(height: 32),
 
@@ -134,8 +173,20 @@ class _OtpScreenState extends State<OtpScreen> {
                     style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      // TODO: Resend OTP
+                    onTap: () async {
+                      try {
+                        await ref.read(authRepositoryProvider).resendOtp(
+                          email: widget.email,
+                          type: widget.type,
+                        );
+                        if (mounted) {
+                          DgSnackbar.showSuccess(context, message: 'OTP baru telah dikirim');
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          DgSnackbar.showError(context, message: 'Gagal', error: e);
+                        }
+                      }
                     },
                     child: Text(
                       'Kirim Ulang',

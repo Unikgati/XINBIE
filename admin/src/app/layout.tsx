@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Sidebar from '@/components/Sidebar';
+import AppLayout from '@/components/AppLayout';
 import Providers from '@/components/Providers';
 
 export const metadata: Metadata = {
@@ -17,12 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Providers>
-          <div className="admin-layout">
-            <Sidebar />
-            <main className="main-content">
-              {children}
-            </main>
-          </div>
+          <AppLayout>
+            {children}
+          </AppLayout>
         </Providers>
       </body>
     </html>

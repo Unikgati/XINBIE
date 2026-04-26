@@ -12,7 +12,12 @@ class NotificationRepository {
 
   Future<List<NotificationModel>> getNotifications() async {
     final response = await _api.get(ApiEndpoints.notifications);
-    final list = response.data as List;
+    List list = [];
+    if (response.data is Map) {
+      list = response.data['data'] as List? ?? response.data['notifications'] as List? ?? [];
+    } else if (response.data is List) {
+      list = response.data as List;
+    }
     return list.map((e) => NotificationModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 

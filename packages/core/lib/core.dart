@@ -7,6 +7,7 @@ library core;
 // Models
 export 'models/user.dart';
 export 'models/product.dart';
+export 'models/product_variant.dart';
 export 'models/category.dart';
 export 'models/order.dart';
 export 'models/order_item.dart';
@@ -34,12 +35,15 @@ export 'repositories/order_repository.dart';
 export 'repositories/address_repository.dart';
 export 'repositories/notification_repository.dart';
 export 'repositories/driver_repository.dart';
+export 'repositories/banner_repository.dart';
+export 'repositories/delivery_repository.dart';
 
 // Utils
 export 'utils/currency_formatter.dart';
 export 'utils/wa_deeplink.dart';
 export 'utils/date_formatter.dart';
 export 'utils/validators.dart';
+export 'utils/error_handler.dart';
 
 // Constants
 export 'constants/enums.dart';

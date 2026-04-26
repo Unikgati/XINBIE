@@ -1,28 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_kit/ui_kit.dart';
+import '../../providers/driver_providers.dart';
 
-class DriverEarningsScreen extends StatelessWidget {
+class DriverEarningsScreen extends ConsumerWidget {
   const DriverEarningsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // TODO: Replace with real API data from /driver/earnings
-    final balance = 125000;
-    final todayEarnings = 45000;
-    final todayOrders = 3;
-    final weekEarnings = 320000;
-    final weekOrders = 15;
-    final totalEarnings = 1250000;
-    final totalOrders = 50;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyEarnings = ref.watch(driverEarningsProvider(null));
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Penghasilan')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
+      body: asyEarnings.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, stack) => Center(child: Text('Gagal memuat data: $e')),
+        data: (data) {
+          final balance = data['balance'] as int? ?? 0;
+          final todayEarnings = data['todayEarnings'] as int? ?? 0;
+          final todayOrders = data['todayOrders'] as int? ?? 0;
+          final weekEarnings = data['weekEarnings'] as int? ?? 0;
+          final weekOrders = data['weekOrders'] as int? ?? 0;
+          final totalEarnings = data['totalEarnings'] as int? ?? 0;
+          final totalOrders = data['totalOrders'] as int? ?? 0;
+          final transactions = (data['transactions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
             // Balance Card
             Container(
               width: double.infinity,
@@ -67,30 +75,34 @@ class DriverEarningsScreen extends StatelessWidget {
             ]),
             const SizedBox(height: 24),
 
-            // Transaction history
-            Align(alignment: Alignment.centerLeft, child: Text('Riwayat Transaksi', style: AppTypography.h4)),
-            const SizedBox(height: 12),
+              // Transaction history
+              Align(alignment: Alignment.centerLeft, child: Text('Riwayat Komisi (50 Trx Terakhir)', style: AppTypography.h4)),
+              const SizedBox(height: 12),
 
-            // TODO: Replace with real transactions from API
-            ...List.generate(7, (i) {
-              final types = ['COMMISSION', 'COMMISSION', 'COD_SETTLEMENT', 'COMMISSION', 'WITHDRAWAL', 'COMMISSION', 'BONUS'];
-              final type = types[i % types.length];
-              final amounts = [13000, 8000, -85000, 15000, -125000, 10000, 25000];
-              final amount = amounts[i % amounts.length];
+              if (transactions.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(child: Text('Belum ada transaksi')),
+                )
+              else
+                ...transactions.map((tx) {
+                  final type = tx['type'] as String? ?? 'UNKNOWN';
+                  final amount = tx['amount'] as int? ?? 0;
+                  final rawDate = tx['createdAt'] as String?;
+                  final date = rawDate != null ? DateTime.parse(rawDate) : DateTime.now();
+                  final note = tx['note'] as String? ?? 'Transaksi';
 
-              return _TransactionTile(
-                type: type,
-                amount: amount,
-                date: DateTime.now().subtract(Duration(days: i)),
-                note: type == 'COMMISSION' ? 'Komisi order DG-${1000 + i}' 
-                    : type == 'COD_SETTLEMENT' ? 'Setoran COD DG-${1000 + i}'
-                    : type == 'WITHDRAWAL' ? 'Penarikan ke BCA 1234567890'
-                    : type == 'BONUS' ? 'Bonus mingguan'
-                    : 'Transaksi',
-              );
-            }),
-          ],
-        ),
+                  return _TransactionTile(
+                    type: type,
+                    amount: amount,
+                    date: date,
+                    note: note,
+                  );
+                }),
+            ],
+          ),
+        );
+      },
       ),
     );
   }

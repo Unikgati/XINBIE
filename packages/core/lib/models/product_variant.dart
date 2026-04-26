@@ -9,7 +9,14 @@ abstract class ProductVariant with _$ProductVariant {
     required String id,
     required String productId,
     required String name,
+    String? sku,
+    @Default(0) int price,
+    @Default(0) int costPrice,
+    int? discountPrice,
     @Default(0) int priceAddition,
+    @Default(0) int stockQty,
+    String? imageUrl,
+    @Default(0) int sortOrder,
     @Default(true) bool isActive,
   }) = _ProductVariant;
 

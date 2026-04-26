@@ -5,6 +5,8 @@ import ActionMenu from '@/components/ActionMenu';
 import CustomSelect from '@/components/CustomSelect';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { TableSkeleton } from '@/components/Skeleton';
+import { Pagination } from '@/components/Pagination';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 
 interface Variant {
@@ -12,6 +14,7 @@ interface Variant {
   name: string;
   price: number;
   costPrice: number;
+  discountPrice?: number;
   stockQty: number;
   imageUrl?: string;
 }
@@ -40,6 +43,13 @@ interface Category {
 
 const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
+const KITCHEN_UNITS = [
+  'pcs', 'kg', 'gram', 'ikat', 'bungkus', 'pack', 'liter', 'ml', 
+  'botol', 'renceng', 'butir', 'tray', 'siung', 'kotak', 'dus', 'sisir',
+  'lembar', 'kaleng', 'box', 'papan', 'karton', 'cup',
+  'gelas', 'galon', 'toples', 'pouch', 'jar', 'jerigen', 'karung'
+];
+
 function calcMargin(sell: number, cost: number) {
   if (cost <= 0 || sell <= 0) return 0;
   return Math.round(((sell - cost) / sell) * 100);
@@ -57,6 +67,7 @@ interface FormVariant {
   name: string;
   price: string;
   costPrice: string;
+  discountPrice: string;
   stockQty: string;
 }
 
@@ -67,6 +78,8 @@ export default function ProductsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [formVariants, setFormVariants] = useState<FormVariant[]>([]);
   const [productCategory, setProductCategory] = useState('');
@@ -86,17 +99,18 @@ export default function ProductsPage() {
     try {
       setLoading(true);
       const [prodRes, catRes] = await Promise.all([
-        apiGet<any>('/products?limit=100'), // Explicitly pass 100 limit since pagination wrapper is used
+        apiGet<any>(`/products?limit=20&page=${page}`),
         apiGet<Category[]>('/categories'),
       ]);
       setProducts(prodRes?.data ? prodRes.data : Array.isArray(prodRes) ? prodRes : []);
+      setTotalPages(prodRes?.meta?.totalPages || 1);
       setCategories(Array.isArray(catRes) ? catRes : []);
     } catch (err: any) {
       toast.error(err.message || 'Gagal memuat data');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -111,7 +125,7 @@ export default function ProductsPage() {
   };
 
   const addFormVariant = () => {
-    setFormVariants(prev => [...prev, { tempId: Date.now().toString(), name: '', price: '', costPrice: '', stockQty: '' }]);
+    setFormVariants(prev => [...prev, { tempId: Date.now().toString(), name: '', price: '', costPrice: '', discountPrice: '', stockQty: '' }]);
   };
 
   const removeFormVariant = (tempId: string) => {
@@ -147,6 +161,7 @@ export default function ProductsPage() {
       name: v.name,
       price: String(v.price),
       costPrice: String(v.costPrice),
+      discountPrice: v.discountPrice ? String(v.discountPrice) : '',
       stockQty: String(v.stockQty)
     })) : []);
     setShowModal(true);
@@ -183,6 +198,7 @@ export default function ProductsPage() {
           varData.append('name', v.name);
           varData.append('price', v.price);
           varData.append('costPrice', v.costPrice || '0');
+          if (v.discountPrice) varData.append('discountPrice', v.discountPrice);
           varData.append('stockQty', v.stockQty || '0');
 
           if (v.tempId.includes('-')) {
@@ -274,20 +290,26 @@ export default function ProductsPage() {
       <div className="page-body">
         <div style={{ marginBottom: 16 }}>
           <div className="search-bar">
-            <span className="material-symbols-outlined">search</span>
+            <span className="material-symbols-outlined search-icon">search</span>
             <input placeholder="Cari produk..." value={search} onChange={e => setSearch(e.target.value)} />
+            {search && (
+              <button className="search-clear" onClick={() => setSearch('')}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            )}
           </div>
         </div>
 
         <div className="data-card">
           {loading ? (
-            <div className="loading-center"><div className="spinner" /> Memuat data produk...</div>
+            <TableSkeleton rows={8} columns={6} />
           ) : filtered.length === 0 ? (
             <div className="empty-state">
               <span className="material-symbols-outlined">inventory_2</span>
               {search ? 'Tidak ada produk yang cocok' : 'Belum ada produk'}
             </div>
           ) : (
+            <div className="table-responsive">
             <table className="data-table">
               <thead><tr><th>Produk</th><th>Kategori</th><th>Harga Jual</th><th>Harga Beli</th><th>Margin</th><th>Stok</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
               <tbody>
@@ -325,36 +347,24 @@ export default function ProductsPage() {
                             </div>
                           ) : hasVariants ? (
                             <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                              {(() => {
-                                const vals = p.variants.map(v => v.price);
-                                const min = Math.min(...vals); const max = Math.max(...vals);
-                                return min === max ? <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{fmt(min)}</span> : `${fmt(min)} — ${fmt(max)}`;
-                              })()}
+                              {fmt(Math.min(...p.variants.map(v => v.price)))} — {fmt(Math.max(...p.variants.map(v => v.price)))}
                             </div>
                           ) : <div style={{ fontWeight: 600 }}>{fmt(p.price)}</div>}
                         </td>
                         <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
                           {hasVariants ? (
-                            <span>
-                              {(() => {
-                                const vals = p.variants.map(v => v.costPrice);
-                                const min = Math.min(...vals); const max = Math.max(...vals);
-                                return min === max ? fmt(min) : `${fmt(min)} — ${fmt(max)}`;
-                              })()}
-                            </span>
+                            <span>{fmt(Math.min(...p.variants.map(v => v.costPrice)))} — {fmt(Math.max(...p.variants.map(v => v.costPrice)))}</span>
                           ) : fmt(p.costPrice || 0)}
                         </td>
                         <td>
-                          <div>
-                            <span className={`badge ${marginColor(margin)}`}>{margin}%</span>
-                            <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 2 }}>
-                              {hasVariants ? (() => {
-                                const profits = p.variants.map(v => v.price - v.costPrice);
-                                const minP = Math.min(...profits); const maxP = Math.max(...profits);
-                                return minP === maxP ? `+${fmt(minP)}` : `+${fmt(minP)} — +${fmt(maxP)}`;
-                              })() : `+${fmt(profit)}`}
+                          {hasVariants ? (
+                            <span className="badge gray">Bervariasi</span>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span className={`badge ${marginColor(margin)}`}>{margin}%</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>({fmt(profit)})</span>
                             </div>
-                          </div>
+                          )}
                         </td>
                         <td>
                           {hasVariants ? (
@@ -378,8 +388,9 @@ export default function ProductsPage() {
                         </td>
                       </tr>
                       {hasVariants && isExpanded && p.variants.map(v => {
-                        const vMargin = calcMargin(v.price, v.costPrice);
-                        const vProfit = v.price - v.costPrice;
+                        const vSellPrice = v.discountPrice || v.price;
+                        const vMargin = calcMargin(vSellPrice, v.costPrice);
+                        const vProfit = vSellPrice - v.costPrice;
                         return (
                           <tr key={v.id} style={{ background: 'var(--primary-surface)' }}>
                             <td style={{ paddingLeft: hasVariants ? 72 : 48 }}>
@@ -389,7 +400,14 @@ export default function ProductsPage() {
                               </div>
                             </td>
                             <td></td>
-                            <td style={{ fontWeight: 600 }}>{fmt(v.price)}</td>
+                            <td>
+                              {v.discountPrice ? (
+                                <div>
+                                  <div style={{ textDecoration: 'line-through', color: 'var(--text-hint)', fontSize: 12 }}>{fmt(v.price)}</div>
+                                  <div style={{ fontWeight: 600, color: 'var(--primary-dark)' }}>{fmt(v.discountPrice)}</div>
+                                </div>
+                              ) : <div style={{ fontWeight: 600 }}>{fmt(v.price)}</div>}
+                            </td>
                             <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{fmt(v.costPrice)}</td>
                             <td>
                               <span className={`badge ${marginColor(vMargin)}`}>{vMargin}%</span>
@@ -410,6 +428,11 @@ export default function ProductsPage() {
                 })}
               </tbody>
             </table>
+            </div>
+          )}
+
+          {!loading && filtered.length > 0 && totalPages > 1 && (
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
           )}
         </div>
       </div>
@@ -431,24 +454,40 @@ export default function ProductsPage() {
                   placeholder="Pilih kategori"
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                <div className="form-group"><label className="form-label">Harga Beli (Rp)</label><input className="form-input" type="number" placeholder="HPP" value={formCostPrice} onChange={e => setFormCostPrice(e.target.value)} /></div>
-                <div className="form-group"><label className="form-label">Harga Jual (Rp)</label><input className="form-input" type="number" placeholder="0" value={formPrice} onChange={e => setFormPrice(e.target.value)} /></div>
-                <div className="form-group"><label className="form-label">Harga Diskon (Rp)</label><input className="form-input" type="number" placeholder="Opsional" value={formDiscountPrice} onChange={e => setFormDiscountPrice(e.target.value)} /></div>
-              </div>
-              <div className="alert info" style={{ fontSize: 12 }}>
-                <span className="material-symbols-outlined">info</span>
-                Harga beli hanya terlihat di admin panel. Tidak ditampilkan ke pelanggan.
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div className="form-group"><label className="form-label">Stok</label><input className="form-input" type="number" placeholder="0" value={formStock} onChange={e => setFormStock(e.target.value)} /></div>
-                <div className="form-group"><label className="form-label">Satuan</label><input className="form-input" placeholder="pcs, kg, ikat..." value={formUnit} onChange={e => setFormUnit(e.target.value)} /></div>
+              <div style={formVariants.length > 0 ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                  <div className="form-group"><label className="form-label">Harga Beli (Rp)</label><input className="form-input" type="number" placeholder="HPP" value={formCostPrice} onChange={e => setFormCostPrice(e.target.value)} /></div>
+                  <div className="form-group"><label className="form-label">Harga Jual (Rp)</label><input className="form-input" type="number" placeholder="0" value={formPrice} onChange={e => setFormPrice(e.target.value)} /></div>
+                  <div className="form-group"><label className="form-label">Harga Diskon (Rp)</label><input className="form-input" type="number" placeholder="Opsional" value={formDiscountPrice} onChange={e => setFormDiscountPrice(e.target.value)} /></div>
+                </div>
+                {formVariants.length > 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--warning)', marginTop: -8, marginBottom: 12 }}>* Harga utama diabaikan karena produk memiliki varian.</div>
+                )}
+                <div className="alert info" style={{ fontSize: 12 }}>
+                  <span className="material-symbols-outlined">info</span>
+                  Harga beli hanya terlihat di admin panel. Tidak ditampilkan ke pelanggan.
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="form-group"><label className="form-label">Stok</label><input className="form-input" type="number" placeholder="0" value={formStock} onChange={e => setFormStock(e.target.value)} /></div>
+                  <div className="form-group">
+                    <label className="form-label">Satuan</label>
+                    <CustomSelect
+                      value={formUnit}
+                      onChange={setFormUnit}
+                      options={[
+                        ...KITCHEN_UNITS.map(u => ({ value: u, label: u })),
+                        ...(formUnit && !KITCHEN_UNITS.includes(formUnit) ? [{ value: formUnit, label: formUnit }] : [])
+                      ]}
+                      placeholder="Pilih satuan"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="form-group"><label className="form-label">Deskripsi</label><textarea className="form-input" rows={3} placeholder="Deskripsi produk..." value={formDesc} onChange={e => setFormDesc(e.target.value)} /></div>
 
               <div className="form-group">
                 <label className="form-label">
-                  Foto Produk <span style={{ color: 'var(--text-hint)', fontWeight: 'normal', fontSize: 12 }}>({formImages.length} terpilih)</span>
+                  Foto Produk
                 </label>
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
                   {formImages.map((file, idx) => (
@@ -466,22 +505,23 @@ export default function ProductsPage() {
                     </div>
                   ))}
 
-                  <label className="upload-tile hover-scale" style={{ 
-                    width: 80, height: 80, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                    cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
-                    background: 'var(--primary-surface)'
-                  }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 24, marginBottom: 4, color: 'var(--primary-light)' }}>add_photo_alternate</span>
-                    <span style={{ fontSize: 10, fontWeight: 500 }}>Upload Foto</span>
-                    <input 
-                      type="file" 
-                      multiple 
-                      accept="image/*" 
-                      style={{ display: 'none' }} 
-                      onChange={e => setFormImages(prev => [...prev, ...Array.from(e.target.files || [])])} 
-                    />
-                  </label>
+                  {formImages.length === 0 && (
+                    <label className="upload-tile hover-scale" style={{ 
+                      width: 80, height: 80, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                      cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
+                      background: 'var(--primary-surface)'
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 24, marginBottom: 4, color: 'var(--primary-light)' }}>add_photo_alternate</span>
+                      <span style={{ fontSize: 10, fontWeight: 500 }}>Upload Foto</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        style={{ display: 'none' }} 
+                        onChange={e => setFormImages(e.target.files?.length ? [e.target.files[0]] : [])} 
+                      />
+                    </label>
+                  )}
                 </div>
               </div>
 
@@ -517,14 +557,18 @@ export default function ProductsPage() {
                         <div className="form-group" style={{ marginBottom: 8 }}>
                           <input className="form-input" placeholder="Nama varian (cth: Besar, 1kg, 500ml)" value={v.name} onChange={e => updateFormVariant(v.tempId, 'name', e.target.value)} />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label" style={{ fontSize: 11 }}>Harga Beli</label>
+                            <input className="form-input" type="number" placeholder="0" value={v.costPrice} onChange={e => updateFormVariant(v.tempId, 'costPrice', e.target.value)} />
+                          </div>
                           <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label" style={{ fontSize: 11 }}>Harga Jual</label>
                             <input className="form-input" type="number" placeholder="0" value={v.price} onChange={e => updateFormVariant(v.tempId, 'price', e.target.value)} />
                           </div>
                           <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label className="form-label" style={{ fontSize: 11 }}>Harga Beli</label>
-                            <input className="form-input" type="number" placeholder="0" value={v.costPrice} onChange={e => updateFormVariant(v.tempId, 'costPrice', e.target.value)} />
+                            <label className="form-label" style={{ fontSize: 11 }}>Diskon</label>
+                            <input className="form-input" type="number" placeholder="Opsional" value={v.discountPrice} onChange={e => updateFormVariant(v.tempId, 'discountPrice', e.target.value)} />
                           </div>
                           <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label" style={{ fontSize: 11 }}>Stok</label>

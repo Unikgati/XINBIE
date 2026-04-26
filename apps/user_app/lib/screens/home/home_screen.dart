@@ -1,188 +1,417 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:ui_kit/ui_kit.dart';
+import '../../providers/product_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/user_providers.dart';
+import '../../providers/banner_provider.dart';
+import '../../widgets/dg_product_bottom_sheet.dart';
+import 'package:core/core.dart'; // To access AppConfig
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      ref.read(paginatedProductsProvider.notifier).loadMore();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final featuredProductsAsync = ref.watch(featuredProductsProvider);
+    final promoProductsAsync = ref.watch(promoProductsProvider);
+    final paginatedProductsAsync = ref.watch(paginatedProductsProvider);
+    final cart = ref.watch(cartProvider);
+    
+    final authState = ref.watch(authStateProvider);
+    final isLoggedIn = authState.valueOrNull ?? false;
+
+    // Dynamic Greeting
+    final hour = DateTime.now().hour;
+    String timeGreeting = 'Selamat Pagi';
+    if (hour >= 12 && hour < 15) timeGreeting = 'Selamat Siang';
+    else if (hour >= 15 && hour < 18) timeGreeting = 'Selamat Sore';
+    else if (hour >= 18) timeGreeting = 'Selamat Malam';
+
+    // Kalkulasi padding bawah untuk memberikan ruang pada floating navigation bar
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 90;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // Header + Search
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Halo! 👋', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
-                              const SizedBox(height: 2),
-                              Text('Mau masak apa hari ini?', style: AppTypography.h3),
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => context.push('/notifications'),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 4)],
-                            ),
-                            child: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const DgSearchBar(readOnly: true, hintText: 'Cari sayur, buah, bumbu...'),
-                  ],
+      body: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          // Top Stack: Banner 1 (Background) + Header + Floating Categories
+          SliverToBoxAdapter(
+            child: Stack(
+              children: [
+                // Layer 1: Top Banner Background (extends behind status bar)
+                Container(
+                  width: double.infinity,
+                  height: 260, // Fixed height for the background
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.heroGradient,
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                  ),
                 ),
-              ),
-            ),
 
-            // Hero Banner
-            SliverToBoxAdapter(
-              child: Container(
-                height: 160,
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: AppColors.heroGradient,
-                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                ),
-                child: Stack(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Gratis Ongkir',
-                            style: AppTypography.h3.copyWith(color: AppColors.textOnPrimary),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Min. belanja Rp 150.000',
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textOnPrimary.withValues(alpha: 0.9),
+                // Layer 2: Content (Search Bar + Categories)
+                SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: [
+                      // Greeting Header & Notification
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$timeGreeting, ${isLoggedIn ? 'Sahabat' : 'Tamu'} 👋',
+                                  style: AppTypography.labelLarge.copyWith(color: Colors.white70),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Mau masak apa hari ini?',
+                                  style: AppTypography.h4.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    height: 1.1,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(20),
+                            GestureDetector(
+                              onTap: () => context.push('/notifications'),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.notifications_outlined, color: Colors.white),
+                              ),
                             ),
-                            child: Text(
-                              'Belanja Sekarang',
-                              style: AppTypography.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Positioned(
-                      right: 16,
-                      bottom: 16,
-                      child: Icon(Icons.local_offer, size: 80, color: AppColors.textOnPrimary.withValues(alpha: 0.2)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
 
-            // Categories
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Kategori', style: AppTypography.h4),
-                    Text('Lihat Semua', style: AppTypography.bodySmall.copyWith(color: AppColors.primary)),
-                  ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 100,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: [
-                    _CategoryItem(icon: Icons.grass, label: 'Sayuran', color: const Color(0xFF4CAF50), onTap: () {}),
-                    _CategoryItem(icon: Icons.apple, label: 'Buah', color: const Color(0xFFFF9800), onTap: () {}),
-                    _CategoryItem(icon: Icons.whatshot, label: 'Bumbu', color: const Color(0xFFF44336), onTap: () {}),
-                    _CategoryItem(icon: Icons.egg, label: 'Protein', color: const Color(0xFF795548), onTap: () {}),
-                    _CategoryItem(icon: Icons.rice_bowl, label: 'Pokok', color: const Color(0xFF9C27B0), onTap: () {}),
-                    _CategoryItem(icon: Icons.local_drink, label: 'Minuman', color: const Color(0xFF2196F3), onTap: () {}),
-                    _CategoryItem(icon: Icons.cookie, label: 'Snack', color: const Color(0xFFFF5722), onTap: () {}),
-                    _CategoryItem(icon: Icons.ac_unit, label: 'Frozen', color: const Color(0xFF00BCD4), onTap: () {}),
-                  ],
-                ),
-              ),
-            ),
+                      // Search Bar
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
+                        child: DgSearchBar(
+                          readOnly: true, 
+                          hintText: 'Cari sayur, buah, bumbu...',
+                          onTap: () => context.push('/search'),
+                        ),
+                      ),
 
-            // Featured Products
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Produk Pilihan 🔥', style: AppTypography.h4),
-                    Text('Semua', style: AppTypography.bodySmall.copyWith(color: AppColors.primary)),
-                  ],
+                      // Invisible spacer to push categories down to the overlap position
+                      const SizedBox(height: 32),
+
+                      // Floating Categories
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: categoriesAsync.when(
+                          data: (categories) {
+                            if (categories.isEmpty) return const SizedBox(height: 80);
+                            
+                            // Ambil maksimal 8 kategori untuk ditampilkan di Grid
+                            final displayCats = categories.take(8).toList();
+                            
+                            return LayoutBuilder(
+                              builder: (context, constraints) {
+                                // Hitung persis lebar 1/4 dari kontainer
+                                final itemWidth = constraints.maxWidth / 4;
+                                
+                                return Wrap(
+                                  runSpacing: 16,
+                                  children: displayCats.map((c) {
+                                    return SizedBox(
+                                      width: itemWidth,
+                                      child: Align(
+                                        alignment: Alignment.topCenter,
+                                        child: _CategoryItem(
+                                          iconUrl: c.iconUrl,
+                                          fallbackIcon: Icons.category,
+                                          label: c.name,
+                                          color: Color(int.parse(c.bgColor.replaceFirst('#', '0xFF'))),
+                                          onTap: () => context.push('/category/${c.id}?name=${Uri.encodeComponent(c.name)}'),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                );
+                              }
+                            );
+                          },
+                          loading: () => DgShimmer.categoryList(),
+                          error: (err, stack) => const Center(
+                            child: Text('Gagal memuat kategori', style: TextStyle(color: Colors.red)),
+                          ),
+                        ),
+                      ),
+                      
+                      // Bottom padding inside the stack to separate from the next element
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.62,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final products = _mockProducts;
-                    if (index >= products.length) return null;
-                    final p = products[index];
-                    return DgProductCard(
-                      name: p['name'] as String,
-                      price: p['price'] as int,
-                      unit: p['unit'] as String,
-                      discountPrice: p['discountPrice'] as int?,
-                      discountPercent: p['discountPercent'] as int?,
-                      onTap: () => context.push('/product/mock-$index'),
-                      onAddToCart: () {},
+          ),
+          // Promo Banners Section
+          SliverToBoxAdapter(
+            child: Consumer(
+              builder: (context, ref, child) {
+                final promoBannersAsync = ref.watch(promoBannersProvider);
+                
+                return promoBannersAsync.when(
+                  data: (banners) {
+                    if (banners.isEmpty) return const SizedBox.shrink();
+                    
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: _PromoBannersCarousel(banners: banners),
                     );
                   },
-                  childCount: _mockProducts.length,
+                  loading: () => DgShimmer.banner(),
+                  error: (err, stack) => const SizedBox.shrink(),
+                );
+              },
+            ),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
+            // 1. Pilihan DapurGizi 🔥
+            featuredProductsAsync.when(
+              loading: () => SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: DgShimmer.productGrid(count: 2),
                 ),
               ),
+              error: (e, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              data: (featuredProducts) {
+                if (featuredProducts.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+                return SliverMainAxisGroup(slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      child: Text('Pilihan DapurGizi 🔥', style: AppTypography.h4),
+                    ),
+                  ),
+                  _buildProductGrid(featuredProducts, cart, ref),
+                ]);
+              },
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            // 2. Spesial Diskon 💸
+            promoProductsAsync.when(
+              loading: () => SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: DgShimmer.productGrid(count: 2),
+                ),
+              ),
+              error: (e, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              data: (promoProducts) {
+                if (promoProducts.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+                return SliverMainAxisGroup(slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 32, 16, 12),
+                      child: Text('Spesial Diskon 💸', style: AppTypography.h4),
+                    ),
+                  ),
+                  _buildProductGrid(promoProducts, cart, ref),
+                ]);
+              },
+            ),
+
+            // 3. Belanja Harianmu 🛒 (Infinite Scroll)
+            paginatedProductsAsync.when(
+              loading: () => SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: DgShimmer.productGrid(count: 4),
+                ),
+              ),
+              error: (e, _) => SliverToBoxAdapter(
+                child: Center(child: Text('Error memuat produk: $e', style: const TextStyle(color: Colors.red))),
+              ),
+              data: (allProducts) {
+                return SliverMainAxisGroup(slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+                      child: Text('Belanja Harianmu 🛒', style: AppTypography.h4),
+                    ),
+                  ),
+                  _buildProductGrid(allProducts, cart, ref),
+
+                  // Loading indicator / End of list indicator
+                  if (paginatedProductsAsync.isRefreshing)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 12.0),
+                        child: DgShimmer.productGrid(count: 2), // Menggunakan shimmer 2 kotak saat load more
+                      ),
+                    )
+                  else if (allProducts.isNotEmpty && !ref.read(paginatedProductsProvider.notifier).hasMore)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Center(
+                          child: Text(
+                            'Semua produk telah ditampilkan',
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ),
+                      ),
+                    ),
+                ]);
+              },
+            ),
+
+            SliverToBoxAdapter(child: SizedBox(height: bottomPadding)),
           ],
+        ),
+    );
+  }
+
+  // --- HELPER METHODS ---
+
+  Widget _buildProductCard(Product p, List<CartItem> cart, WidgetRef ref, BuildContext context) {
+    // Format image URL safely
+    String? pImageUrl = p.images.isNotEmpty ? p.images.first : null;
+    if (pImageUrl != null) {
+      if (pImageUrl.startsWith('/')) {
+        final baseUrl = AppConfig.apiBaseUrl.replaceAll('/api', '');
+        pImageUrl = '$baseUrl$pImageUrl';
+      }
+      if (defaultTargetPlatform == TargetPlatform.android && pImageUrl.contains('localhost')) {
+        pImageUrl = pImageUrl.replaceAll('localhost', '10.0.2.2');
+      }
+    }
+    
+    // Find quantity from cart state
+    final cartItemIdx = cart.indexWhere((item) => item.productId == p.id);
+    final currentQty = cartItemIdx >= 0 ? cart[cartItemIdx].qty : 0;
+
+    return DgProductCard(
+      name: p.name,
+      price: p.displayPrice,
+      unit: p.unit,
+      discountPrice: p.displayDiscountPrice,
+      discountPercent: p.discountPercent,
+      variantCount: p.variants?.length ?? 0,
+      hasMultiplePrices: p.hasMultiplePrices,
+      quantity: currentQty,
+      isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+      imageUrl: pImageUrl,
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          useRootNavigator: true,
+          builder: (context) => DgProductBottomSheet(product: p),
+        );
+      },
+      onAddToCart: () {
+        if (p.variants != null && p.variants!.isNotEmpty) {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            useRootNavigator: true,
+            builder: (context) => DgProductBottomSheet(product: p),
+          );
+        } else {
+          ref.read(cartProvider.notifier).addItem(p);
+        }
+      },
+      onQuantityChanged: (newQty) {
+        ref.read(cartProvider.notifier).updateQuantity(p.id, newQty);
+      },
+    );
+  }
+
+
+
+  Widget _buildProductGrid(List<Product> products, List<CartItem> cart, WidgetRef ref) {
+    if (products.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Center(
+            child: Text('Belum ada produk', style: AppTypography.bodyMedium),
+          ),
+        ),
+      );
+    }
+    
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.62,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            if (index >= products.length) return null;
+            return _buildProductCard(products[index], cart, ref, context);
+          },
+          childCount: products.length,
         ),
       ),
     );
@@ -191,16 +420,50 @@ class HomeScreen extends StatelessWidget {
 
 class _CategoryItem extends StatelessWidget {
   const _CategoryItem({
-    required this.icon,
+    this.iconUrl,
+    required this.fallbackIcon,
     required this.label,
     required this.color,
     required this.onTap,
   });
 
-  final IconData icon;
+  final String? iconUrl;
+  final IconData fallbackIcon;
   final String label;
   final Color color;
   final VoidCallback onTap;
+
+  Widget _buildIcon(String? url, Color color) {
+    if (url == null || url.isEmpty) {
+      return Icon(fallbackIcon, color: color, size: 36);
+    }
+    
+    String fullUrl = url;
+    if (url.startsWith('/')) {
+      final baseUrl = AppConfig.apiBaseUrl.replaceAll('/api', '');
+      fullUrl = '$baseUrl$url';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android && fullUrl.contains('localhost')) {
+      fullUrl = fullUrl.replaceAll('localhost', '10.0.2.2');
+    }
+
+    if (fullUrl.toLowerCase().endsWith('.svg')) {
+      return SvgPicture.network(
+        fullUrl,
+        width: 36,
+        height: 36,
+        placeholderBuilder: (_) => Icon(fallbackIcon, color: color, size: 36),
+      );
+    } else {
+      return CachedNetworkImage(
+        imageUrl: fullUrl,
+        width: 36,
+        height: 36,
+        placeholder: (_, __) => Icon(fallbackIcon, color: color, size: 36),
+        errorWidget: (_, __, ___) => Icon(fallbackIcon, color: color, size: 36),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -217,10 +480,18 @@ class _CategoryItem extends StatelessWidget {
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, color: color, size: 28),
+              child: Center(
+                child: _buildIcon(iconUrl, color),
+              ),
             ),
             const SizedBox(height: 6),
-            Text(label, style: AppTypography.caption.copyWith(fontWeight: FontWeight.w500)),
+            Text(
+              label, 
+              style: AppTypography.caption.copyWith(fontWeight: FontWeight.w500, height: 1.2),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),
@@ -228,11 +499,126 @@ class _CategoryItem extends StatelessWidget {
   }
 }
 
-final _mockProducts = [
-  {'name': 'Brokoli Segar', 'price': 15000, 'unit': 'ikat', 'discountPrice': null, 'discountPercent': null},
-  {'name': 'Apel Fuji', 'price': 35000, 'unit': 'kg', 'discountPrice': 29000, 'discountPercent': 17},
-  {'name': 'Dada Ayam Fillet', 'price': 45000, 'unit': 'pack', 'discountPrice': 39000, 'discountPercent': 13},
-  {'name': 'Alpukat Mentega', 'price': 30000, 'unit': 'kg', 'discountPrice': null, 'discountPercent': null},
-  {'name': 'Beras Organik 5kg', 'price': 85000, 'unit': 'karung', 'discountPrice': null, 'discountPercent': null},
-  {'name': 'Jus Cold Pressed', 'price': 25000, 'unit': 'botol', 'discountPrice': null, 'discountPercent': null},
-];
+class _PromoBannersCarousel extends StatefulWidget {
+  final List<BannerModel> banners;
+  const _PromoBannersCarousel({required this.banners});
+
+  @override
+  State<_PromoBannersCarousel> createState() => _PromoBannersCarouselState();
+}
+
+class _PromoBannersCarouselState extends State<_PromoBannersCarousel> {
+  late PageController _pageController;
+  Timer? _timer;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.9);
+    if (widget.banners.length > 1) {
+      _startAutoScroll();
+    }
+  }
+
+  void _startAutoScroll() {
+    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (_pageController.hasClients) {
+        int nextPage = _currentPage + 1;
+        if (nextPage >= widget.banners.length) {
+          nextPage = 0;
+          _pageController.animateToPage(
+            nextPage,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.fastOutSlowIn,
+          );
+        } else {
+          _pageController.nextPage(
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.fastOutSlowIn,
+          );
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 140,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: widget.banners.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              final banner = widget.banners[index];
+              
+              String bImageUrl = banner.imageUrl;
+              if (bImageUrl.startsWith('/')) {
+                final baseUrl = AppConfig.apiBaseUrl.replaceAll('/api', '');
+                bImageUrl = '$baseUrl$bImageUrl';
+              }
+              if (defaultTargetPlatform == TargetPlatform.android && bImageUrl.contains('localhost')) {
+                bImageUrl = bImageUrl.replaceAll('localhost', '10.0.2.2');
+              }
+
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: AppColors.surface,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: CachedNetworkImage(
+                  imageUrl: bImageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: AppColors.background,
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: AppColors.background,
+                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            widget.banners.length,
+            (index) => AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: _currentPage == index ? 24 : 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: _currentPage == index ? AppColors.primary : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+

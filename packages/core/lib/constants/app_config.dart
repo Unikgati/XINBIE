@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// App-wide configuration constants.
 class AppConfig {
   AppConfig._();
@@ -6,7 +8,22 @@ class AppConfig {
   static const String appNameDriver = 'Dapur Gizi Driver';
 
   // API
-  static const String apiBaseUrl = 'http://localhost:3001/api';
+  static String get apiBaseUrl {
+    if (kIsWeb) return 'http://localhost:3001/api';
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:3001/api';
+    }
+    return 'http://localhost:3001/api';
+  }
+
+  /// Helper to convert localhost URLs to Android emulator accessible URLs
+  static String fixImageUrl(String url) {
+    if (kIsWeb) return url;
+    if (defaultTargetPlatform == TargetPlatform.android && url.contains('localhost')) {
+      return url.replaceAll('localhost', '10.0.2.2');
+    }
+    return url;
+  }
 
   // Pagination
   static const int pageSize = 20;

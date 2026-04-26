@@ -6,6 +6,7 @@ import CustomSelect from '@/components/CustomSelect';
 import FileUpload from '@/components/FileUpload';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { TableSkeleton } from '@/components/Skeleton';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 
 interface Banner {
@@ -91,10 +92,11 @@ export default function BannersPage() {
       <div className="page-body">
         <div className="data-card">
           {loading ? (
-            <div className="loading-center"><div className="spinner" /> Memuat banner...</div>
+            <TableSkeleton rows={4} columns={4} />
           ) : banners.length === 0 ? (
             <div className="empty-state"><span className="material-symbols-outlined">image</span>Belum ada banner</div>
           ) : (
+            <div className="table-responsive">
             <table className="data-table">
               <thead><tr><th>Banner</th><th>Tipe</th><th>Status</th><th>Urutan</th><th style={{ width: 48 }}></th></tr></thead>
               <tbody>
@@ -118,6 +120,7 @@ export default function BannersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
@@ -131,14 +134,13 @@ export default function BannersPage() {
             </div>
             <div className="modal-body">
               <div className="form-group"><label className="form-label">Judul</label><input className="form-input" value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder="Judul banner" /></div>
-              <div className="form-group"><label className="form-label">Tipe</label><CustomSelect value={formType} onChange={setFormType} options={[{ value: 'PROMO', label: 'Promo' }, { value: 'INFO', label: 'Info' }, { value: 'EVENT', label: 'Event' }]} /></div>
               <div className="form-group">
                 <label className="form-label">Gambar Banner</label>
                 <FileUpload
                   accept="image/*"
                   icon="image"
                   label="Upload gambar banner"
-                  hint="Format JPG, PNG, WebP — maks 2MB"
+                  hint="Format JPG, PNG, WebP — maks 2MB (Rekomendasi rasio 2.5:1, cth: 1000x400 px)"
                   maxSize={2048}
                   preview={imagePreview}
                   onChange={(file) => { setImageFile(file); setImagePreview(URL.createObjectURL(file)); }}

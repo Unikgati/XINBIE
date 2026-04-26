@@ -4,11 +4,15 @@ import '../api/api_endpoints.dart';
 import '../models/user.dart';
 import 'auth_state.dart';
 
+import 'package:dio/dio.dart';
+
 /// Auth repository — handles login, register, OTP, password reset.
 class AuthRepository {
   AuthRepository(this._api);
 
   final ApiClient _api;
+
+  Stream<void> get onUnauthorized => _api.onUnauthorized;
 
   Future<AuthState> login({
     required String email,
@@ -28,9 +32,19 @@ class AuthRepository {
     );
   }
 
-  Future<AuthState> loginWithGoogle({required String idToken}) async {
+  Future<AuthState> loginWithGoogle({
+    required String idToken,
+    required String name,
+    required String email,
+    String? avatarUrl,
+    required String googleId,
+  }) async {
     final response = await _api.post(ApiEndpoints.google, data: {
       'idToken': idToken,
+      'name': name,
+      'email': email,
+      'avatarUrl': avatarUrl,
+      'googleId': googleId,
     });
     final data = response.data as Map<String, dynamic>;
     await _api.setTokens(
@@ -107,6 +121,27 @@ class AuthRepository {
 
   Future<User> getMe() async {
     final response = await _api.get(ApiEndpoints.me);
+    return User.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<User> updateProfile({
+    String? name,
+    String? phoneWa,
+    String? avatarPath,
+  }) async {
+    final formData = FormData.fromMap({
+      if (name != null) 'name': name,
+      if (phoneWa != null) 'phoneWa': phoneWa,
+      if (avatarPath != null)
+        'avatar': await MultipartFile.fromFile(
+          avatarPath,
+          filename: avatarPath.split('/').last.contains('.') 
+            ? avatarPath.split('/').last 
+            : '${avatarPath.split('/').last}.jpg',
+        ),
+    });
+
+    final response = await _api.put(ApiEndpoints.profile, data: formData);
     return User.fromJson(response.data as Map<String, dynamic>);
   }
 

@@ -15,35 +15,83 @@ import '../screens/earnings/withdrawal_screen.dart';
 import '../screens/profile/driver_profile_screen.dart';
 import '../screens/profile/bank_account_screen.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core/core.dart';
+import '../providers/driver_providers.dart';
+
 final _rootKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
-final router = GoRouter(
-  navigatorKey: _rootKey,
-  initialLocation: '/splash',
-  routes: [
-    GoRoute(path: '/splash', builder: (_, __) => const DriverSplashScreen()),
-    GoRoute(path: '/login', builder: (_, __) => const DriverLoginScreen()),
-    GoRoute(path: '/register', builder: (_, __) => const DriverRegisterScreen()),
-    GoRoute(path: '/upload-ktp', builder: (_, __) => const KtpUploadScreen()),
-    GoRoute(path: '/verification-pending', builder: (_, __) => const VerificationPendingScreen()),
+class DriverRouterNotifier extends ChangeNotifier {
+  DriverRouterNotifier(this.ref) {
+    ref.listen<AuthState>(
+      driverAuthNotifierProvider,
+      (_, __) => notifyListeners(),
+    );
+  }
 
-    ShellRoute(
-      navigatorKey: _shellKey,
-      builder: (_, __, child) => DriverHomeShell(child: child),
-      routes: [
-        GoRoute(path: '/home', builder: (_, __) => const DriverHomeScreen()),
-        GoRoute(path: '/history', builder: (_, __) => const DriverHistoryScreen()),
-        GoRoute(path: '/earnings', builder: (_, __) => const DriverEarningsScreen()),
-        GoRoute(path: '/profile', builder: (_, __) => const DriverProfileScreen()),
-      ],
-    ),
+  final Ref ref;
+}
 
-    GoRoute(
-      path: '/order/:id',
-      builder: (_, state) => DriverOrderDetailScreen(orderId: state.pathParameters['id']!),
-    ),
-    GoRoute(path: '/withdrawal', builder: (_, __) => const WithdrawalScreen()),
-    GoRoute(path: '/bank-account', builder: (_, __) => const BankAccountScreen()),
-  ],
-);
+final routerProvider = Provider<GoRouter>((ref) {
+  final notifier = DriverRouterNotifier(ref);
+
+  return GoRouter(
+    navigatorKey: _rootKey,
+    initialLocation: '/splash',
+    refreshListenable: notifier,
+    redirect: (context, state) {
+      final authState = ref.read(driverAuthNotifierProvider);
+
+      final isAuth = authState.maybeWhen(
+        authenticated: (_) => true,
+        orElse: () => false,
+      );
+
+      final isSplash = state.matchedLocation == '/splash';
+      final isGoingToAuth = state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register' ||
+          state.matchedLocation == '/upload-ktp' ||
+          state.matchedLocation == '/verification-pending';
+
+      if (isSplash) {
+        return null;
+      }
+
+      if (!isAuth && !isGoingToAuth) {
+        return '/login'; // driver app defaults to login
+      }
+
+      if (isAuth && isGoingToAuth) {
+        return '/home';
+      }
+
+      return null;
+    },
+    routes: [
+      GoRoute(path: '/splash', builder: (_, __) => const DriverSplashScreen()),
+      GoRoute(path: '/login', builder: (_, __) => const DriverLoginScreen()),
+      GoRoute(path: '/register', builder: (_, __) => const DriverRegisterScreen()),
+      GoRoute(path: '/upload-ktp', builder: (_, __) => const KtpUploadScreen()),
+      GoRoute(path: '/verification-pending', builder: (_, __) => const VerificationPendingScreen()),
+
+      ShellRoute(
+        navigatorKey: _shellKey,
+        builder: (_, __, child) => DriverHomeShell(child: child),
+        routes: [
+          GoRoute(path: '/home', builder: (_, __) => const DriverHomeScreen()),
+          GoRoute(path: '/history', builder: (_, __) => const DriverHistoryScreen()),
+          GoRoute(path: '/earnings', builder: (_, __) => const DriverEarningsScreen()),
+          GoRoute(path: '/profile', builder: (_, __) => const DriverProfileScreen()),
+        ],
+      ),
+
+      GoRoute(
+        path: '/order/:id',
+        builder: (_, state) => DriverOrderDetailScreen(orderId: state.pathParameters['id']!),
+      ),
+      GoRoute(path: '/withdrawal', builder: (_, __) => const WithdrawalScreen()),
+      GoRoute(path: '/bank-account', builder: (_, __) => const BankAccountScreen()),
+    ],
+  );
+});

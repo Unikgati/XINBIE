@@ -26,6 +26,7 @@ abstract class Order with _$Order {
     required int grandTotal,
     String? midtransTransactionId,
     String? midtransPaymentType,
+    Map<String, dynamic>? paymentDetails,
     String? proofPhotoUrl,
     String? notes,
     String? problemType,

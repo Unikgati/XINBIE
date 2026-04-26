@@ -1,23 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_kit/ui_kit.dart';
+import '../../providers/driver_providers.dart';
 
-class DriverSplashScreen extends StatefulWidget {
+class DriverSplashScreen extends ConsumerStatefulWidget {
   const DriverSplashScreen({super.key});
   @override
-  State<DriverSplashScreen> createState() => _DriverSplashScreenState();
+  ConsumerState<DriverSplashScreen> createState() => _DriverSplashScreenState();
 }
 
-class _DriverSplashScreenState extends State<DriverSplashScreen> with SingleTickerProviderStateMixin {
+class _DriverSplashScreenState extends ConsumerState<DriverSplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..forward();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) context.go('/login');
-    });
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      await ref.read(driverAuthNotifierProvider.notifier).checkAuthStatus();
+      if (mounted) {
+        context.go('/login'); // The router will redirect to /home if authenticated
+      }
+    }
   }
 
   @override

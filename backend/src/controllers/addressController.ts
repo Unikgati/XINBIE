@@ -51,9 +51,26 @@ export async function updateAddress(req: AuthRequest, res: Response, next: NextF
     });
     if (!address) throw new AppError('Alamat tidak ditemukan', 404);
 
+    const { recipientName, phoneWa, lat, lng, fullAddress, notes, isPrimary } = req.body;
+
+    if (isPrimary === true) {
+      await prisma.address.updateMany({
+        where: { userId: req.userId! },
+        data: { isPrimary: false },
+      });
+    }
+
     const updated = await prisma.address.update({
       where: { id: req.params.id },
-      data: req.body,
+      data: {
+        ...(recipientName !== undefined && { recipientName }),
+        ...(phoneWa !== undefined && { phoneWa }),
+        ...(lat !== undefined && { lat }),
+        ...(lng !== undefined && { lng }),
+        ...(fullAddress !== undefined && { fullAddress }),
+        ...(notes !== undefined && { notes }),
+        ...(isPrimary !== undefined && { isPrimary }),
+      },
     });
 
     res.json(updated);

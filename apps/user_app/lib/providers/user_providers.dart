@@ -1,6 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/core.dart';
 
+/// Authentication state
+final authStateProvider = FutureProvider<bool>((ref) async {
+  return ref.watch(authRepositoryProvider).isLoggedIn();
+});
+
+/// Current user profile
+final currentUserProvider = FutureProvider<User?>((ref) async {
+  final repo = ref.watch(authRepositoryProvider);
+  final isLoggedIn = await repo.isLoggedIn();
+  if (!isLoggedIn) return null;
+  
+  try {
+    return await repo.getMe();
+  } catch (e) {
+    return null;
+  }
+});
+
+
 /// User addresses
 final addressesProvider = FutureProvider<List<Address>>((ref) async {
   final repo = ref.watch(addressRepositoryProvider);

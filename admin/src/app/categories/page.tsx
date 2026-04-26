@@ -5,6 +5,7 @@ import ActionMenu from '@/components/ActionMenu';
 import FileUpload from '@/components/FileUpload';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { TableSkeleton } from '@/components/Skeleton';
 import { apiGet, apiPost, apiPut } from '@/lib/api';
 
 interface Category {
@@ -12,7 +13,6 @@ interface Category {
   name: string;
   iconUrl?: string;
   bgColor: string;
-  sortOrder: number;
   _count?: { products: number };
 }
 
@@ -106,15 +106,16 @@ export default function CategoriesPage() {
       <div className="page-body">
         <div className="data-card">
           {loading ? (
-            <div className="loading-center"><div className="spinner" /> Memuat kategori...</div>
+            <TableSkeleton rows={5} columns={4} />
           ) : categories.length === 0 ? (
             <div className="empty-state">
               <span className="material-symbols-outlined">category</span>
               Belum ada kategori
             </div>
           ) : (
+            <div className="table-responsive">
             <table className="data-table">
-              <thead><tr><th>Kategori</th><th>Warna</th><th>Produk</th><th>Urutan</th><th style={{ width: 48 }}></th></tr></thead>
+              <thead><tr><th>Kategori</th><th>Produk</th><th style={{ width: 48 }}></th></tr></thead>
               <tbody>
                 {categories.map(c => (
                   <tr key={c.id}>
@@ -130,14 +131,7 @@ export default function CategoriesPage() {
                         <span style={{ fontWeight: 600 }}>{c.name}</span>
                       </div>
                     </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 16, height: 16, borderRadius: 4, background: c.bgColor }} />
-                        <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>{c.bgColor}</span>
-                      </div>
-                    </td>
                     <td>{c._count?.products || 0} produk</td>
-                    <td>{c.sortOrder}</td>
                     <td>
                       <ActionMenu items={[
                         { icon: 'edit', label: 'Edit', onClick: () => openEdit(c) },
@@ -147,6 +141,7 @@ export default function CategoriesPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
@@ -160,7 +155,13 @@ export default function CategoriesPage() {
             </div>
             <div className="modal-body">
               <div className="form-group"><label className="form-label">Nama Kategori</label><input className="form-input" placeholder="Masukkan nama" value={formName} onChange={e => setFormName(e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">Warna Background</label><input className="form-input" type="color" value={formColor} onChange={e => setFormColor(e.target.value)} style={{ height: 44, padding: 4 }} /></div>
+              <div className="form-group">
+                <label className="form-label">Warna Background</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="color" value={formColor} onChange={e => setFormColor(e.target.value)} style={{ width: 44, height: 44, padding: 2, border: '2px solid var(--border)', borderRadius: 'var(--radius-md)', cursor: 'pointer', background: 'none' }} />
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{formColor.toUpperCase()}</span>
+                </div>
+              </div>
               <div className="form-group">
                 <label className="form-label">Ikon Kategori</label>
                 <FileUpload

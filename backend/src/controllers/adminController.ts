@@ -3,6 +3,7 @@ import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { processAndUploadImage, processAndUploadImages } from '../middleware/upload';
+import { emitToAdmins, notifyOrderStatus } from '../websocket';
 
 // ═══════════════════════════════════════
 // Dashboard
@@ -109,7 +110,6 @@ const parseProductData = (body: any) => {
   if (data.price !== undefined) data.price = parseInt(data.price) || 0;
   if (data.costPrice !== undefined) data.costPrice = parseInt(data.costPrice) || 0;
   if (data.discountPrice !== undefined) data.discountPrice = parseInt(data.discountPrice) || null;
-  if (data.discountPercent !== undefined) data.discountPercent = parseInt(data.discountPercent) || null;
   if (data.weightGram !== undefined) data.weightGram = parseInt(data.weightGram) || null;
   if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 1;
   
@@ -117,6 +117,13 @@ const parseProductData = (body: any) => {
   if (data.isActive !== undefined) data.isActive = String(data.isActive) === 'true';
   if (data.isFeatured !== undefined) data.isFeatured = String(data.isFeatured) === 'true';
   if (data.isUnlimitedStock !== undefined) data.isUnlimitedStock = String(data.isUnlimitedStock) === 'true';
+
+  // Auto-calculate discountPercent if discountPrice exists and is less than price
+  if (data.price > 0 && data.discountPrice && data.discountPrice < data.price) {
+    data.discountPercent = Math.round(((data.price - data.discountPrice) / data.price) * 100);
+  } else {
+    data.discountPercent = null;
+  }
 
   return data;
 };
@@ -158,11 +165,10 @@ export async function adminUpdateProduct(req: AuthRequest, res: Response, next: 
 
 export async function adminDeleteProduct(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await prisma.product.update({
+    await prisma.product.delete({
       where: { id: req.params.id },
-      data: { isActive: false },
     });
-    res.json({ message: 'Produk dinonaktifkan' });
+    res.json({ message: 'Produk dihapus' });
   } catch (err) { next(err); }
 }
 
@@ -192,6 +198,7 @@ export async function adminCreateVariant(req: AuthRequest, res: Response, next: 
         sku: req.body.sku || null,
         price: parseInt(req.body.price) || 0,
         costPrice: parseInt(req.body.costPrice) || 0,
+        discountPrice: req.body.discountPrice ? parseInt(req.body.discountPrice) : null,
         priceAddition: parseInt(req.body.priceAddition) || 0,
         stockQty: parseInt(req.body.stockQty) || 0,
         imageUrl,
@@ -207,10 +214,11 @@ export async function adminUpdateVariant(req: AuthRequest, res: Response, next: 
     const data: any = { ...req.body };
     if (req.file) data.imageUrl = await processAndUploadImage(req.file, 'variants');
     if (data.price) data.price = parseInt(data.price);
-    if (data.costPrice) data.costPrice = parseInt(data.costPrice);
-    if (data.priceAddition) data.priceAddition = parseInt(data.priceAddition);
-    if (data.stockQty) data.stockQty = parseInt(data.stockQty);
-    if (data.sortOrder) data.sortOrder = parseInt(data.sortOrder);
+    if (data.costPrice !== undefined) data.costPrice = parseInt(data.costPrice) || 0;
+    if (data.discountPrice !== undefined) data.discountPrice = parseInt(data.discountPrice) || null;
+    if (data.priceAddition !== undefined) data.priceAddition = parseInt(data.priceAddition) || 0;
+    if (data.stockQty !== undefined) data.stockQty = parseInt(data.stockQty) || 0;
+    if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 0;
 
     const variant = await prisma.productVariant.update({
       where: { id: req.params.id },
@@ -222,11 +230,10 @@ export async function adminUpdateVariant(req: AuthRequest, res: Response, next: 
 
 export async function adminDeleteVariant(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await prisma.productVariant.update({
+    await prisma.productVariant.delete({
       where: { id: req.params.id },
-      data: { isActive: false },
     });
-    res.json({ message: 'Varian dinonaktifkan' });
+    res.json({ message: 'Varian dihapus' });
   } catch (err) { next(err); }
 }
 
@@ -278,7 +285,12 @@ export async function adminGetOrders(req: AuthRequest, res: Response, next: Next
     const { status, page = '1', limit = '20', search } = req.query;
     const where: any = {};
     if (status) where.orderStatus = status;
-    if (search) where.code = { contains: search as string, mode: 'insensitive' };
+    if (search) {
+      where.OR = [
+        { code: { contains: search as string, mode: 'insensitive' } },
+        { user: { name: { contains: search as string, mode: 'insensitive' } } },
+      ];
+    }
 
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
@@ -299,6 +311,32 @@ export async function adminGetOrders(req: AuthRequest, res: Response, next: Next
   } catch (err) { next(err); }
 }
 
+export async function adminGetOrderDetail(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: {
+        user: { select: { id: true, name: true, email: true, phoneWa: true, avatarUrl: true } },
+        driver: { select: { id: true, name: true, phoneWa: true } },
+        deliverySlot: true,
+        items: {
+          include: {
+            product: { select: { id: true, name: true, images: true } },
+            variant: { select: { id: true, name: true } },
+          },
+        },
+        statusLogs: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    if (!order) throw new AppError('Pesanan tidak ditemukan', 404);
+
+    res.json(order);
+  } catch (err) { next(err); }
+}
+
 export async function adminUpdateOrderStatus(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { status, note, driverId, pickupPointId } = req.body;
@@ -306,12 +344,20 @@ export async function adminUpdateOrderStatus(req: AuthRequest, res: Response, ne
     if (driverId) data.driverId = driverId;
     if (pickupPointId) data.pickupPointId = pickupPointId;
 
-    await prisma.$transaction([
-      prisma.order.update({ where: { id: req.params.id }, data }),
+    const [updatedOrder] = await prisma.$transaction([
+      prisma.order.update({
+        where: { id: req.params.id },
+        data,
+        select: { id: true, userId: true, orderStatus: true, code: true },
+      }),
       prisma.orderStatusLog.create({
         data: { orderId: req.params.id, status, actorId: req.userId, note: note || 'Admin update' },
       }),
     ]);
+
+    // Broadcast to admins + notify user
+    emitToAdmins('order:statusUpdate', { orderId: req.params.id, status });
+    notifyOrderStatus(updatedOrder.userId, req.params.id, status);
 
     res.json({ message: 'Status pesanan diperbarui' });
   } catch (err) { next(err); }
@@ -711,5 +757,138 @@ export async function adminDriverAdjustment(req: AuthRequest, res: Response, nex
     });
 
     res.json({ message: `${type} berhasil diterapkan`, ...result });
+  } catch (err) { next(err); }
+}
+
+// ═══════════════════════════════════════
+// Delivery Slots (Admin)
+// ═══════════════════════════════════════
+
+export async function adminGetDeliverySlots(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const slots = await prisma.deliverySlot.findMany({
+      orderBy: [
+        { dayOfWeek: 'asc' },
+        { startTime: 'asc' },
+      ],
+      include: {
+        _count: {
+          select: { orders: true }
+        }
+      }
+    });
+    res.json(slots);
+  } catch (err) { next(err); }
+}
+
+export async function adminCreateDeliverySlot(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { dayOfWeek, label, startTime, endTime, maxOrders, cutoffHours, isActive } = req.body;
+    const slot = await prisma.deliverySlot.create({
+      data: {
+        dayOfWeek: parseInt(dayOfWeek),
+        label,
+        startTime,
+        endTime,
+        maxOrders: maxOrders ? parseInt(maxOrders) : undefined,
+        cutoffHours: cutoffHours ? parseInt(cutoffHours) : undefined,
+        isActive: isActive ?? true,
+      },
+    });
+    res.status(201).json(slot);
+  } catch (err) { next(err); }
+}
+
+export async function adminUpdateDeliverySlotsByDay(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const dayOfWeek = parseInt(req.params.day);
+    const { slots, maxOrders, cutoffHours } = req.body;
+    
+    // slots is an array of: { label, startTime, endTime, isActive }
+    
+    const results = [];
+    
+    for (const slotDef of slots) {
+      const { label, startTime, endTime, isActive } = slotDef;
+      
+      const existing = await prisma.deliverySlot.findFirst({
+        where: { dayOfWeek, label }
+      });
+      
+      if (existing) {
+        if (isActive) {
+          // Update to active with new times
+          const updated = await prisma.deliverySlot.update({
+            where: { id: existing.id },
+            data: { isActive: true, startTime, endTime, maxOrders, cutoffHours }
+          });
+          results.push(updated);
+        } else {
+          // Deactivate
+          const count = await prisma.order.count({ where: { deliverySlotId: existing.id } });
+          if (count > 0) {
+            // Soft delete
+            const updated = await prisma.deliverySlot.update({
+              where: { id: existing.id },
+              data: { isActive: false, maxOrders, cutoffHours }
+            });
+            results.push(updated);
+          } else {
+            // Hard delete
+            await prisma.deliverySlot.delete({ where: { id: existing.id } });
+          }
+        }
+      } else {
+        if (isActive) {
+          // Create new
+          const created = await prisma.deliverySlot.create({
+            data: { dayOfWeek, label, startTime, endTime, maxOrders, cutoffHours, isActive: true }
+          });
+          results.push(created);
+        }
+      }
+    }
+    
+    res.json({ message: 'Jadwal berhasil diperbarui', slots: results });
+  } catch (err) { next(err); }
+}
+
+export async function adminUpdateDeliverySlot(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const { dayOfWeek, label, startTime, endTime, maxOrders, cutoffHours, isActive } = req.body;
+    
+    const slot = await prisma.deliverySlot.update({
+      where: { id },
+      data: {
+        ...(dayOfWeek !== undefined && { dayOfWeek: parseInt(dayOfWeek) }),
+        ...(label && { label }),
+        ...(startTime && { startTime }),
+        ...(endTime && { endTime }),
+        ...(maxOrders !== undefined && { maxOrders: parseInt(maxOrders) }),
+        ...(cutoffHours !== undefined && { cutoffHours: parseInt(cutoffHours) }),
+        ...(isActive !== undefined && { isActive }),
+      },
+    });
+    res.json(slot);
+  } catch (err) { next(err); }
+}
+
+export async function adminDeleteDeliverySlot(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    
+    const count = await prisma.order.count({ where: { deliverySlotId: id } });
+    if (count > 0) {
+      // Soft delete
+      const slot = await prisma.deliverySlot.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      return res.json({ message: 'Slot disembunyikan (Soft Delete) karena masih memiliki pesanan aktif', slot, softDeleted: true });
+    }
+
+    await prisma.deliverySlot.delete({ where: { id } });
+    res.json({ message: 'Slot berhasil dihapus permanen' });
   } catch (err) { next(err); }
 }

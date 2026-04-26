@@ -1,11 +1,23 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/core.dart';
 
 /// Driver auth notifier — extends base auth with driver-specific flows.
 class DriverAuthNotifier extends StateNotifier<AuthState> {
-  DriverAuthNotifier(this._authRepo) : super(const AuthState.initial());
+  DriverAuthNotifier(this._authRepo) : super(const AuthState.initial()) {
+    _unauthorizedSub = _authRepo.onUnauthorized.listen((_) {
+      state = const AuthState.unauthenticated();
+    });
+  }
 
   final AuthRepository _authRepo;
+  late final StreamSubscription _unauthorizedSub;
+
+  @override
+  void dispose() {
+    _unauthorizedSub.cancel();
+    super.dispose();
+  }
 
   Future<void> checkAuthStatus() async {
     state = const AuthState.loading();
@@ -83,4 +95,18 @@ final driverEarningsProvider = FutureProvider.family<Map<String, dynamic>, Strin
 final verificationStatusProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final repo = ref.watch(driverRepositoryProvider);
   return repo.getVerificationStatus();
+});
+
+/// Driver wallet provider
+final driverWalletProvider = FutureProvider<DriverWallet>((ref) async {
+  final repo = ref.watch(driverRepositoryProvider);
+  final data = await repo.getWallet();
+  return DriverWallet.fromJson(data);
+});
+
+/// Bank info provider
+final driverBankInfoProvider = FutureProvider<BankInfo>((ref) async {
+  final repo = ref.watch(driverRepositoryProvider);
+  final data = await repo.getBankInfo();
+  return BankInfo.fromJson(data);
 });

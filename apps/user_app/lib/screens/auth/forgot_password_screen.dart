@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ui_kit/ui_kit.dart';
+import 'package:core/core.dart';
 import 'package:core/utils/validators.dart';
+import '../../providers/auth_provider.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _emailCtrl = TextEditingController();
   bool _loading = false;
 
@@ -59,15 +62,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               DgButton(
                 label: 'Kirim OTP',
                 isLoading: _loading,
-                onPressed: () {
+                onPressed: () async {
                   if (Validators.email(_emailCtrl.text) != null) return;
                   setState(() => _loading = true);
-                  Future.delayed(const Duration(seconds: 1), () {
+                  
+                  try {
+                    await ref.read(authRepositoryProvider).forgotPassword(email: _emailCtrl.text.trim());
+                    if (mounted) {
+                      DgSnackbar.showSuccess(context, message: 'OTP telah dikirim ke email kamu');
+                      context.push('/otp?email=${_emailCtrl.text.trim()}&type=password_reset');
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      DgSnackbar.showError(context, message: 'Gagal mengirim OTP', error: e);
+                    }
+                  } finally {
                     if (mounted) {
                       setState(() => _loading = false);
-                      context.push('/otp?email=${_emailCtrl.text}&type=password_reset');
                     }
-                  });
+                  }
                 },
               ),
             ],

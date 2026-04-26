@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useNotification } from './NotificationProvider';
 
 const navItems = [
   { section: 'Utama', items: [
@@ -23,6 +24,7 @@ const navItems = [
     { href: '/promos', icon: 'sell', label: 'Promo' },
   ]},
   { section: 'Sistem', items: [
+    { href: '/delivery-slots', icon: 'event', label: 'Jadwal Pengiriman' },
     { href: '/settings', icon: 'settings', label: 'Pengaturan' },
     { href: '/broadcast', icon: 'campaign', label: 'Broadcast' },
   ]},
@@ -31,6 +33,14 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { pendingCount, resetPendingCount, socketStatus } = useNotification();
+
+  const statusDot: Record<string, { color: string; title: string; pulse?: boolean }> = {
+    connected: { color: '#4CAF50', title: 'Terhubung' },
+    reconnecting: { color: '#FF9800', title: 'Menyambung ulang...', pulse: true },
+    disconnected: { color: '#F44336', title: 'Koneksi terputus' },
+  };
+  const dot = statusDot[socketStatus] || statusDot.disconnected;
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -52,12 +62,22 @@ export default function Sidebar() {
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <span className="material-symbols-outlined">eco</span>
+          <img src="/logo-icon.svg" alt="Dapur Gizi Logo" style={{ width: 24, height: 24, objectFit: 'contain' }} />
         </div>
         {!collapsed && (
           <div>
             <div className="sidebar-title">Dapur Gizi</div>
-            <div className="sidebar-subtitle">Admin Panel</div>
+            <div className="sidebar-subtitle" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              Admin Panel
+              <span
+                title={dot.title}
+                style={{
+                  width: 7, height: 7, borderRadius: '50%', background: dot.color,
+                  display: 'inline-block', flexShrink: 0,
+                  animation: dot.pulse ? 'pulse-dot 1.5s ease-in-out infinite' : undefined,
+                }}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -72,9 +92,33 @@ export default function Sidebar() {
                 href={item.href}
                 className={`nav-item ${pathname === item.href ? 'active' : ''}`}
                 title={collapsed ? item.label : undefined}
+                onClick={item.href === '/orders' ? resetPendingCount : undefined}
+                style={{ position: 'relative' }}
               >
                 <span className="material-symbols-outlined">{item.icon}</span>
                 {!collapsed && <span className="nav-label">{item.label}</span>}
+                {item.href === '/orders' && pendingCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: 6,
+                    right: collapsed ? 4 : 12,
+                    background: '#F44336',
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 5px',
+                    lineHeight: 1,
+                    boxShadow: '0 1px 3px rgba(244,67,54,0.4)',
+                  }}>
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </span>
+                )}
               </Link>
             ))}
           </div>
@@ -96,7 +140,21 @@ export default function Sidebar() {
               <div style={{ fontSize: 14, fontWeight: 600 }}>Admin</div>
               <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>admin@dapurgizi.com</div>
             </div>
-            <span className="material-symbols-outlined" style={{ color: 'var(--text-hint)', cursor: 'pointer' }}>logout</span>
+            <span 
+              className="material-symbols-outlined" 
+              style={{ color: 'var(--text-hint)', cursor: 'pointer', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--error)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-hint)'}
+              onClick={() => {
+                import('@/lib/api').then(({ clearAuthToken }) => {
+                  clearAuthToken();
+                  window.location.href = '/login';
+                });
+              }}
+              title="Keluar"
+            >
+              logout
+            </span>
           </>
         )}
       </div>

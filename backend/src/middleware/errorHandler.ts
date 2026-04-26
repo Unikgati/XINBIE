@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import fs from 'fs';
 
 export function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
   console.error('❌ Error:', err.message || err);
+  fs.appendFileSync('error.log', new Date().toISOString() + ' - ' + (err.stack || err.message || err) + '\n');
 
   if (err.name === 'ValidationError') {
     return res.status(422).json({ message: 'Validasi gagal', errors: err.errors });

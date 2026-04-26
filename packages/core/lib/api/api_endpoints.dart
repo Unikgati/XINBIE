@@ -13,12 +13,14 @@ class ApiEndpoints {
   static const String resetPassword = '/auth/reset-password';
   static const String logout = '/auth/logout';
   static const String me = '/auth/me';
+  static const String profile = '/auth/profile';
   static const String fcmToken = '/auth/fcm-token';
 
   // Products & Categories
   static const String categories = '/categories';
   static const String products = '/products';
   static String product(String id) => '/products/$id';
+  static const String banners = '/banners';
 
   // Cart
   static const String cartValidate = '/cart/validate';
@@ -34,7 +36,7 @@ class ApiEndpoints {
   static const String deliveryAreas = '/delivery/areas';
 
   // Promo
-  static const String promoValidate = '/promo/validate';
+  static const String promoValidate = '/promos/validate';
 
   // Orders
   static const String orders = '/orders';
@@ -64,6 +66,9 @@ class ApiEndpoints {
   static String driverOrderCodConfirm(String id) =>
       '/driver/orders/$id/cod-confirm';
   static const String driverEarnings = '/driver/earnings';
+  static const String driverWallet = '/driver/wallet';
+  static const String driverWithdrawal = '/driver/withdrawal';
+  static const String driverBank = '/driver/bank';
 
   // Geocoding
   static const String geocodeReverse = '/geocode/reverse';

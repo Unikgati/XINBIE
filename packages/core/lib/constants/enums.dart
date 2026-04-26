@@ -1,9 +1,14 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 /// Enums matching database schema and business logic.
 
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
 enum UserRole { user, driver, admin }
 
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
 enum VerificationStatus { pending, approved, rejected }
 
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
 enum OrderStatus {
   waitingPayment,
   received,
@@ -16,18 +21,41 @@ enum OrderStatus {
   problem,
 }
 
-enum PaymentMethod { qris, va, cod }
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
+enum PaymentMethod {
+  qris,
+  va, // Legacy fallback
+  gopay,
+  shopeepay,
+  ovo,
+  dana,
+  vaBca,
+  vaMandiri,
+  vaBni,
+  vaBri,
+  vaPermata,
+  vaCimb,
+  alfamart,
+  indomaret,
+  cod,
+}
 
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
 enum PaymentStatus { pending, paid, failed, refunded }
 
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
 enum DeliveryType { regular, instant }
 
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
 enum BannerType { hero, promo }
 
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
 enum BannerActionType { none, category, product, url }
 
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
 enum PromoType { percent, nominal }
 
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
 enum ProblemType {
   addressNotFound,
   recipientAbsent,
@@ -37,6 +65,7 @@ enum ProblemType {
   other,
 }
 
+@JsonEnum(fieldRename: FieldRename.screamingSnake)
 enum NotificationType {
   orderCreated,
   paymentSuccess,

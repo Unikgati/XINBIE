@@ -26,6 +26,7 @@ export async function getProducts(req: Request, res: Response, next: NextFunctio
       categoryId,
       search,
       featured,
+      promo,
       sort = 'newest',
       page = '1',
       limit = '20',
@@ -34,6 +35,9 @@ export async function getProducts(req: Request, res: Response, next: NextFunctio
     const where: any = { isActive: true };
     if (categoryId) where.categoryId = categoryId;
     if (featured === 'true') where.isFeatured = true;
+    if (promo === 'true') {
+      where.discountPrice = { gt: 0 };
+    }
     if (search) where.name = { contains: search as string, mode: 'insensitive' };
 
     const orderBy: any = {};

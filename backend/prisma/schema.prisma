@@ -131,6 +131,7 @@ model ProductVariant {
   sku           String? @unique
   price         Int     @default(0)
   costPrice     Int     @default(0) @map("cost_price")
+  discountPrice Int?    @map("discount_price")
   priceAddition Int     @default(0) @map("price_addition")
   stockQty      Int     @default(0) @map("stock_qty")
   imageUrl      String? @map("image_url")
@@ -269,6 +270,7 @@ model Order {
   grandTotal            Int           @map("grand_total")
   midtransTransactionId String?       @map("midtrans_transaction_id")
   midtransPaymentType   String?       @map("midtrans_payment_type")
+  paymentDetails        Json?         @map("payment_details")
   proofPhotoUrl         String?       @map("proof_photo_url")
   notes                 String?
   problemType           String?       @map("problem_type")
@@ -296,6 +298,18 @@ enum DeliveryType {
 enum PaymentMethod {
   QRIS
   VA
+  GOPAY
+  SHOPEEPAY
+  OVO
+  DANA
+  VA_BCA
+  VA_MANDIRI
+  VA_BNI
+  VA_BRI
+  VA_PERMATA
+  VA_CIMB
+  ALFAMART
+  INDOMARET
   COD
 }
 

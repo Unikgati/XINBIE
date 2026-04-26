@@ -25,17 +25,18 @@ class DgCategoryChip extends StatelessWidget {
         height: AppSpacing.chipHeight,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.surface,
+          color: isSelected ? AppColors.primaryAction : AppColors.surface,
           borderRadius: BorderRadius.circular(AppSpacing.chipRadius),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
+            color: AppColors.primaryAction,
+            width: 1,
           ),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: AppTypography.labelLarge.copyWith(
-            color: isSelected ? AppColors.textOnPrimary : AppColors.textPrimary,
+            color: isSelected ? AppColors.textOnPrimary : AppColors.primaryAction,
           ),
         ),
       ),

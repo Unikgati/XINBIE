@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/app_config.dart';
@@ -26,6 +27,9 @@ class ApiClient {
 
   final Dio _dio;
   final FlutterSecureStorage _storage;
+
+  final _unauthorizedController = StreamController<void>.broadcast();
+  Stream<void> get onUnauthorized => _unauthorizedController.stream;
 
   Dio get dio => _dio;
 
@@ -79,7 +83,11 @@ class ApiClient {
               return handler.resolve(retryResponse);
             } catch (_) {
               await clearTokens();
+              _unauthorizedController.add(null);
             }
+          } else {
+            await clearTokens();
+            _unauthorizedController.add(null);
           }
         }
         handler.next(error);
@@ -87,19 +95,62 @@ class ApiClient {
     );
   }
 
+  // Helper to handle DioExceptions
+  Exception _handleError(Object e) {
+    if (e is DioException && e.response != null) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        return ApiException(
+          message: data['message'].toString(), 
+          statusCode: e.response?.statusCode
+        );
+      }
+      return ApiException(
+        message: 'Terjadi kesalahan pada server (Kode: ${e.response?.statusCode})', 
+        statusCode: e.response?.statusCode
+      );
+    }
+    return e as Exception;
+  }
+
   // Convenience methods
-  Future<Response<T>> get<T>(String path,
-          {Map<String, dynamic>? queryParameters}) =>
-      _dio.get<T>(path, queryParameters: queryParameters);
+  Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) async {
+    try {
+      return await _dio.get<T>(path, queryParameters: queryParameters);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
 
-  Future<Response<T>> post<T>(String path, {dynamic data}) =>
-      _dio.post<T>(path, data: data);
+  Future<Response<T>> post<T>(String path, {dynamic data}) async {
+    try {
+      return await _dio.post<T>(path, data: data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
 
-  Future<Response<T>> put<T>(String path, {dynamic data}) =>
-      _dio.put<T>(path, data: data);
+  Future<Response<T>> put<T>(String path, {dynamic data}) async {
+    try {
+      return await _dio.put<T>(path, data: data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
 
-  Future<Response<T>> delete<T>(String path) => _dio.delete<T>(path);
+  Future<Response<T>> delete<T>(String path) async {
+    try {
+      return await _dio.delete<T>(path);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
 
-  Future<Response<T>> upload<T>(String path, FormData formData) =>
-      _dio.post<T>(path, data: formData);
+  Future<Response<T>> upload<T>(String path, FormData formData) async {
+    try {
+      return await _dio.post<T>(path, data: formData);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
 }

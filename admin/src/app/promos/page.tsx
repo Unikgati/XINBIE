@@ -5,6 +5,7 @@ import ActionMenu from '@/components/ActionMenu';
 import CustomSelect from '@/components/CustomSelect';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { TableSkeleton } from '@/components/Skeleton';
 import { apiGet, apiPost, apiPut } from '@/lib/api';
 
 interface Promo {
@@ -98,10 +99,11 @@ export default function PromosPage() {
       <div className="page-body">
         <div className="data-card">
           {loading ? (
-            <div className="loading-center"><div className="spinner" /> Memuat promo...</div>
+            <TableSkeleton rows={4} columns={6} />
           ) : promos.length === 0 ? (
             <div className="empty-state"><span className="material-symbols-outlined">sell</span>Belum ada promo</div>
           ) : (
+            <div className="table-responsive">
             <table className="data-table">
               <thead><tr><th>Kode</th><th>Tipe</th><th>Nilai</th><th>Min. Order</th><th>Penggunaan</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
               <tbody>
@@ -122,6 +124,7 @@ export default function PromosPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

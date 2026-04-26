@@ -21,6 +21,8 @@ import orderRoutes from './routes/order';
 import driverRoutes from './routes/driver';
 import notificationRoutes from './routes/notification';
 import adminRoutes from './routes/admin';
+import paymentRoutes from './routes/payment';
+import promoRoutes from './routes/promo';
 
 const app = express();
 const server = createServer(app);
@@ -56,6 +58,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/driver', driverRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/promos', promoRoutes);
 
 // 404
 app.use((req, res) => {

@@ -3,6 +3,8 @@ import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { generateOrderCode } from '../utils/helpers';
+import { coreApi } from '../config/midtrans';
+import { emitToAdmins } from '../websocket';
 
 // POST /api/orders
 export async function createOrder(req: AuthRequest, res: Response, next: NextFunction) {
@@ -15,8 +17,15 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
     // Validate address
     const address = await prisma.address.findFirst({
       where: { id: addressId, userId: req.userId },
+      include: { user: true },
     });
     if (!address) throw new AppError('Alamat tidak ditemukan', 404);
+
+    // Validate user has WhatsApp number
+    const user = (address as any).user;
+    if (!user?.phoneWa) {
+      throw new AppError('Nomor WhatsApp wajib diisi sebelum membuat pesanan. Silakan lengkapi profil Anda.', 400);
+    }
 
     // Validate products + calculate price
     const productIds = items.map((i: any) => i.productId);
@@ -65,12 +74,21 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
     // Delivery fee
     const deliveryFee = deliveryType === 'INSTANT' ? 10000 : 5000; // TODO: calculate from area
 
-    // Promo discount
-    let discountAmount = 0;
-    let promoId: string | null = null;
-    if (promoCode) {
-      const promo = await prisma.promoCode.findUnique({ where: { code: promoCode } });
-      if (promo && promo.isActive) {
+    const code = generateOrderCode();
+    const initialStatus = paymentMethod === 'COD' ? 'RECEIVED' : 'WAITING_PAYMENT';
+
+    const order = await prisma.$transaction(async (tx) => {
+      // Promo discount validation (Atomic)
+      let discountAmount = 0;
+      let promoId: string | null = null;
+      if (promoCode) {
+        const promo = await tx.promoCode.findUnique({ where: { code: promoCode } });
+        if (!promo || !promo.isActive) throw new AppError('Kode promo tidak valid atau sudah tidak aktif', 400);
+        if (promo.totalUsageLimit > 0 && promo.usedCount >= promo.totalUsageLimit) throw new AppError('Kuota kode promo sudah habis', 400);
+        if (subtotal < promo.minOrder) throw new AppError(`Minimal belanja Rp ${promo.minOrder} untuk promo ini`, 400);
+
+        // TODO: check perUserLimit if needed
+
         if (promo.type === 'PERCENT') {
           discountAmount = Math.floor((subtotal * promo.value) / 100);
           if (promo.maxDiscount && discountAmount > promo.maxDiscount) discountAmount = promo.maxDiscount;
@@ -79,13 +97,9 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
         }
         promoId = promo.id;
       }
-    }
 
-    const grandTotal = subtotal + deliveryFee - discountAmount;
-    const code = generateOrderCode();
-    const initialStatus = paymentMethod === 'COD' ? 'RECEIVED' : 'WAITING_PAYMENT';
+      const grandTotal = subtotal + deliveryFee - discountAmount;
 
-    const order = await prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
           code,
@@ -144,10 +158,107 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
       return newOrder;
     });
 
-    // TODO: Send notification to admin
-    // TODO: Create Midtrans transaction if not COD
+    // Notify admins via WebSocket
+    emitToAdmins('order:new', {
+      id: order.id,
+      code: order.code,
+      customerName: (address.user as any)?.name || 'Pelanggan',
+      grandTotal: order.grandTotal,
+      paymentMethod: order.paymentMethod,
+      createdAt: order.createdAt,
+    });
+    
+    let finalOrder = order;
 
-    res.status(201).json(order);
+    // Create Midtrans transaction if not COD
+    if (paymentMethod !== 'COD') {
+      try {
+        let payment_type = 'bank_transfer';
+        let additionalParams: any = {};
+
+        switch (paymentMethod) {
+          case 'QRIS':
+          case 'GOPAY':
+            payment_type = 'gopay';
+            break;
+          case 'SHOPEEPAY':
+            payment_type = 'shopeepay';
+            additionalParams.shopeepay = { callback_url: 'https://dapurgizi.com' };
+            break;
+          case 'OVO':
+          case 'DANA':
+            payment_type = 'qris';
+            break;
+          case 'VA':
+          case 'VA_BCA':
+            payment_type = 'bank_transfer';
+            additionalParams.bank_transfer = { bank: 'bca' };
+            break;
+          case 'VA_MANDIRI':
+            payment_type = 'echannel';
+            additionalParams.echannel = { bill_info1: 'Pembayaran', bill_info2: 'Pesanan' };
+            break;
+          case 'VA_BNI':
+            payment_type = 'bank_transfer';
+            additionalParams.bank_transfer = { bank: 'bni' };
+            break;
+          case 'VA_BRI':
+            payment_type = 'bank_transfer';
+            additionalParams.bank_transfer = { bank: 'bri' };
+            break;
+          case 'VA_PERMATA':
+            payment_type = 'bank_transfer';
+            additionalParams.bank_transfer = { bank: 'permata' };
+            break;
+          case 'VA_CIMB':
+            payment_type = 'bank_transfer';
+            additionalParams.bank_transfer = { bank: 'cimb' };
+            break;
+          case 'ALFAMART':
+            payment_type = 'cstore';
+            additionalParams.cstore = { store: 'alfamart', message: 'DapurGizi' };
+            break;
+          case 'INDOMARET':
+            payment_type = 'cstore';
+            additionalParams.cstore = { store: 'indomaret', message: 'DapurGizi' };
+            break;
+          default:
+            payment_type = 'bank_transfer';
+            additionalParams.bank_transfer = { bank: 'bca' };
+        }
+
+        const parameter: any = {
+          payment_type,
+          transaction_details: {
+            order_id: order.id,
+            gross_amount: order.grandTotal,
+          },
+          customer_details: {
+            first_name: address.recipientName,
+            email: address.user?.email || 'user@dapurgizi.com',
+            phone: address.phoneWa,
+          },
+          ...additionalParams
+        };
+
+        const chargeResponse = await coreApi.charge(parameter);
+        
+        finalOrder = await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            paymentDetails: chargeResponse,
+            midtransTransactionId: chargeResponse.transaction_id,
+            midtransPaymentType: chargeResponse.payment_type,
+          },
+          include: { items: true },
+        });
+      } catch (error) {
+        console.error('Midtrans Error:', error);
+        throw new AppError('Gagal membuat transaksi pembayaran', 500);
+      }
+    }
+
+    res.status(201).json(finalOrder);
   } catch (err) { next(err); }
 }
 
@@ -214,6 +325,7 @@ export async function cancelOrder(req: AuthRequest, res: Response, next: NextFun
   try {
     const order = await prisma.order.findFirst({
       where: { id: req.params.id, userId: req.userId },
+      include: { items: true },
     });
 
     if (!order) throw new AppError('Pesanan tidak ditemukan', 404);
@@ -221,22 +333,71 @@ export async function cancelOrder(req: AuthRequest, res: Response, next: NextFun
       throw new AppError('Pesanan tidak bisa dibatalkan', 400);
     }
 
-    await prisma.$transaction([
+    const queries: any[] = [];
+
+    queries.push(
       prisma.order.update({
         where: { id: order.id },
         data: { orderStatus: 'CANCELLED' },
-      }),
+      })
+    );
+
+    queries.push(
       prisma.orderStatusLog.create({
         data: {
           orderId: order.id,
           status: 'CANCELLED',
-          note: 'Dibatalkan oleh user',
+          note: req.body.reason || 'Dibatalkan oleh user',
           actorId: req.userId,
         },
-      }),
-    ]);
+      })
+    );
 
-    // TODO: Restore stock, refund if paid
+    // Kembalikan stok barang
+    for (const item of order.items) {
+      if (item.variantId) {
+        queries.push(
+          prisma.productVariant.update({
+            where: { id: item.variantId },
+            data: { stockQty: { increment: item.qty } },
+          })
+        );
+      } else if (item.productId) {
+        queries.push(
+          prisma.product.update({
+            where: { id: item.productId },
+            data: { stockQty: { increment: item.qty } },
+          })
+        );
+      }
+    }
+
+    // Kembalikan kuota promo
+    const promoUsage = await prisma.promoUsage.findFirst({ where: { orderId: order.id } });
+    if (promoUsage) {
+      queries.push(
+        prisma.promoCode.update({
+          where: { id: promoUsage.promoCodeId },
+          data: { usedCount: { decrement: 1 } },
+        })
+      );
+      queries.push(
+        prisma.promoUsage.delete({ where: { id: promoUsage.id } })
+      );
+    }
+
+    // Eksekusi seluruh operasi ke database secara aman (Atomic Transaction)
+    await prisma.$transaction(queries);
+
+    // Batalkan tagihan di sisi Midtrans jika masih waiting payment dan ada ID transaksinya
+    if (order.midtransTransactionId && order.orderStatus === 'WAITING_PAYMENT') {
+      try {
+        await coreApi.transaction.cancel(order.id);
+      } catch (midtransError: any) {
+        // Abaikan error midtrans (misal karena transaksinya sudah expired) agar tidak merusak flow batal di sisi kita
+        console.warn(`[Midtrans] Failed to cancel order ${order.id}:`, midtransError.message);
+      }
+    }
 
     res.json({ message: 'Pesanan dibatalkan' });
   } catch (err) { next(err); }

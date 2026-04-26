@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import ActionMenu from '@/components/ActionMenu';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { TableSkeleton } from '@/components/Skeleton';
 import { apiGet, apiPut } from '@/lib/api';
 
 interface Driver {
@@ -91,13 +92,14 @@ export default function DriversPage() {
 
         <div className="data-card">
           {loading ? (
-            <div className="loading-center"><div className="spinner" /> Memuat data driver...</div>
+            <TableSkeleton rows={8} columns={6} />
           ) : drivers.length === 0 ? (
             <div className="empty-state">
               <span className="material-symbols-outlined">directions_car</span>
               Belum ada driver terdaftar
             </div>
           ) : (
+            <div className="table-responsive">
             <table className="data-table">
               <thead><tr><th>Driver</th><th>Kontak</th><th>Rating</th><th>Pesanan</th><th>Online</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
               <tbody>
@@ -134,6 +136,7 @@ export default function DriversPage() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

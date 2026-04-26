@@ -8,6 +8,7 @@ class AppColors {
   static const Color primary = Color(0xFF4CAF50);
   static const Color primaryDark = Color(0xFF2E7D32);
   static const Color primaryLight = Color(0xFF81C784);
+  static const Color primaryAction = Color(0xFF9ECE67); // Action buttons
   static const Color primarySurface = Color(0xFFE8F5E9);
 
   // Surfaces
@@ -20,6 +21,7 @@ class AppColors {
   static const Color textSecondary = Color(0xFF757575);
   static const Color textHint = Color(0xFFBDBDBD);
   static const Color textOnPrimary = Color(0xFFFFFFFF);
+  static const Color textGreeting = Color(0xFF488044);
 
   // Price
   static const Color priceActive = Color(0xFF2E7D32);
@@ -51,13 +53,13 @@ class AppColors {
   static const LinearGradient heroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+    colors: [Color(0xFF9ECE67), Color(0xFF2D6739)],
   );
 
   // Gradient for onboarding
   static const LinearGradient onboardingGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF4CAF50), Color(0xFF81C784)],
+    colors: [Color(0xFF9ECE67), Color(0xFF2D6739)],
   );
 }

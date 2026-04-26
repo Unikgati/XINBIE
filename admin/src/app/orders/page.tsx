@@ -1,9 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import ActionMenu from '@/components/ActionMenu';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { TableSkeleton } from '@/components/Skeleton';
+import { Pagination } from '@/components/Pagination';
+import { useNotification } from '@/components/NotificationProvider';
+import { getSocket } from '@/lib/socket';
 import { apiGet, apiPut } from '@/lib/api';
 
 interface Order {
@@ -34,27 +39,73 @@ const statusMap: Record<string, { label: string; badge: string; icon: string }> 
 
 const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
+const payMethodLabel: Record<string, string> = {
+  'VA_BCA': 'VA BCA', 'VA_BRI': 'VA BRI', 'VA_BNI': 'VA BNI',
+  'VA_MANDIRI': 'VA Mandiri', 'VA_PERMATA': 'VA Permata',
+  'COD': 'COD', 'TRANSFER': 'Transfer', 'EWALLET': 'E-Wallet', 'QRIS': 'QRIS',
+};
+const fmtPay = (m: string) => payMethodLabel[m] || m;
+
 export default function OrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const toast = useToast();
   const confirm = useConfirm();
+  const { resetPendingCount } = useNotification();
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const statusParam = filter !== 'ALL' ? `?status=${filter}` : '';
-      const res = await apiGet<{ data: Order[] }>(`/orders${statusParam}`);
+      const statusParam = filter !== 'ALL' ? `&status=${filter}` : '';
+      const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+      const res = await apiGet<{ data: Order[], meta: any }>(`/orders?limit=20&page=${page}${statusParam}${searchParam}`);
       setOrders(res.data || []);
+      setTotalPages(res.meta?.totalPages || 1);
     } catch (err: any) {
       toast.error(err.message || 'Gagal memuat pesanan');
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, page, search]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Reset badge when entering orders page
+  useEffect(() => {
+    resetPendingCount();
+  }, [resetPendingCount]);
+
+  // Auto-refresh when order changes via WebSocket
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onNew = () => { fetchData(); };
+    const onStatusUpdate = (data: { orderId: string; status: string }) => {
+      setOrders(prev => prev.map(o =>
+        o.id === data.orderId ? { ...o, orderStatus: data.status } : o
+      ));
+    };
+
+    socket.on('order:new', onNew);
+    socket.on('order:statusUpdate', onStatusUpdate);
+    return () => { socket.off('order:new', onNew); socket.off('order:statusUpdate', onStatusUpdate); };
+  }, [fetchData]);
 
   const handleUpdateStatus = async (id: string, status: string, label: string) => {
     const ok = await confirm({
@@ -82,8 +133,25 @@ export default function OrdersPage() {
         </div>
       </div>
       <div className="page-body">
+        <div style={{ marginBottom: 16 }}>
+          <div className="search-bar">
+            <span className="material-symbols-outlined search-icon">search</span>
+            <input
+              type="text"
+              placeholder="Cari kode pesanan atau nama pelanggan..."
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+            />
+            {searchInput && (
+              <button className="search-clear" onClick={() => setSearchInput('')}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="chip-group">
-          {['ALL', 'WAITING_PAYMENT', 'PROCESSING', 'IN_DELIVERY', 'COMPLETED', 'CANCELLED'].map(s => (
+          {['ALL', 'WAITING_PAYMENT', 'RECEIVED', 'PROCESSING', 'IN_DELIVERY', 'COMPLETED', 'CANCELLED'].map(s => (
             <button key={s} className={`chip ${filter === s ? 'active' : ''}`} onClick={() => setFilter(s)}>
               {s === 'ALL' ? 'Semua' : statusMap[s]?.label || s}
             </button>
@@ -92,13 +160,14 @@ export default function OrdersPage() {
 
         <div className="data-card">
           {loading ? (
-            <div className="loading-center"><div className="spinner" /> Memuat pesanan...</div>
+            <TableSkeleton rows={8} columns={8} />
           ) : orders.length === 0 ? (
             <div className="empty-state">
               <span className="material-symbols-outlined">receipt_long</span>
               Belum ada pesanan
             </div>
           ) : (
+            <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr><th>Kode</th><th>Pelanggan</th><th>Items</th><th>Total</th><th>Pembayaran</th><th>Driver</th><th>Status</th><th style={{ width: 48 }}></th></tr>
@@ -107,7 +176,12 @@ export default function OrdersPage() {
                 {orders.map(o => {
                   const sm = statusMap[o.orderStatus] || { label: o.orderStatus, badge: 'gray', icon: 'help' };
                   return (
-                    <tr key={o.id}>
+                    <tr
+                      key={o.id}
+                      onClick={() => router.push(`/orders/${o.id}`)}
+                      style={{ cursor: 'pointer' }}
+                      title="Klik untuk lihat detail"
+                    >
                       <td style={{ fontWeight: 600 }}>{o.code}</td>
                       <td>
                         <div>{o.user?.name || '-'}</div>
@@ -115,11 +189,12 @@ export default function OrdersPage() {
                       </td>
                       <td>{o.items?.length || 0} item</td>
                       <td style={{ fontWeight: 700 }}>{fmt(o.grandTotal)}</td>
-                      <td><span className="badge gray">{o.paymentMethod}</span></td>
+                      <td><span className="badge gray">{fmtPay(o.paymentMethod)}</span></td>
                       <td>{o.driver?.name || '-'}</td>
                       <td><span className={`badge ${sm.badge}`}><span className="material-symbols-outlined">{sm.icon}</span> {sm.label}</span></td>
-                      <td>
+                      <td onClick={e => e.stopPropagation()}>
                         <ActionMenu items={[
+                          { icon: 'visibility', label: 'Lihat Detail', onClick: () => router.push(`/orders/${o.id}`) },
                           ...(o.orderStatus === 'RECEIVED' ? [
                             { icon: 'pending', label: 'Proses', onClick: () => handleUpdateStatus(o.id, 'PROCESSING', 'Diproses') },
                           ] : []),
@@ -136,6 +211,11 @@ export default function OrdersPage() {
                 })}
               </tbody>
             </table>
+            </div>
+          )}
+          
+          {!loading && orders.length > 0 && totalPages > 1 && (
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
           )}
         </div>
       </div>

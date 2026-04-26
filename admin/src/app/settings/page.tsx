@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import CustomSelect from '@/components/CustomSelect';
 import { useToast } from '@/components/Toast';
+import { FormSkeleton } from '@/components/Skeleton';
 import { apiGet, apiPut } from '@/lib/api';
 
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false });
@@ -42,7 +43,21 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) return <div className="loading-center"><div className="spinner" /> Memuat pengaturan...</div>;
+  if (loading) {
+    return (
+      <>
+        <div className="page-header">
+          <div><h1 className="page-title">Pengaturan</h1><p className="page-subtitle">Konfigurasi toko dan pengiriman</p></div>
+        </div>
+        <div className="page-body">
+          <div className="data-card" style={{ marginBottom: 16 }}>
+            <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">hourglass_empty</span> Memuat pengaturan...</h3></div>
+            <FormSkeleton rows={3} />
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const commType = settings.commission_type || 'HYBRID';
 

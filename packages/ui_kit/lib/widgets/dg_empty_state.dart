@@ -22,13 +22,21 @@ class DgEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Align(
+      alignment: const Alignment(0, -0.3), // Lift up slightly for visual centering
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 72, color: AppColors.textHint),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.primarySurface,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 64, color: AppColors.primaryAction),
+            ),
             const SizedBox(height: 16),
             Text(
               title,

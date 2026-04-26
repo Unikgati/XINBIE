@@ -1,20 +1,22 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-// Temporary: hardcoded admin token for development (no login page yet)
-let adminToken: string | null = null;
+export function getAuthToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('dapurgizi_admin_token');
+  }
+  return null;
+}
 
-async function getToken(): Promise<string> {
-  if (adminToken) return adminToken;
+export function setAuthToken(token: string) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('dapurgizi_admin_token', token);
+  }
+}
 
-  // Auto-login as admin in dev mode
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@dapurgizi.com', password: 'Admin123!' }),
-  });
-  const data = await res.json();
-  adminToken = data.accessToken;
-  return adminToken!;
+export function clearAuthToken() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('dapurgizi_admin_token');
+  }
 }
 
 export async function api<T = any>(path: string, options?: RequestInit & { noAuth?: boolean }): Promise<T> {
@@ -25,8 +27,10 @@ export async function api<T = any>(path: string, options?: RequestInit & { noAut
   };
 
   if (!noAuth) {
-    const token = await getToken();
-    headers['Authorization'] = `Bearer ${token}`;
+    const token = getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
   }
 
   // Don't set Content-Type for FormData (browser sets boundary automatically)
@@ -34,19 +38,20 @@ export async function api<T = any>(path: string, options?: RequestInit & { noAut
     headers['Content-Type'] = headers['Content-Type'] || 'application/json';
   }
 
-  const res = await fetch(`${API_BASE}/admin${path}`, {
+  const isAuthRoute = path.startsWith('/auth/');
+  const endpoint = isAuthRoute ? path : `/admin${path}`;
+
+  const res = await fetch(`${API_BASE}${endpoint}`, {
     ...fetchOptions,
     headers,
   });
 
   if (res.status === 401) {
-    // Token expired — retry login
-    adminToken = null;
-    const token = await getToken();
-    headers['Authorization'] = `Bearer ${token}`;
-    const retryRes = await fetch(`${API_BASE}/admin${path}`, { ...fetchOptions, headers });
-    if (!retryRes.ok) throw new Error(await retryRes.text());
-    return retryRes.json();
+    clearAuthToken();
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+    throw new Error('Sesi Anda telah berakhir, silakan login kembali.');
   }
 
   if (!res.ok) {

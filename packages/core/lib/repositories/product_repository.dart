@@ -20,6 +20,7 @@ class ProductRepository {
   Future<List<Product>> getProducts({
     String? categoryId,
     String? search,
+    bool promo = false,
     int page = 1,
     int limit = 20,
   }) async {
@@ -28,10 +29,11 @@ class ProductRepository {
       'limit': limit,
       if (categoryId != null) 'categoryId': categoryId,
       if (search != null && search.isNotEmpty) 'search': search,
+      if (promo) 'promo': true,
     };
     final response = await _api.get(ApiEndpoints.products, queryParameters: params);
     final data = response.data as Map<String, dynamic>;
-    final list = data['products'] as List;
+    final list = (data['data'] ?? data['products']) as List;
     return list.map((e) => Product.fromJson(e as Map<String, dynamic>)).toList();
   }
 
@@ -41,7 +43,17 @@ class ProductRepository {
       'limit': 10,
     });
     final data = response.data as Map<String, dynamic>;
-    final list = data['products'] as List;
+    final list = (data['data'] ?? data['products']) as List;
+    return list.map((e) => Product.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<Product>> getPromoProducts() async {
+    final response = await _api.get(ApiEndpoints.products, queryParameters: {
+      'promo': true,
+      'limit': 10,
+    });
+    final data = response.data as Map<String, dynamic>;
+    final list = (data['data'] ?? data['products']) as List;
     return list.map((e) => Product.fromJson(e as Map<String, dynamic>)).toList();
   }
 
