@@ -115,6 +115,21 @@ const payMethodLabel: Record<string, string> = {
 };
 const fmtPayMethod = (m: string) => payMethodLabel[m] || m;
 
+const payMethodLogo: Record<string, string> = {
+  'VA_BCA': '/payments/bca.png',
+  'VA_BRI': '/payments/bri.png',
+  'VA_BNI': '/payments/bni.png',
+  'VA_MANDIRI': '/payments/mandiri.png',
+  'VA_PERMATA': '/payments/permata.png',
+  'VA_CIMB': '/payments/cimb.png',
+  'GOPAY': '/payments/gopay.png',
+  'OVO': '/payments/ovo.png',
+  'DANA': '/payments/dana.png',
+  'SHOPEEPAY': '/payments/shopeepay.png',
+  'ALFAMART': '/payments/alfamart.png',
+  'INDOMARET': '/payments/indomaret.png',
+};
+
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -369,7 +384,7 @@ export default function OrderDetailPage() {
               {/* Payment */}
               <div className="data-card" style={{ padding: 20 }}>
                 <Sk w={90} h={11} mb={12} />
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                   <Sk w={80} h={24} r={12} />
                   <Sk w={80} h={24} r={12} />
                 </div>
@@ -597,7 +612,14 @@ export default function OrderDetailPage() {
             {/* Payment Info */}
             <div className="data-card" style={{ padding: 20 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Pembayaran</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+                {payMethodLogo[order.paymentMethod] && (
+                  <img
+                    src={payMethodLogo[order.paymentMethod]}
+                    alt={fmtPayMethod(order.paymentMethod)}
+                    style={{ height: 24, width: 'auto', objectFit: 'contain', borderRadius: 4 }}
+                  />
+                )}
                 <span className="badge gray">{fmtPayMethod(order.paymentMethod)}</span>
                 {order.paymentStatus !== 'PENDING' && (
                   <span className={`badge ${ps.badge}`}>{ps.label}</span>

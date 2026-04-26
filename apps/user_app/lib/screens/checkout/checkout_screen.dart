@@ -102,6 +102,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (user?.phoneWa == null || (user?.phoneWa?.isEmpty ?? true)) {
       final phoneEntered = await _showPhoneWaBottomSheet();
       if (!phoneEntered) return; // User cancelled
+      // Wait for fresh user data after phoneWa update
+      await ref.read(currentUserProvider.future);
     }
     
     setState(() => _loading = true);

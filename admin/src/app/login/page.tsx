@@ -45,63 +45,62 @@ export default function LoginPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(160deg, #9ECE67 0%, #2D6739 100%);
-          padding: 24px;
+          background: linear-gradient(160deg, #78B34A 0%, #3A7D44 50%, #2D6739 100%);
+          padding: 32px;
           font-family: 'Poppins', sans-serif;
         }
 
-        .login-card {
-          background: #fff;
-          border-radius: 20px;
-          padding: 48px 40px;
+        /* ===== Outer container with border ===== */
+        .login-outer {
           width: 100%;
-          max-width: 420px;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+          max-width: 880px;
+          border: 1.5px solid rgba(255,255,255,0.25);
+          border-radius: 28px;
+          padding: 20px;
         }
 
-        .login-brand {
+        /* ===== Inner card: split layout ===== */
+        .login-inner {
           display: flex;
-          align-items: center;
+          border-radius: 20px;
+          overflow: hidden;
+          min-height: 520px;
+          position: relative;
+        }
+
+        /* ===== Left: White form area ===== */
+        .login-left {
+          flex: 0 0 420px;
+          background: #fff;
+          padding: 48px 40px;
+          display: flex;
+          flex-direction: column;
           justify-content: center;
-          gap: 12px;
-          margin-bottom: 32px;
+          border-radius: 20px;
+          z-index: 1;
         }
 
-        .login-brand img {
-          width: 36px;
-          height: 36px;
-          filter: brightness(0) saturate(100%) invert(78%) sepia(28%) saturate(580%) hue-rotate(42deg) brightness(96%) contrast(88%);
-        }
-
-        .login-brand-text h1 {
-          margin: 0;
-          font-size: 20px;
-          font-weight: 700;
-          color: #212121;
-          line-height: 1.2;
-        }
-
-        .login-brand-text p {
-          margin: 0;
+        .login-chip {
+          display: inline-block;
+          padding: 5px 16px;
+          border: 1.5px solid #E0E0E0;
+          border-radius: 20px;
           font-size: 12px;
-          color: #9E9E9E;
           font-weight: 500;
-        }
-
-        .login-heading {
-          text-align: center;
+          color: #757575;
           margin-bottom: 28px;
+          width: fit-content;
         }
 
         .login-heading h2 {
           margin: 0 0 4px;
-          font-size: 22px;
+          font-size: 28px;
           font-weight: 700;
           color: #212121;
         }
 
         .login-heading p {
-          margin: 0;
+          margin: 0 0 28px;
           font-size: 14px;
           color: #757575;
         }
@@ -157,18 +156,14 @@ export default function LoginPage() {
           transition: border-color 0.2s, box-shadow 0.2s;
         }
 
-        .login-input-wrap input::placeholder {
-          color: #BDBDBD;
-        }
+        .login-input-wrap input::placeholder { color: #BDBDBD; }
 
         .login-input-wrap input:focus {
           border-color: #4CAF50;
           box-shadow: 0 0 0 3px rgba(76,175,80,0.08);
         }
 
-        .login-input-wrap input:focus ~ .li-icon {
-          color: #4CAF50;
-        }
+        .login-input-wrap input:focus ~ .li-icon { color: #4CAF50; }
 
         .login-eye {
           position: absolute;
@@ -210,9 +205,7 @@ export default function LoginPage() {
           box-shadow: 0 4px 16px rgba(158,206,103,0.4);
         }
 
-        .login-submit:active:not(:disabled) {
-          transform: scale(0.98);
-        }
+        .login-submit:active:not(:disabled) { transform: scale(0.98); }
 
         .login-submit:disabled {
           opacity: 0.65;
@@ -238,78 +231,141 @@ export default function LoginPage() {
           animation: lspin 0.7s linear infinite;
         }
 
-        @media (max-width: 480px) {
-          .login-card {
-            padding: 36px 24px;
-            border-radius: 16px;
+        /* ===== Right: Green area with mascot ===== */
+        .login-right {
+          flex: 1;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          position: relative;
+          overflow: visible;
+        }
+
+        .login-brand-top {
+          position: absolute;
+          top: 24px;
+          right: 28px;
+        }
+
+        .login-brand-top img {
+          height: 24px;
+          width: auto;
+        }
+
+        .login-mascot {
+          width: 360px;
+          max-width: 100%;
+          height: auto;
+          object-fit: contain;
+          margin-bottom: -2px;
+          filter: drop-shadow(0 8px 20px rgba(0,0,0,0.1));
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 820px) {
+          .login-root { padding: 24px; }
+
+          .login-outer {
+            max-width: 420px;
+            border: none;
+            padding: 0;
           }
+
+          .login-right { display: none; }
+
+          .login-left {
+            flex: 1;
+            border-radius: 20px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .login-root { padding: 16px; }
+          .login-left { padding: 36px 24px; border-radius: 16px; }
         }
       `}</style>
 
-      <div className="login-card">
-        <div className="login-brand">
-          <img src="/logo-icon.svg" alt="DapurGizi" />
-        </div>
+      <div className="login-outer">
+        <div className="login-inner">
+          {/* Left: Login Form */}
+          <div className="login-left">
+            <div className="login-chip">Admin panel</div>
 
-        <div className="login-heading">
-          <h2>Selamat Datang!</h2>
-          <p>Masuk untuk mengelola aplikasi</p>
-        </div>
+            <div className="login-heading">
+              <h2>Selamat Datang !</h2>
+              <p>Masuk untuk mengelola aplikasi</p>
+            </div>
 
-        {error && (
-          <div className="login-error-box">
-            <span className="material-symbols-outlined" style={{ fontSize: 18, flexShrink: 0 }}>error</span>
-            {error}
+            {error && (
+              <div className="login-error-box">
+                <span className="material-symbols-outlined" style={{ fontSize: 18, flexShrink: 0 }}>error</span>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleLogin}>
+              <label className="login-label">Email</label>
+              <div className="login-input-wrap">
+                <span className="material-symbols-outlined li-icon">email</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="contoh@email.com"
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              <label className="login-label">Password</label>
+              <div className="login-input-wrap">
+                <span className="material-symbols-outlined li-icon">lock</span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Masukkan password"
+                  required
+                  disabled={loading}
+                  style={{ paddingRight: 44 }}
+                />
+                <button
+                  type="button"
+                  className="login-eye"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                    {showPassword ? 'visibility' : 'visibility_off'}
+                  </span>
+                </button>
+              </div>
+
+              <button type="submit" className="login-submit" disabled={loading}>
+                {loading ? (
+                  <div className="login-spinner-ring" />
+                ) : 'Masuk'}
+              </button>
+            </form>
+
+            <div className="login-footer">
+              © {new Date().getFullYear()} DapurGizi
+            </div>
           </div>
-        )}
 
-        <form onSubmit={handleLogin}>
-          <label className="login-label">Email</label>
-          <div className="login-input-wrap">
-            <span className="material-symbols-outlined li-icon">email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="contoh@email.com"
-              required
-              disabled={loading}
+          {/* Right: Mascot + Logo */}
+          <div className="login-right">
+            <div className="login-brand-top">
+              <img src="/logo-full.svg" alt="Dapurgizi" />
+            </div>
+            <img
+              src="/mascot-admin.webp"
+              alt="DapurGizi Mascot"
+              className="login-mascot"
+              width={340}
+              height={451}
             />
           </div>
-
-          <label className="login-label">Password</label>
-          <div className="login-input-wrap">
-            <span className="material-symbols-outlined li-icon">lock</span>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Masukkan password"
-              required
-              disabled={loading}
-              style={{ paddingRight: 44 }}
-            />
-            <button
-              type="button"
-              className="login-eye"
-              onClick={() => setShowPassword(!showPassword)}
-              tabIndex={-1}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-                {showPassword ? 'visibility' : 'visibility_off'}
-              </span>
-            </button>
-          </div>
-
-          <button type="submit" className="login-submit" disabled={loading}>
-            {loading ? (
-              <div className="login-spinner-ring" />
-            ) : 'Masuk'}
-          </button>
-        </form>
-
-        <div className="login-footer">
-          © {new Date().getFullYear()} DapurGizi
         </div>
       </div>
     </div>

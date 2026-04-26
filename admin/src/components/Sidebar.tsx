@@ -61,23 +61,22 @@ export default function Sidebar() {
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
-        <div className="sidebar-logo">
+        <div className="sidebar-logo" style={{ position: 'relative' }}>
           <img src="/logo-icon.svg" alt="Dapur Gizi Logo" style={{ width: 24, height: 24, objectFit: 'contain' }} />
+          <span
+            title={dot.title}
+            style={{
+              position: 'absolute', bottom: -2, right: -2,
+              width: 10, height: 10, borderRadius: '50%',
+              background: dot.color, border: '2px solid #fff',
+              animation: dot.pulse ? 'pulse-dot 1.5s ease-in-out infinite' : undefined,
+            }}
+          />
         </div>
         {!collapsed && (
           <div>
             <div className="sidebar-title">Dapur Gizi</div>
-            <div className="sidebar-subtitle" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              Admin Panel
-              <span
-                title={dot.title}
-                style={{
-                  width: 7, height: 7, borderRadius: '50%', background: dot.color,
-                  display: 'inline-block', flexShrink: 0,
-                  animation: dot.pulse ? 'pulse-dot 1.5s ease-in-out infinite' : undefined,
-                }}
-              />
-            </div>
+            <div className="sidebar-subtitle">Admin Panel</div>
           </div>
         )}
       </div>
