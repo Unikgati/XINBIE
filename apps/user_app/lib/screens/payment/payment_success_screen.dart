@@ -42,7 +42,7 @@ class PaymentSuccessScreen extends StatelessWidget {
               Text(
                 'Pesanan Anda sedang diproses oleh admin.\nKami akan segera menyiapkan pesanan Anda.',
                 textAlign: TextAlign.center,
-                style: AppTypography.body2.copyWith(
+                style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                   height: 1.5,
                 ),
@@ -65,7 +65,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                   ),
                   child: Text(
                     'Kembali ke Beranda',
-                    style: AppTypography.body1.copyWith(
+                    style: AppTypography.bodyLarge.copyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
                     ),
