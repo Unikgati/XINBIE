@@ -28,9 +28,11 @@ router.post('/categories', upload.single('icon'), admin.adminCreateCategory);
 router.put('/categories/:id', upload.single('icon'), admin.adminUpdateCategory);
 
 // Orders
+router.get('/orders/unread-count', admin.adminGetUnreadCount);
 router.get('/orders', admin.adminGetOrders);
 router.get('/orders/:id', admin.adminGetOrderDetail);
 router.put('/orders/:id/status', admin.adminUpdateOrderStatus);
+router.put('/orders/:id/read', admin.adminMarkOrderAsRead);
 
 // Drivers
 router.get('/drivers', admin.adminGetDrivers);

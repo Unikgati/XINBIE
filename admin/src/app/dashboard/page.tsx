@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/components/Toast';
 import { useRouter } from 'next/navigation';
 import { TableSkeleton, StatCardSkeleton } from '@/components/Skeleton';
@@ -27,6 +27,7 @@ interface DashboardData {
     userName: string;
     grandTotal: number;
     orderStatus: string;
+    isReadAdmin: boolean;
     createdAt: string;
   }[];
 }
@@ -37,20 +38,27 @@ const statusMap: Record<string, { label: string; badge: string }> = {
   WAITING_PAYMENT: { label: 'Menunggu Bayar', badge: 'orange' },
   RECEIVED: { label: 'Diterima', badge: 'blue' },
   PROCESSING: { label: 'Diproses', badge: 'purple' },
+  WAITING_DRIVER: { label: 'Tunggu Driver', badge: 'orange' },
   IN_DELIVERY: { label: 'Dikirim', badge: 'green' },
+  DELIVERED: { label: 'Diantar', badge: 'green' },
   COMPLETED: { label: 'Selesai', badge: 'green' },
   CANCELLED: { label: 'Batal', badge: 'red' },
+  PROBLEM: { label: 'Masalah', badge: 'orange' },
 };
+
+import { useNotification } from '@/components/NotificationProvider';
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const toast = useToast();
+  const { socketStatus } = useNotification();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const res = await apiGet<DashboardData>('/dashboard');
       setData(res);
     } catch (err: any) {
@@ -62,28 +70,24 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Auto-refresh when order changes via WebSocket
+  // Auto-refresh when order changes via WebSocket (debounced)
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
 
-    const onNew = () => { fetchData(); };
-    const onStatusUpdate = (ev: { orderId: string; status: string }) => {
-      setData(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          recentOrders: prev.recentOrders.map(o =>
-            o.id === ev.orderId ? { ...o, orderStatus: ev.status } : o
-          ),
-        };
-      });
+    const debouncedRefresh = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => fetchData(false), 500);
     };
 
-    socket.on('order:new', onNew);
-    socket.on('order:statusUpdate', onStatusUpdate);
-    return () => { socket.off('order:new', onNew); socket.off('order:statusUpdate', onStatusUpdate); };
-  }, [fetchData]);
+    socket.on('order:new', debouncedRefresh);
+    socket.on('order:statusUpdate', debouncedRefresh);
+    return () => {
+      socket.off('order:new', debouncedRefresh);
+      socket.off('order:statusUpdate', debouncedRefresh);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [fetchData, socketStatus]);
 
   if (loading) {
     return (
@@ -172,8 +176,13 @@ export default function DashboardPage() {
                 {recentOrders.map(o => {
                   const sm = statusMap[o.orderStatus] || { label: o.orderStatus, badge: 'gray' };
                   return (
-                    <tr key={o.id} onClick={() => router.push(`/orders/${o.id}`)} style={{ cursor: 'pointer' }} title="Klik untuk lihat detail">
-                      <td style={{ fontWeight: 600 }}>{o.code}</td>
+                    <tr key={o.id} onClick={() => router.push(`/orders/${o.id}`)} style={{ cursor: 'pointer', fontWeight: o.isReadAdmin === false ? 600 : 'normal', background: o.isReadAdmin === false ? 'var(--primary-surface, #f0f7ff)' : undefined }} title="Klik untuk lihat detail">
+                      <td style={{ fontWeight: 600 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {o.isReadAdmin === false && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary, #2563eb)', display: 'inline-block', flexShrink: 0 }} />}
+                          {o.code}
+                        </span>
+                      </td>
                       <td>{o.userName}</td>
                       <td style={{ fontWeight: 600 }}>{fmt(o.grandTotal)}</td>
                       <td><span className={`badge ${sm.badge}`}>{sm.label}</span></td>

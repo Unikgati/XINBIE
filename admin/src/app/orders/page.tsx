@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ActionMenu from '@/components/ActionMenu';
 import { useToast } from '@/components/Toast';
@@ -19,22 +19,23 @@ interface Order {
   paymentStatus: string;
   grandTotal: number;
   deliveryFee: number;
+  isReadAdmin: boolean;
   createdAt: string;
   user: { name: string; phoneWa: string };
   driver: { name: string; phoneWa: string } | null;
   items: any[];
 }
 
-const statusMap: Record<string, { label: string; badge: string; icon: string }> = {
-  WAITING_PAYMENT: { label: 'Menunggu Bayar', badge: 'orange', icon: 'schedule' },
-  RECEIVED: { label: 'Diterima', badge: 'blue', icon: 'inbox' },
-  PROCESSING: { label: 'Diproses', badge: 'purple', icon: 'pending' },
-  WAITING_DRIVER: { label: 'Tunggu Driver', badge: 'orange', icon: 'hail' },
-  IN_DELIVERY: { label: 'Dikirim', badge: 'green', icon: 'local_shipping' },
-  DELIVERED: { label: 'Diantar', badge: 'green', icon: 'package_2' },
-  COMPLETED: { label: 'Selesai', badge: 'green', icon: 'check_circle' },
-  CANCELLED: { label: 'Batal', badge: 'red', icon: 'cancel' },
-  PROBLEM: { label: 'Masalah', badge: 'orange', icon: 'warning' },
+const statusMap: Record<string, { label: string; badge: string }> = {
+  WAITING_PAYMENT: { label: 'Menunggu Bayar', badge: 'orange' },
+  RECEIVED: { label: 'Diterima', badge: 'blue' },
+  PROCESSING: { label: 'Diproses', badge: 'purple' },
+  WAITING_DRIVER: { label: 'Tunggu Driver', badge: 'orange' },
+  IN_DELIVERY: { label: 'Dikirim', badge: 'green' },
+  DELIVERED: { label: 'Diantar', badge: 'green' },
+  COMPLETED: { label: 'Selesai', badge: 'green' },
+  CANCELLED: { label: 'Batal', badge: 'red' },
+  PROBLEM: { label: 'Masalah', badge: 'orange' },
 };
 
 const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
@@ -57,7 +58,8 @@ export default function OrdersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const toast = useToast();
   const confirm = useConfirm();
-  const { resetPendingCount } = useNotification();
+  const { socketStatus } = useNotification();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounce search
   useEffect(() => {
@@ -68,9 +70,9 @@ export default function OrdersPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const statusParam = filter !== 'ALL' ? `&status=${filter}` : '';
       const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
       const res = await apiGet<{ data: Order[], meta: any }>(`/orders?limit=20&page=${page}${statusParam}${searchParam}`);
@@ -85,27 +87,26 @@ export default function OrdersPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Reset badge when entering orders page
-  useEffect(() => {
-    resetPendingCount();
-  }, [resetPendingCount]);
 
-  // Auto-refresh when order changes via WebSocket
+
+  // Auto-refresh when order changes via WebSocket (debounced)
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
 
-    const onNew = () => { fetchData(); };
-    const onStatusUpdate = (data: { orderId: string; status: string }) => {
-      setOrders(prev => prev.map(o =>
-        o.id === data.orderId ? { ...o, orderStatus: data.status } : o
-      ));
+    const debouncedRefresh = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => fetchData(false), 500);
     };
 
-    socket.on('order:new', onNew);
-    socket.on('order:statusUpdate', onStatusUpdate);
-    return () => { socket.off('order:new', onNew); socket.off('order:statusUpdate', onStatusUpdate); };
-  }, [fetchData]);
+    socket.on('order:new', debouncedRefresh);
+    socket.on('order:statusUpdate', debouncedRefresh);
+    return () => {
+      socket.off('order:new', debouncedRefresh);
+      socket.off('order:statusUpdate', debouncedRefresh);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [fetchData, socketStatus]);
 
   const handleUpdateStatus = async (id: string, status: string, label: string) => {
     const ok = await confirm({
@@ -179,10 +180,15 @@ export default function OrdersPage() {
                     <tr
                       key={o.id}
                       onClick={() => router.push(`/orders/${o.id}`)}
-                      style={{ cursor: 'pointer' }}
+                      style={{ cursor: 'pointer', fontWeight: o.isReadAdmin === false ? 600 : 'normal', background: o.isReadAdmin === false ? 'var(--primary-surface, #f0f7ff)' : undefined }}
                       title="Klik untuk lihat detail"
                     >
-                      <td style={{ fontWeight: 600 }}>{o.code}</td>
+                      <td style={{ fontWeight: 600 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {o.isReadAdmin === false && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary, #2563eb)', display: 'inline-block', flexShrink: 0 }} />}
+                          {o.code}
+                        </span>
+                      </td>
                       <td>
                         <div>{o.user?.name || '-'}</div>
                         <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{o.user?.phoneWa || ''}</div>
@@ -191,7 +197,7 @@ export default function OrdersPage() {
                       <td style={{ fontWeight: 700 }}>{fmt(o.grandTotal)}</td>
                       <td><span className="badge gray">{fmtPay(o.paymentMethod)}</span></td>
                       <td>{o.driver?.name || '-'}</td>
-                      <td><span className={`badge ${sm.badge}`}><span className="material-symbols-outlined">{sm.icon}</span> {sm.label}</span></td>
+                      <td><span className={`badge ${sm.badge}`}>{sm.label}</span></td>
                       <td onClick={e => e.stopPropagation()}>
                         <ActionMenu items={[
                           { icon: 'visibility', label: 'Lihat Detail', onClick: () => router.push(`/orders/${o.id}`) },

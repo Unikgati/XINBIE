@@ -13,7 +13,10 @@ final currentUserProvider = FutureProvider<User?>((ref) async {
   if (!isLoggedIn) return null;
   
   try {
-    return await repo.getMe();
+    final user = await repo.getMe();
+    // Connect WebSocket
+    ref.read(socketServiceProvider).connect();
+    return user;
   } catch (e) {
     return null;
   }

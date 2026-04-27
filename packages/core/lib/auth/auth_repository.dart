@@ -158,6 +158,10 @@ class AuthRepository {
     final token = await _api.accessToken;
     return token != null;
   }
+
+  Future<String?> getToken() async {
+    return await _api.accessToken;
+  }
 }
 
 /// Provider for AuthRepository.

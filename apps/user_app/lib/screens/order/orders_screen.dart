@@ -186,7 +186,7 @@ class _OrderList extends StatelessWidget {
         String itemsText = (o.items ?? []).map((e) => e.productSnapshot?['name'] ?? 'Item').join(', ');
         
         return GestureDetector(
-          onTap: () => context.push('/order/${o.id}'),
+          onTap: () => context.push('/orders/${o.id}'),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(

@@ -18,14 +18,14 @@ interface OrderNotification {
 
 interface NotificationContextType {
   pendingCount: number;
-  resetPendingCount: () => void;
+  decrementPendingCount: () => void;
   notifications: OrderNotification[];
   socketStatus: SocketStatus;
 }
 
 const NotificationContext = createContext<NotificationContextType>({
   pendingCount: 0,
-  resetPendingCount: () => {},
+  decrementPendingCount: () => {},
   notifications: [],
   socketStatus: 'disconnected',
 });
@@ -71,6 +71,35 @@ function showBrowserNotification(order: OrderNotification) {
   });
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+/** Fetch unread count from backend */
+async function fetchUnreadCount(): Promise<number> {
+  const token = getAuthToken();
+  if (!token) return 0;
+  try {
+    const res = await fetch(`${API_URL}/admin/orders/unread-count`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    return typeof data.unreadCount === 'number' ? data.unreadCount : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// BroadcastChannel for cross-tab sync (graceful fallback if unsupported)
+const CHANNEL_NAME = 'dapurgizi_unread_sync';
+
+function getBroadcastChannel(): BroadcastChannel | null {
+  if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return null;
+  try {
+    return new BroadcastChannel(CHANNEL_NAME);
+  } catch {
+    return null;
+  }
+}
+
 export default function NotificationProvider({ children }: { children: ReactNode }) {
   const [pendingCount, setPendingCount] = useState(0);
   const [notifications, setNotifications] = useState<OrderNotification[]>([]);
@@ -78,14 +107,59 @@ export default function NotificationProvider({ children }: { children: ReactNode
   const toast = useToast();
   const pathname = usePathname();
   const listenersAttached = useRef(false);
+  const channelRef = useRef<BroadcastChannel | null>(null);
+  const hasFetchedRef = useRef(false);
 
   // Track socket connection status
   useEffect(() => {
     return onSocketStatusChange(setSocketStatus);
   }, []);
 
-  const resetPendingCount = useCallback(() => {
-    setPendingCount(0);
+  // ─── Fix #1: Re-fetch unread count on WebSocket reconnection ───
+  // ─── Fix #4: Re-fetch on login (pathname transitions away from /login) ───
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token || pathname === '/login') {
+      hasFetchedRef.current = false; // Reset so we re-fetch after next login
+      return;
+    }
+
+    // Fetch on first mount OR when socket reconnects
+    if (!hasFetchedRef.current || socketStatus === 'connected') {
+      hasFetchedRef.current = true;
+      fetchUnreadCount().then(setPendingCount);
+    }
+  }, [pathname, socketStatus]);
+
+  const decrementPendingCount = useCallback(() => {
+    setPendingCount(prev => {
+      const next = Math.max(0, prev - 1);
+      // ─── Fix #2: Broadcast to other tabs ───
+      channelRef.current?.postMessage({ type: 'sync', count: next });
+      return next;
+    });
+  }, []);
+
+  // ─── Fix #2: Cross-tab sync via BroadcastChannel ───
+  useEffect(() => {
+    const channel = getBroadcastChannel();
+    if (!channel) return;
+    channelRef.current = channel;
+
+    channel.onmessage = (event) => {
+      const { type, count } = event.data || {};
+      if (type === 'sync' && typeof count === 'number') {
+        setPendingCount(count);
+      }
+      if (type === 'refetch') {
+        fetchUnreadCount().then(setPendingCount);
+      }
+    };
+
+    return () => {
+      channel.close();
+      channelRef.current = null;
+    };
   }, []);
 
   // Request browser notification permission
@@ -108,34 +182,43 @@ export default function NotificationProvider({ children }: { children: ReactNode
 
     listenersAttached.current = true;
 
-    socket.on('order:new', (data: OrderNotification) => {
-      // Update state
-      setPendingCount(prev => prev + 1);
-      setNotifications(prev => [data, ...prev].slice(0, 20)); // Keep last 20
+    // Store named refs so socket.off() only removes OUR listeners, not other components'
+    const handleNewOrder = (data: OrderNotification) => {
+      setPendingCount(prev => {
+        const next = prev + 1;
+        channelRef.current?.postMessage({ type: 'sync', count: next });
+        return next;
+      });
+      setNotifications(prev => [data, ...prev].slice(0, 20));
 
-      // Play sound
       playNotificationSound();
 
-      // Toast
       const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
       toast.success(`Pesanan baru ${data.code} dari ${data.customerName} — ${fmt(data.grandTotal)}`);
 
-      // Browser notification
       showBrowserNotification(data);
-    });
+    };
+
+    const handleStatusUpdate = (data: { orderId: string; code?: string; status: string; paymentStatus?: string }) => {
+      if (data.paymentStatus === 'PAID') {
+        playNotificationSound();
+        toast.success(`Pembayaran untuk pesanan ${data.code || data.orderId.split('-')[0]} telah diterima!`);
+      }
+    };
+
+    socket.on('order:new', handleNewOrder);
+    socket.on('order:statusUpdate', handleStatusUpdate);
 
     return () => {
-      // Cleanup on unmount
-      const s = getSocket();
-      if (s) {
-        s.off('order:new');
-        listenersAttached.current = false;
-      }
+      // Only remove OUR specific listeners, not all listeners for these events
+      socket.off('order:new', handleNewOrder);
+      socket.off('order:statusUpdate', handleStatusUpdate);
+      listenersAttached.current = false;
     };
   }, [pathname, toast]);
 
   return (
-    <NotificationContext.Provider value={{ pendingCount, resetPendingCount, notifications, socketStatus }}>
+    <NotificationContext.Provider value={{ pendingCount, decrementPendingCount, notifications, socketStatus }}>
       {children}
     </NotificationContext.Provider>
   );

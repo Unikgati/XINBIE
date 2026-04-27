@@ -31,6 +31,24 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   void initState() {
     super.initState();
     _loadOrder();
+
+    // Listen to WebSocket for real-time payment update
+    final socket = ref.read(socketServiceProvider);
+    socket.onPaymentUpdate((data) {
+      if (data['orderId'] == widget.orderId) {
+        if (data['status'] == 'PAID' && mounted) {
+          context.go('/payment-success/${widget.orderId}');
+        } else {
+          _loadOrder();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    ref.read(socketServiceProvider).offPaymentUpdate();
+    super.dispose();
   }
 
   Future<void> _loadOrder() async {
@@ -57,8 +75,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
     if (_order != null && _order!.paymentStatus == PaymentStatus.paid) {
       if (mounted) {
-        DgSnackbar.showSuccess(context, message: 'Pembayaran Berhasil!');
-        context.go('/orders');
+        context.go('/payment-success/${widget.orderId}');
       }
     } else {
       if (mounted) {

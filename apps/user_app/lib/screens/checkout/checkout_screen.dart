@@ -98,7 +98,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (cartItems.isEmpty) return;
 
     // Check if user has WhatsApp number
-    final user = ref.read(currentUserProvider).valueOrNull;
+    final user = await ref.read(currentUserProvider.future);
     if (user?.phoneWa == null || (user?.phoneWa?.isEmpty ?? true)) {
       final phoneEntered = await _showPhoneWaBottomSheet();
       if (!phoneEntered) return; // User cancelled

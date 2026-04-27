@@ -21,6 +21,7 @@ import '../screens/checkout/checkout_screen.dart';
 import '../screens/order/orders_screen.dart';
 import '../screens/order/order_detail_screen.dart';
 import '../screens/payment/payment_screen.dart';
+import '../screens/payment/payment_success_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/profile/edit_profile_screen.dart';
 import '../screens/profile/address_list_screen.dart';
@@ -68,7 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isProtected = state.matchedLocation.startsWith('/edit-profile') ||
           state.matchedLocation.startsWith('/address') ||
           state.matchedLocation.startsWith('/checkout') ||
-          state.matchedLocation.startsWith('/order/');
+          state.matchedLocation.startsWith('/orders/');
 
       if (isSplash) {
         return null; // Let splash screen decide initial routing
@@ -149,7 +150,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // Full screen routes
+      // Full screen routes (no bottom nav)
+      GoRoute(
+        path: '/orders/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) => OrderDetailScreen(
+          orderId: state.pathParameters['id']!,
+        ),
+      ),
       GoRoute(
         path: '/category/:id',
         builder: (_, state) => CategoryScreen(
@@ -172,14 +180,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const CheckoutScreen(),
       ),
       GoRoute(
-        path: '/order/:id',
-        builder: (_, state) => OrderDetailScreen(
+        path: '/payment/:id',
+        builder: (_, state) => PaymentScreen(
           orderId: state.pathParameters['id']!,
         ),
       ),
       GoRoute(
-        path: '/payment/:id',
-        builder: (_, state) => PaymentScreen(
+        path: '/payment-success/:id',
+        builder: (_, state) => PaymentSuccessScreen(
           orderId: state.pathParameters['id']!,
         ),
       ),

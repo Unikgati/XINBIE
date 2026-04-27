@@ -64,6 +64,7 @@ export async function getDashboard(req: AuthRequest, res: Response, next: NextFu
       recentOrders: recentOrders.map((o) => ({
         id: o.id, code: o.code, userName: o.user.name,
         grandTotal: o.grandTotal, orderStatus: o.orderStatus,
+        isReadAdmin: o.isReadAdmin,
         createdAt: o.createdAt,
       })),
     });
@@ -360,6 +361,26 @@ export async function adminUpdateOrderStatus(req: AuthRequest, res: Response, ne
     notifyOrderStatus(updatedOrder.userId, req.params.id, status);
 
     res.json({ message: 'Status pesanan diperbarui' });
+  } catch (err) { next(err); }
+}
+
+export async function adminGetUnreadCount(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const count = await prisma.order.count({
+      where: { isReadAdmin: false },
+    });
+    res.json({ unreadCount: count });
+  } catch (err) { next(err); }
+}
+
+export async function adminMarkOrderAsRead(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    await prisma.order.update({
+      where: { id },
+      data: { isReadAdmin: true },
+    });
+    res.json({ message: 'Order marked as read' });
   } catch (err) { next(err); }
 }
 

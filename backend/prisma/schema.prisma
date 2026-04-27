@@ -277,6 +277,7 @@ model Order {
   problemDescription    String?       @map("problem_description")
   problemPhotoUrl       String?       @map("problem_photo_url")
   problemResolvedAt     DateTime?     @map("problem_resolved_at")
+  isReadAdmin           Boolean       @default(false) @map("is_read_admin")
   createdAt             DateTime      @default(now()) @map("created_at")
   updatedAt             DateTime      @updatedAt @map("updated_at")
 

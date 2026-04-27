@@ -33,7 +33,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { pendingCount, resetPendingCount, socketStatus } = useNotification();
+  const { pendingCount, socketStatus } = useNotification();
 
   const statusDot: Record<string, { color: string; title: string; pulse?: boolean }> = {
     connected: { color: '#4CAF50', title: 'Terhubung' },
@@ -91,7 +91,6 @@ export default function Sidebar() {
                 href={item.href}
                 className={`nav-item ${pathname === item.href ? 'active' : ''}`}
                 title={collapsed ? item.label : undefined}
-                onClick={item.href === '/orders' ? resetPendingCount : undefined}
                 style={{ position: 'relative' }}
               >
                 <span className="material-symbols-outlined">{item.icon}</span>

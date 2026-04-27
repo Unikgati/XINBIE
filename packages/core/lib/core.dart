@@ -24,6 +24,7 @@ export 'models/cart_item.dart';
 export 'api/api_client.dart';
 export 'api/api_endpoints.dart';
 export 'api/api_exception.dart';
+export 'api/socket_service.dart';
 
 // Auth
 export 'auth/auth_repository.dart';

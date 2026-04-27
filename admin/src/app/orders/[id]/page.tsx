@@ -6,6 +6,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { apiGet, apiPut } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
+import { useNotification } from '@/components/NotificationProvider';
 
 interface OrderItem {
   id: string;
@@ -52,8 +53,10 @@ interface OrderDetail {
   user: { id: string; name: string; email: string; phoneWa: string };
   driver?: { id: string; name: string; phoneWa: string };
   deliverySlot?: { day: string; startTime: string; endTime: string };
+  scheduledDate?: string;
   items: OrderItem[];
   statusLogs: StatusLog[];
+  isReadAdmin: boolean;
 }
 
 const statusMap: Record<string, { label: string; badge: string; icon: string }> = {
@@ -139,6 +142,7 @@ export default function OrderDetailPage() {
   const confirm = useConfirm();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const { decrementPendingCount } = useNotification();
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -153,6 +157,18 @@ export default function OrderDetailPage() {
   }, [params.id]);
 
   useEffect(() => { fetchOrder(); }, [fetchOrder]);
+
+  // Mark as read when order is loaded
+  useEffect(() => {
+    if (order && order.isReadAdmin === false) {
+      apiPut(`/orders/${params.id}/read`)
+        .then(() => {
+          decrementPendingCount();
+          setOrder(prev => prev ? { ...prev, isReadAdmin: true } : prev);
+        })
+        .catch(() => {}); // silent fail
+    }
+  }, [order?.id, order?.isReadAdmin, params.id, decrementPendingCount]);
 
   // Realtime: refresh when status changes
   useEffect(() => {
@@ -614,7 +630,7 @@ export default function OrderDetailPage() {
             {/* Payment Info */}
             <div className="data-card" style={{ padding: 20 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Pembayaran</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 {payMethodLogo[order.paymentMethod] && (
                   <img
                     src={payMethodLogo[order.paymentMethod]}
@@ -622,18 +638,26 @@ export default function OrderDetailPage() {
                     style={{ height: 24, width: 'auto', objectFit: 'contain', borderRadius: 4 }}
                   />
                 )}
-                <span className="badge gray">{fmtPayMethod(order.paymentMethod)}</span>
-                {order.paymentStatus !== 'PENDING' && (
-                  <span className={`badge ${ps.badge}`}>{ps.label}</span>
-                )}
+                <span className={`badge ${ps.badge}`}>{ps.label}</span>
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
+            </div>
+
+            {/* Delivery Info */}
+            <div className="data-card" style={{ padding: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Pengiriman</div>
+              <div style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-secondary)' }}>local_shipping</span>
                 {order.deliveryType === 'INSTANT' ? 'Pengiriman Instan' : 'Pengiriman Reguler'}
               </div>
+              {order.scheduledDate && (
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>event</span>
+                  {new Date(order.scheduledDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </div>
+              )}
               {order.deliverySlot && (
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>event</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
                   {order.deliverySlot.startTime} - {order.deliverySlot.endTime}
                 </div>
               )}
