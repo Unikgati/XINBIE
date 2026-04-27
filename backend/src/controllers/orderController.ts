@@ -77,88 +77,195 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
     const code = generateOrderCode();
     const initialStatus = paymentMethod === 'COD' ? 'RECEIVED' : 'WAITING_PAYMENT';
 
-    const order = await prisma.$transaction(async (tx) => {
-      // Promo discount validation (Atomic)
-      let discountAmount = 0;
-      let promoId: string | null = null;
-      if (promoCode) {
-        const promo = await tx.promoCode.findUnique({ where: { code: promoCode } });
-        if (!promo || !promo.isActive) throw new AppError('Kode promo tidak valid atau sudah tidak aktif', 400);
-        if (promo.totalUsageLimit > 0 && promo.usedCount >= promo.totalUsageLimit) throw new AppError('Kuota kode promo sudah habis', 400);
-        if (subtotal < promo.minOrder) throw new AppError(`Minimal belanja Rp ${promo.minOrder} untuk promo ini`, 400);
+    // Pre-calculate promo discount (read-only, no writes yet)
+    let discountAmount = 0;
+    let promoId: string | null = null;
+    if (promoCode) {
+      const promo = await prisma.promoCode.findUnique({ where: { code: promoCode } });
+      if (!promo || !promo.isActive) throw new AppError('Kode promo tidak valid atau sudah tidak aktif', 400);
+      if (promo.totalUsageLimit > 0 && promo.usedCount >= promo.totalUsageLimit) throw new AppError('Kuota kode promo sudah habis', 400);
+      if (subtotal < promo.minOrder) throw new AppError(`Minimal belanja Rp ${promo.minOrder} untuk promo ini`, 400);
 
-        // TODO: check perUserLimit if needed
+      if (promo.type === 'PERCENT') {
+        discountAmount = Math.floor((subtotal * promo.value) / 100);
+        if (promo.maxDiscount && discountAmount > promo.maxDiscount) discountAmount = promo.maxDiscount;
+      } else {
+        discountAmount = promo.value;
+      }
+      promoId = promo.id;
+    }
 
-        if (promo.type === 'PERCENT') {
-          discountAmount = Math.floor((subtotal * promo.value) / 100);
-          if (promo.maxDiscount && discountAmount > promo.maxDiscount) discountAmount = promo.maxDiscount;
-        } else {
-          discountAmount = promo.value;
-        }
-        promoId = promo.id;
+    const grandTotal = subtotal + deliveryFee - discountAmount;
+
+    // ── Midtrans: charge BEFORE DB write ──
+    // If this fails, nothing is written to DB → no ghost orders.
+    let chargeResponse: any = null;
+    if (paymentMethod !== 'COD') {
+      let payment_type = 'bank_transfer';
+      let additionalParams: any = {};
+
+      switch (paymentMethod) {
+        case 'QRIS':
+        case 'GOPAY':
+          payment_type = 'gopay';
+          break;
+        case 'SHOPEEPAY':
+          payment_type = 'shopeepay';
+          additionalParams.shopeepay = { callback_url: 'https://dapurgizi.com' };
+          break;
+        case 'OVO':
+        case 'DANA':
+          payment_type = 'qris';
+          break;
+        case 'VA':
+        case 'VA_BCA':
+          payment_type = 'bank_transfer';
+          additionalParams.bank_transfer = { bank: 'bca' };
+          break;
+        case 'VA_MANDIRI':
+          payment_type = 'echannel';
+          additionalParams.echannel = { bill_info1: 'Pembayaran', bill_info2: 'Pesanan' };
+          break;
+        case 'VA_BNI':
+          payment_type = 'bank_transfer';
+          additionalParams.bank_transfer = { bank: 'bni' };
+          break;
+        case 'VA_BRI':
+          payment_type = 'bank_transfer';
+          additionalParams.bank_transfer = { bank: 'bri' };
+          break;
+        case 'VA_PERMATA':
+          payment_type = 'bank_transfer';
+          additionalParams.bank_transfer = { bank: 'permata' };
+          break;
+        case 'VA_CIMB':
+          payment_type = 'bank_transfer';
+          additionalParams.bank_transfer = { bank: 'cimb' };
+          break;
+        case 'ALFAMART':
+          payment_type = 'cstore';
+          additionalParams.cstore = { store: 'alfamart', message: 'DapurGizi' };
+          break;
+        case 'INDOMARET':
+          payment_type = 'cstore';
+          additionalParams.cstore = { store: 'indomaret', message: 'DapurGizi' };
+          break;
+        default:
+          payment_type = 'bank_transfer';
+          additionalParams.bank_transfer = { bank: 'bca' };
       }
 
-      const grandTotal = subtotal + deliveryFee - discountAmount;
-
-      const newOrder = await tx.order.create({
-        data: {
-          code,
-          userId: req.userId!,
-          addressSnapshot: {
-            recipientName: address.recipientName,
-            phoneWa: address.phoneWa,
-            lat: address.lat,
-            lng: address.lng,
-            fullAddress: address.fullAddress,
-            notes: address.notes,
-          },
-          deliveryType: deliveryType || 'REGULAR',
-          deliverySlotId: deliverySlotId || null,
-          scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
-          paymentMethod,
-          paymentStatus: paymentMethod === 'COD' ? 'PENDING' : 'PENDING',
-          orderStatus: initialStatus,
-          subtotal,
-          deliveryFee,
-          discountAmount,
-          grandTotal,
-          notes,
-          items: { create: orderItems },
+      // Use order code as Midtrans order_id (unique, human-readable)
+      const parameter: any = {
+        payment_type,
+        transaction_details: {
+          order_id: code,
+          gross_amount: grandTotal,
         },
-        include: { items: true },
-      });
+        customer_details: {
+          first_name: address.recipientName,
+          email: address.user?.email || 'user@dapurgizi.com',
+          phone: address.phoneWa,
+        },
+        ...additionalParams
+      };
 
-      // Status log
-      await tx.orderStatusLog.create({
-        data: { orderId: newOrder.id, status: initialStatus, actorId: req.userId },
-      });
+      try {
+        chargeResponse = await coreApi.charge(parameter);
+      } catch (error) {
+        console.error('Midtrans charge failed:', error);
+        throw new AppError('Gagal membuat transaksi pembayaran. Silakan coba lagi.', 502);
+      }
+    }
 
-      // Decrement stock
-      for (const item of items) {
-        const product = products.find((p) => p.id === item.productId);
-        if (product && !product.isUnlimitedStock) {
-          await tx.product.update({
-            where: { id: product.id },
-            data: { stockQty: { decrement: item.qty } },
+    // ── DB Transaction: only runs if Midtrans succeeded (or COD) ──
+    // If DB fails after Midtrans charge, cancel the Midtrans transaction.
+    let order;
+    try {
+      order = await prisma.$transaction(async (tx) => {
+        // Re-validate promo atomically (in case concurrent usage)
+        if (promoId && promoCode) {
+          const promo = await tx.promoCode.findUnique({ where: { code: promoCode } });
+          if (!promo || !promo.isActive) throw new AppError('Kode promo tidak valid atau sudah tidak aktif', 400);
+          if (promo.totalUsageLimit > 0 && promo.usedCount >= promo.totalUsageLimit) throw new AppError('Kuota kode promo sudah habis', 400);
+        }
+
+        const newOrder = await tx.order.create({
+          data: {
+            code,
+            userId: req.userId!,
+            addressSnapshot: {
+              recipientName: address.recipientName,
+              phoneWa: address.phoneWa,
+              lat: address.lat,
+              lng: address.lng,
+              fullAddress: address.fullAddress,
+              notes: address.notes,
+            },
+            deliveryType: deliveryType || 'REGULAR',
+            deliverySlotId: deliverySlotId || null,
+            scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
+            paymentMethod,
+            paymentStatus: paymentMethod === 'COD' ? 'PENDING' : 'PENDING',
+            orderStatus: initialStatus,
+            subtotal,
+            deliveryFee,
+            discountAmount,
+            grandTotal,
+            notes,
+            items: { create: orderItems },
+            ...(chargeResponse ? {
+              paymentDetails: chargeResponse,
+              midtransTransactionId: chargeResponse.transaction_id,
+              midtransPaymentType: chargeResponse.payment_type,
+            } : {}),
+          },
+          include: { items: true },
+        });
+
+        // Status log
+        await tx.orderStatusLog.create({
+          data: { orderId: newOrder.id, status: initialStatus, actorId: req.userId },
+        });
+
+        // Decrement stock
+        for (const item of items) {
+          const product = products.find((p) => p.id === item.productId);
+          if (product && !product.isUnlimitedStock) {
+            await tx.product.update({
+              where: { id: product.id },
+              data: { stockQty: { decrement: item.qty } },
+            });
+          }
+        }
+
+        // Record promo usage
+        if (promoId) {
+          await tx.promoUsage.create({
+            data: { promoCodeId: promoId, userId: req.userId!, orderId: newOrder.id },
+          });
+          await tx.promoCode.update({
+            where: { id: promoId },
+            data: { usedCount: { increment: 1 } },
           });
         }
+
+        return newOrder;
+      });
+    } catch (dbError) {
+      // DB failed after Midtrans charge succeeded → cancel Midtrans to prevent orphan payment
+      if (chargeResponse) {
+        try {
+          await coreApi.transaction.cancel(code);
+          console.warn(`[Midtrans] Cancelled charge for ${code} due to DB failure`);
+        } catch (cancelErr) {
+          console.error(`[CRITICAL] Midtrans charge ${code} succeeded but DB failed AND cancel failed. Manual refund needed.`, cancelErr);
+        }
       }
+      throw dbError;
+    }
 
-      // Record promo usage
-      if (promoId) {
-        await tx.promoUsage.create({
-          data: { promoCodeId: promoId, userId: req.userId!, orderId: newOrder.id },
-        });
-        await tx.promoCode.update({
-          where: { id: promoId },
-          data: { usedCount: { increment: 1 } },
-        });
-      }
-
-      return newOrder;
-    });
-
-    // Notify admins via WebSocket
+    // Notify admins via WebSocket (after everything succeeded)
     emitToAdmins('order:new', {
       id: order.id,
       code: order.code,
@@ -167,98 +274,8 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
       paymentMethod: order.paymentMethod,
       createdAt: order.createdAt,
     });
-    
-    let finalOrder = order;
 
-    // Create Midtrans transaction if not COD
-    if (paymentMethod !== 'COD') {
-      try {
-        let payment_type = 'bank_transfer';
-        let additionalParams: any = {};
-
-        switch (paymentMethod) {
-          case 'QRIS':
-          case 'GOPAY':
-            payment_type = 'gopay';
-            break;
-          case 'SHOPEEPAY':
-            payment_type = 'shopeepay';
-            additionalParams.shopeepay = { callback_url: 'https://dapurgizi.com' };
-            break;
-          case 'OVO':
-          case 'DANA':
-            payment_type = 'qris';
-            break;
-          case 'VA':
-          case 'VA_BCA':
-            payment_type = 'bank_transfer';
-            additionalParams.bank_transfer = { bank: 'bca' };
-            break;
-          case 'VA_MANDIRI':
-            payment_type = 'echannel';
-            additionalParams.echannel = { bill_info1: 'Pembayaran', bill_info2: 'Pesanan' };
-            break;
-          case 'VA_BNI':
-            payment_type = 'bank_transfer';
-            additionalParams.bank_transfer = { bank: 'bni' };
-            break;
-          case 'VA_BRI':
-            payment_type = 'bank_transfer';
-            additionalParams.bank_transfer = { bank: 'bri' };
-            break;
-          case 'VA_PERMATA':
-            payment_type = 'bank_transfer';
-            additionalParams.bank_transfer = { bank: 'permata' };
-            break;
-          case 'VA_CIMB':
-            payment_type = 'bank_transfer';
-            additionalParams.bank_transfer = { bank: 'cimb' };
-            break;
-          case 'ALFAMART':
-            payment_type = 'cstore';
-            additionalParams.cstore = { store: 'alfamart', message: 'DapurGizi' };
-            break;
-          case 'INDOMARET':
-            payment_type = 'cstore';
-            additionalParams.cstore = { store: 'indomaret', message: 'DapurGizi' };
-            break;
-          default:
-            payment_type = 'bank_transfer';
-            additionalParams.bank_transfer = { bank: 'bca' };
-        }
-
-        const parameter: any = {
-          payment_type,
-          transaction_details: {
-            order_id: order.id,
-            gross_amount: order.grandTotal,
-          },
-          customer_details: {
-            first_name: address.recipientName,
-            email: address.user?.email || 'user@dapurgizi.com',
-            phone: address.phoneWa,
-          },
-          ...additionalParams
-        };
-
-        const chargeResponse = await coreApi.charge(parameter);
-        
-        finalOrder = await prisma.order.update({
-          where: { id: order.id },
-          data: {
-            paymentDetails: chargeResponse,
-            midtransTransactionId: chargeResponse.transaction_id,
-            midtransPaymentType: chargeResponse.payment_type,
-          },
-          include: { items: true },
-        });
-      } catch (error) {
-        console.error('Midtrans Error:', error);
-        throw new AppError('Gagal membuat transaksi pembayaran', 500);
-      }
-    }
-
-    res.status(201).json(finalOrder);
+    res.status(201).json(order);
   } catch (err) { next(err); }
 }
 
@@ -392,10 +409,11 @@ export async function cancelOrder(req: AuthRequest, res: Response, next: NextFun
     // Batalkan tagihan di sisi Midtrans jika masih waiting payment dan ada ID transaksinya
     if (order.midtransTransactionId && order.orderStatus === 'WAITING_PAYMENT') {
       try {
-        await coreApi.transaction.cancel(order.id);
+        // Use order.code as Midtrans order_id (consistent with charge)
+        await coreApi.transaction.cancel(order.code);
       } catch (midtransError: any) {
         // Abaikan error midtrans (misal karena transaksinya sudah expired) agar tidak merusak flow batal di sisi kita
-        console.warn(`[Midtrans] Failed to cancel order ${order.id}:`, midtransError.message);
+        console.warn(`[Midtrans] Failed to cancel order ${order.code}:`, midtransError.message);
       }
     }
 

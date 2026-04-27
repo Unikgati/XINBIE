@@ -48,7 +48,7 @@ class OrderRepository {
       'paymentMethod': paymentMethod,
       if (scheduledDate != null) 'scheduledDate': scheduledDate.toIso8601String(),
       if (deliveryType != null) 'deliveryType': deliveryType,
-    });
+    }, receiveTimeout: const Duration(seconds: 30));
     return Order.fromJson(response.data as Map<String, dynamic>);
   }
 

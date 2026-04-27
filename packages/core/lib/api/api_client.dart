@@ -122,9 +122,11 @@ class ApiClient {
     }
   }
 
-  Future<Response<T>> post<T>(String path, {dynamic data}) async {
+  Future<Response<T>> post<T>(String path, {dynamic data, Duration? receiveTimeout}) async {
     try {
-      return await _dio.post<T>(path, data: data);
+      return await _dio.post<T>(path, data: data,
+        options: receiveTimeout != null ? Options(receiveTimeout: receiveTimeout) : null,
+      );
     } catch (e) {
       throw _handleError(e);
     }

@@ -126,8 +126,10 @@ const payMethodLogo: Record<string, string> = {
   'OVO': '/payments/ovo.png',
   'DANA': '/payments/dana.png',
   'SHOPEEPAY': '/payments/shopeepay.png',
+  'QRIS': '/payments/qris.png',
   'ALFAMART': '/payments/alfamart.png',
   'INDOMARET': '/payments/indomaret.png',
+  'COD': '/payments/cod.png',
 };
 
 export default function OrderDetailPage() {

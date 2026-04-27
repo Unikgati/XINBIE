@@ -46,7 +46,7 @@ export async function api<T = any>(path: string, options?: RequestInit & { noAut
     headers,
   });
 
-  if (res.status === 401) {
+  if (res.status === 401 && !isAuthRoute) {
     clearAuthToken();
     if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
       window.location.href = '/login';

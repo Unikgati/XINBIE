@@ -40,7 +40,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _scheduledDate = DateTime.now().add(const Duration(days: 2));
 
     // Auto-expand group containing current method
-    if (['GOPAY', 'SHOPEEPAY', 'OVO', 'DANA', 'QRIS'].contains(_paymentMethod)) {
+    if (['GOPAY', 'SHOPEEPAY', 'QRIS'].contains(_paymentMethod)) {
       _expandedPaymentGroup = 'E-Wallet';
     } else if (['VA_BCA', 'VA_MANDIRI', 'VA_BNI', 'VA_BRI', 'VA_PERMATA', 'VA_CIMB'].contains(_paymentMethod)) {
       _expandedPaymentGroup = 'Transfer Bank (Virtual Account)';
@@ -192,8 +192,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     switch (code) {
       case 'GOPAY': return 'GoPay';
       case 'SHOPEEPAY': return 'ShopeePay';
-      case 'OVO': return 'OVO';
-      case 'DANA': return 'DANA';
+
       case 'QRIS': return 'QRIS';
       case 'VA_BCA': return 'BCA (VA)';
       case 'VA_MANDIRI': return 'Mandiri (VA)';
@@ -222,8 +221,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     switch (code) {
       case 'GOPAY': return 'assets/images/payments/gopay.png';
       case 'SHOPEEPAY': return 'assets/images/payments/shopeepay.png';
-      case 'OVO': return 'assets/images/payments/ovo.png';
-      case 'DANA': return 'assets/images/payments/dana.png';
+
+      case 'QRIS': return 'assets/images/payments/qris.png';
       case 'VA_BCA': return 'assets/images/payments/bca.png';
       case 'VA_MANDIRI': return 'assets/images/payments/mandiri.png';
       case 'VA_BNI': return 'assets/images/payments/bni.png';
@@ -232,6 +231,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       case 'VA_CIMB': return 'assets/images/payments/cimb.png';
       case 'ALFAMART': return 'assets/images/payments/alfamart.png';
       case 'INDOMARET': return 'assets/images/payments/indomaret.png';
+      case 'COD': return 'assets/images/payments/cod.png';
       default: return null;
     }
   }
@@ -539,7 +539,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   title: 'METODE PEMBAYARAN',
                   child: Column(
                     children: [
-                      _buildAccordionGroup('E-Wallet', ['GOPAY', 'SHOPEEPAY', 'OVO', 'DANA', 'QRIS']),
+                      _buildAccordionGroup('E-Wallet', ['GOPAY', 'SHOPEEPAY', 'QRIS']),
                       _buildAccordionGroup('Transfer Bank (Virtual Account)', ['VA_BCA', 'VA_MANDIRI', 'VA_BNI', 'VA_BRI', 'VA_PERMATA', 'VA_CIMB']),
                       _buildAccordionGroup('Gerai Ritel', ['ALFAMART', 'INDOMARET']),
                       
@@ -549,6 +549,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         child: _SelectableCard(
                           title: _getPaymentMethodName('COD'),
                           iconData: _getPaymentMethodIcon('COD'),
+                          imageUrl: _getPaymentMethodImageUrl('COD'),
                           isSelected: _paymentMethod == 'COD',
                           onTap: () {
                             setState(() => _paymentMethod = 'COD');

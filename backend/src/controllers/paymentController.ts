@@ -32,7 +32,8 @@ export async function midtransWebhook(req: Request, res: Response) {
       newOrderStatus = 'WAITING_PAYMENT';
     }
 
-    const currentOrder = await prisma.order.findUnique({ where: { id: orderId } });
+    // orderId from Midtrans = our order.code (human-readable)
+    const currentOrder = await prisma.order.findFirst({ where: { code: orderId } });
     if (!currentOrder) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -42,7 +43,7 @@ export async function midtransWebhook(req: Request, res: Response) {
       await prisma.$transaction(async (tx) => {
         // Update Order
         await tx.order.update({
-          where: { id: orderId },
+          where: { id: currentOrder.id },
           data: {
             paymentStatus: newPaymentStatus as any,
             orderStatus: newOrderStatus as any,
@@ -52,7 +53,7 @@ export async function midtransWebhook(req: Request, res: Response) {
         // Add Log
         await tx.orderStatusLog.create({
           data: {
-            orderId,
+            orderId: currentOrder.id,
             status: newOrderStatus as any,
             note: `Midtrans Webhook: ${transactionStatus}`,
           },
@@ -60,7 +61,7 @@ export async function midtransWebhook(req: Request, res: Response) {
 
         // If cancelled/failed, return stock
         if (newOrderStatus === 'CANCELLED' && currentOrder.orderStatus !== 'CANCELLED') {
-          const items = await tx.orderItem.findMany({ where: { orderId } });
+          const items = await tx.orderItem.findMany({ where: { orderId: currentOrder.id } });
           for (const item of items) {
             if (item.productId) {
               await tx.product.update({
