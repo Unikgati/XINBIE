@@ -49,6 +49,10 @@ interface OrderDetail {
     phoneWa: string;
     fullAddress: string;
     notes?: string;
+    province?: string;
+    city?: string;
+    district?: string;
+    village?: string;
   };
   user: { id: string; name: string; email: string; phoneWa: string };
   driver?: { id: string; name: string; phoneWa: string };
@@ -59,16 +63,16 @@ interface OrderDetail {
   isReadAdmin: boolean;
 }
 
-const statusMap: Record<string, { label: string; badge: string; icon: string }> = {
-  WAITING_PAYMENT: { label: 'Menunggu Bayar', badge: 'orange', icon: 'schedule' },
-  RECEIVED: { label: 'Diterima', badge: 'blue', icon: 'inbox' },
-  PROCESSING: { label: 'Diproses', badge: 'purple', icon: 'pending' },
-  WAITING_DRIVER: { label: 'Tunggu Driver', badge: 'orange', icon: 'hail' },
-  IN_DELIVERY: { label: 'Dikirim', badge: 'green', icon: 'local_shipping' },
-  DELIVERED: { label: 'Diantar', badge: 'green', icon: 'package_2' },
-  COMPLETED: { label: 'Selesai', badge: 'green', icon: 'check_circle' },
-  CANCELLED: { label: 'Batal', badge: 'red', icon: 'cancel' },
-  PROBLEM: { label: 'Masalah', badge: 'orange', icon: 'warning' },
+const statusMap: Record<string, { label: string; badge: string }> = {
+  WAITING_PAYMENT: { label: 'Menunggu Bayar', badge: 'orange' },
+  RECEIVED: { label: 'Diterima', badge: 'blue' },
+  PROCESSING: { label: 'Diproses', badge: 'purple' },
+  WAITING_DRIVER: { label: 'Tunggu Driver', badge: 'orange' },
+  IN_DELIVERY: { label: 'Dikirim', badge: 'green' },
+  DELIVERED: { label: 'Diantar', badge: 'green' },
+  COMPLETED: { label: 'Selesai', badge: 'green' },
+  CANCELLED: { label: 'Batal', badge: 'red' },
+  PROBLEM: { label: 'Masalah', badge: 'orange' },
 };
 
 const paymentStatusMap: Record<string, { label: string; badge: string }> = {
@@ -291,7 +295,12 @@ export default function OrderDetailPage() {
       <div class="section-label">Alamat Pengiriman</div>
       <div class="info-name">${order.addressSnapshot.recipientName}</div>
       <div class="info-detail">${order.addressSnapshot.phoneWa}</div>
-      <div class="info-detail">${order.addressSnapshot.fullAddress}</div>
+      <div class="info-detail">${(() => {
+        const hasRegion = !!order.addressSnapshot.province;
+        const region = [order.addressSnapshot.village, order.addressSnapshot.district, order.addressSnapshot.city, order.addressSnapshot.province].filter(Boolean).join(', ');
+        const catatan = hasRegion ? order.addressSnapshot.fullAddress : order.addressSnapshot.notes;
+        return region ? `${region}<br/><i>📌 Catatan: ${catatan || '-'}</i>` : order.addressSnapshot.fullAddress;
+      })()}</div>
     </div>
   </div>
 
@@ -450,7 +459,7 @@ export default function OrderDetailPage() {
     );
   }
 
-  const sm = statusMap[order.orderStatus] || { label: order.orderStatus, badge: 'gray', icon: 'help' };
+  const sm = statusMap[order.orderStatus] || { label: order.orderStatus, badge: 'gray' };
   const ps = paymentStatusMap[order.paymentStatus] || { label: order.paymentStatus, badge: 'gray' };
   const canAct = !['COMPLETED', 'CANCELLED'].includes(order.orderStatus);
 
@@ -470,7 +479,7 @@ export default function OrderDetailPage() {
             <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {order.code}
               <span className={`badge ${sm.badge}`} style={{ fontSize: 12 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{sm.icon}</span> {sm.label}
+                {sm.label}
               </span>
             </h1>
             <p className="page-subtitle">{fmtDate(order.createdAt)}</p>
@@ -484,12 +493,12 @@ export default function OrderDetailPage() {
             <>
               {order.orderStatus === 'RECEIVED' && (
                 <button className="btn btn-primary" onClick={() => handleUpdateStatus('PROCESSING', 'Diproses')}>
-                  <span className="material-symbols-outlined">pending</span> Proses Pesanan
+                  <span className="material-symbols-outlined">action_key</span> Proses Pesanan
                 </button>
               )}
               {order.orderStatus === 'PROCESSING' && (
                 <button className="btn btn-primary" onClick={() => handleUpdateStatus('WAITING_DRIVER', 'Tunggu Driver')}>
-                  <span className="material-symbols-outlined">local_shipping</span> Siap Kirim
+                  <span className="material-symbols-outlined">package_2</span> Siap Kirim
                 </button>
               )}
               <button
@@ -585,14 +594,19 @@ export default function OrderDetailPage() {
             {/* Customer */}
             <div className="data-card" style={{ padding: 20 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Pelanggan</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div 
+                style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, cursor: 'pointer' }}
+                onClick={() => router.push(`/users/${order.user.id}`)}
+                title="Lihat Detail Pelanggan"
+              >
                 <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--primary-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 20 }}>person</span>
                 </div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{order.user.name}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--primary)' }}>{order.user.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{order.user.email}</div>
                 </div>
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--text-hint)' }}>chevron_right</span>
               </div>
               {order.user.phoneWa && <WaLink phone={order.user.phoneWa} />}
             </div>
@@ -605,10 +619,14 @@ export default function OrderDetailPage() {
                 <span style={{ color: 'var(--border)' }}>|</span>
                 <WaLink phone={order.addressSnapshot.phoneWa} />
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.5 }}>{order.addressSnapshot.fullAddress}</div>
-              {order.addressSnapshot.notes && (
-                <div style={{ fontSize: 12, color: 'var(--text-hint)', marginTop: 6, fontStyle: 'italic' }}>📌 {order.addressSnapshot.notes}</div>
-              )}
+              {(() => {
+                const region = [order.addressSnapshot.village, order.addressSnapshot.district, order.addressSnapshot.city, order.addressSnapshot.province].filter(Boolean).join(', ');
+                if (!region) return null;
+                return <div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 8, lineHeight: 1.5 }}>{region}</div>;
+              })()}
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.5 }}>
+                <span style={{ fontWeight: 600 }}>Alamat Lengkap:</span> {order.addressSnapshot.fullAddress}
+              </div>
             </div>
 
             {/* Driver */}
@@ -669,7 +687,7 @@ export default function OrderDetailPage() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 }}>Riwayat Status</div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {order.statusLogs.map((log, i) => {
-                    const logSm = statusMap[log.status] || { label: log.status, badge: 'gray', icon: 'circle' };
+                    const logSm = statusMap[log.status] || { label: log.status, badge: 'gray' };
                     const isLast = i === order.statusLogs.length - 1;
                     return (
                       <div key={log.id} style={{ display: 'flex', gap: 12, position: 'relative' }}>

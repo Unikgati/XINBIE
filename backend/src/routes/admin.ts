@@ -46,6 +46,7 @@ router.put('/withdrawals/:id', admin.adminProcessWithdrawal);
 
 // Users
 router.get('/users', admin.adminGetUsers);
+router.get('/users/:id', admin.adminGetUserDetail);
 router.put('/users/:id/toggle', admin.adminToggleUser);
 
 // Banners

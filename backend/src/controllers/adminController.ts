@@ -285,7 +285,10 @@ export async function adminGetOrders(req: AuthRequest, res: Response, next: Next
   try {
     const { status, page = '1', limit = '20', search } = req.query;
     const where: any = {};
-    if (status) where.orderStatus = status;
+    if (status) {
+      const statuses = (status as string).split(',');
+      where.orderStatus = statuses.length > 1 ? { in: statuses } : statuses[0];
+    }
     if (search) {
       where.OR = [
         { code: { contains: search as string, mode: 'insensitive' } },
@@ -308,7 +311,8 @@ export async function adminGetOrders(req: AuthRequest, res: Response, next: Next
       prisma.order.count({ where }),
     ]);
 
-    res.json({ data: orders, meta: { total, page: parseInt(page as string) } });
+    const lim = parseInt(limit as string);
+    res.json({ data: orders, meta: { total, page: parseInt(page as string), totalPages: Math.ceil(total / lim) } });
   } catch (err) { next(err); }
 }
 
@@ -464,6 +468,98 @@ export async function adminToggleUser(req: AuthRequest, res: Response, next: Nex
     });
 
     res.json({ message: user.isActive ? 'User dinonaktifkan' : 'User diaktifkan' });
+  } catch (err) { next(err); }
+}
+
+export async function adminGetUserDetail(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const userId = req.params.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true, name: true, email: true, phoneWa: true,
+        avatarUrl: true, isActive: true, createdAt: true, updatedAt: true,
+      },
+    });
+    if (!user) throw new AppError('User tidak ditemukan', 404);
+
+    // Stats
+    const [totalOrders, spending, lastOrder] = await Promise.all([
+      prisma.order.count({ where: { userId } }),
+      prisma.order.aggregate({
+        where: { userId, orderStatus: { notIn: ['CANCELLED'] } },
+        _sum: { grandTotal: true },
+      }),
+      prisma.order.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    // Addresses
+    const addresses = await prisma.address.findMany({
+      where: { userId },
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    // Resolve region names for addresses
+    const allRegionIds = addresses.flatMap(a =>
+      [a.provinceId, a.cityId, a.districtId, a.villageId].filter(Boolean) as string[]
+    );
+    const uniqueIds = [...new Set(allRegionIds)];
+
+    let regionMap = new Map<string, string>();
+    if (uniqueIds.length > 0) {
+      const [provinces, cities, districts, villages] = await Promise.all([
+        prisma.province.findMany({ where: { id: { in: uniqueIds } }, select: { id: true, name: true } }),
+        prisma.city.findMany({ where: { id: { in: uniqueIds } }, select: { id: true, name: true } }),
+        prisma.district.findMany({ where: { id: { in: uniqueIds } }, select: { id: true, name: true } }),
+        prisma.village.findMany({ where: { id: { in: uniqueIds } }, select: { id: true, name: true } }),
+      ]);
+      [...provinces, ...cities, ...districts, ...villages].forEach(r => regionMap.set(r.id, r.name));
+    }
+
+    const addressesWithRegion = addresses.map(a => ({
+      ...a,
+      provinceName: a.provinceId ? regionMap.get(a.provinceId) : undefined,
+      cityName: a.cityId ? regionMap.get(a.cityId) : undefined,
+      districtName: a.districtId ? regionMap.get(a.districtId) : undefined,
+      villageName: a.villageId ? regionMap.get(a.villageId) : undefined,
+    }));
+
+    // Recent orders (last 10)
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id: true, code: true, orderStatus: true, paymentStatus: true,
+        grandTotal: true, createdAt: true, isReadAdmin: true,
+        _count: { select: { items: true } },
+      },
+    });
+
+    res.json({
+      user,
+      stats: {
+        totalOrders,
+        totalSpent: spending._sum.grandTotal || 0,
+        lastOrderAt: lastOrder?.createdAt || null,
+      },
+      addresses: addressesWithRegion,
+      orders: orders.map(o => ({
+        id: o.id,
+        code: o.code,
+        orderStatus: o.orderStatus,
+        paymentStatus: o.paymentStatus,
+        grandTotal: o.grandTotal,
+        createdAt: o.createdAt,
+        isReadAdmin: o.isReadAdmin,
+        itemCount: o._count.items,
+      })),
+    });
   } catch (err) { next(err); }
 }
 

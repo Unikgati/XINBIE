@@ -131,16 +131,37 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-footer">
-        <div className="avatar-circle">AD</div>
-        {!collapsed && (
+        {collapsed ? (
+          <span 
+            className="material-symbols-outlined" 
+            style={{ 
+              color: 'var(--text-hint)', 
+              cursor: 'pointer',
+              fontSize: 22,
+              margin: '0 auto',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--error)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-hint)'}
+            onClick={() => {
+              import('@/lib/api').then(({ clearAuthToken }) => {
+                clearAuthToken();
+                window.location.href = '/login';
+              });
+            }}
+            title="Keluar"
+          >
+            logout
+          </span>
+        ) : (
           <>
+            <div className="avatar-circle">AD</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 600 }}>Admin</div>
               <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>admin@dapurgizi.com</div>
             </div>
             <span 
               className="material-symbols-outlined" 
-              style={{ color: 'var(--text-hint)', cursor: 'pointer', transition: 'color 0.2s' }}
+              style={{ color: 'var(--text-hint)', cursor: 'pointer' }}
               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--error)'}
               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-hint)'}
               onClick={() => {

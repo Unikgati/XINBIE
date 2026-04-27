@@ -113,10 +113,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             child: Form(
               key: _formKey,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Profile Picture
-                  GestureDetector(
+                  Center(
+                    child: GestureDetector(
                     onTap: _pickImage,
                     child: Stack(
                       alignment: Alignment.bottomRight,
@@ -161,13 +162,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ],
                     ),
                   ),
+                  ),
                   const SizedBox(height: 32),
                   
                   // Fields
+                  Text('Nama Lengkap', style: AppTypography.labelLarge),
+                  const SizedBox(height: 8),
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(
-                      labelText: 'Nama Lengkap',
                       hintText: 'Masukkan nama Anda',
                       prefixIcon: Icon(Icons.person_outline),
                     ),
@@ -175,11 +178,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   
+                  Text('Nomor WhatsApp', style: AppTypography.labelLarge),
+                  const SizedBox(height: 8),
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
-                      labelText: 'Nomor WhatsApp',
                       hintText: 'Contoh: 081234567890',
                       prefixIcon: Icon(Icons.phone_outlined),
                     ),

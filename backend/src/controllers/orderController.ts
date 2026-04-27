@@ -21,6 +21,14 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
     });
     if (!address) throw new AppError('Alamat tidak ditemukan', 404);
 
+    // Resolve region names for snapshot
+    const [provinceName, cityName, districtName, villageName] = await Promise.all([
+      address.provinceId ? prisma.province.findUnique({ where: { id: address.provinceId }, select: { name: true } }) : null,
+      address.cityId ? prisma.city.findUnique({ where: { id: address.cityId }, select: { name: true } }) : null,
+      address.districtId ? prisma.district.findUnique({ where: { id: address.districtId }, select: { name: true } }) : null,
+      address.villageId ? prisma.village.findUnique({ where: { id: address.villageId }, select: { name: true } }) : null,
+    ]);
+
     // Validate user has WhatsApp number
     const user = (address as any).user;
     if (!user?.phoneWa) {
@@ -201,6 +209,10 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
               lng: address.lng,
               fullAddress: address.fullAddress,
               notes: address.notes,
+              province: provinceName?.name,
+              city: cityName?.name,
+              district: districtName?.name,
+              village: villageName?.name,
             },
             deliveryType: deliveryType || 'REGULAR',
             deliverySlotId: deliverySlotId || null,

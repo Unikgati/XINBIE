@@ -16,6 +16,7 @@ import { initWebSocket } from './websocket';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/product';
 import addressRoutes from './routes/address';
+import regionRoutes from './routes/region';
 import deliveryRoutes from './routes/delivery';
 import orderRoutes from './routes/order';
 import driverRoutes from './routes/driver';
@@ -53,6 +54,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api', productRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/regions', regionRoutes);
 app.use('/api', deliveryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/driver', driverRoutes);

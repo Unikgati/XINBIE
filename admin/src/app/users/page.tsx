@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import ActionMenu from '@/components/ActionMenu';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
@@ -25,6 +26,7 @@ export default function UsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const toast = useToast();
   const confirm = useConfirm();
+  const router = useRouter();
 
   const fetchData = useCallback(async () => {
     try {
@@ -82,14 +84,15 @@ export default function UsersPage() {
               <thead><tr><th>Nama</th><th>Email</th><th>WhatsApp</th><th>Bergabung</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
               <tbody>
                 {users.map(u => (
-                  <tr key={u.id}>
+                  <tr key={u.id} style={{ cursor: 'pointer' }} onClick={() => router.push(`/users/${u.id}`)}>
                     <td style={{ fontWeight: 600 }}>{u.name}</td>
                     <td style={{ fontSize: 13 }}>{u.email}</td>
                     <td style={{ fontSize: 13 }}>{u.phoneWa || '-'}</td>
                     <td style={{ fontSize: 13 }}>{new Date(u.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                     <td><span className={`badge ${u.isActive ? 'green' : 'red'}`}>{u.isActive ? 'Aktif' : 'Nonaktif'}</span></td>
-                    <td>
+                    <td onClick={e => e.stopPropagation()}>
                       <ActionMenu items={[
+                        { icon: 'visibility', label: 'Lihat Detail', onClick: () => router.push(`/users/${u.id}`) },
                         { icon: u.isActive ? 'person_off' : 'person', label: u.isActive ? 'Nonaktifkan' : 'Aktifkan', onClick: () => handleToggle(u), danger: u.isActive },
                       ]} />
                     </td>

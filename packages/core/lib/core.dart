@@ -19,6 +19,7 @@ export 'models/notification_model.dart';
 export 'models/driver_profile.dart';
 export 'models/pickup_point.dart';
 export 'models/cart_item.dart';
+export 'models/region.dart';
 
 // API
 export 'api/api_client.dart';
@@ -38,6 +39,7 @@ export 'repositories/notification_repository.dart';
 export 'repositories/driver_repository.dart';
 export 'repositories/banner_repository.dart';
 export 'repositories/delivery_repository.dart';
+export 'repositories/region_repository.dart';
 
 // Utils
 export 'utils/currency_formatter.dart';

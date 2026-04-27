@@ -24,6 +24,10 @@ class AddressRepository {
     double? latitude,
     double? longitude,
     String? notes,
+    String? provinceId,
+    String? cityId,
+    String? districtId,
+    String? villageId,
     bool isPrimary = false,
   }) async {
     final response = await _api.post(ApiEndpoints.addresses, data: {
@@ -34,6 +38,10 @@ class AddressRepository {
       if (latitude != null) 'lat': latitude,
       if (longitude != null) 'lng': longitude,
       if (notes != null) 'notes': notes,
+      if (provinceId != null) 'provinceId': provinceId,
+      if (cityId != null) 'cityId': cityId,
+      if (districtId != null) 'districtId': districtId,
+      if (villageId != null) 'villageId': villageId,
       'isPrimary': isPrimary,
     });
     return Address.fromJson(response.data as Map<String, dynamic>);

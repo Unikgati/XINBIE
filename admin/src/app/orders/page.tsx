@@ -38,6 +38,17 @@ const statusMap: Record<string, { label: string; badge: string }> = {
   PROBLEM: { label: 'Masalah', badge: 'orange' },
 };
 
+// Smart filter groups — priority-based for admin workflow
+const filterGroups: { key: string; label: string; icon: string; statuses: string | null; color?: string }[] = [
+  { key: 'ALL', label: 'Semua', icon: 'list', statuses: null },
+  { key: 'ACTION', label: 'Perlu Ditindak', icon: 'priority_high', statuses: 'RECEIVED,PROBLEM', color: '#DC2626' },
+  { key: 'PROGRESS', label: 'Diproses', icon: 'pending', statuses: 'PROCESSING,WAITING_DRIVER' },
+  { key: 'DELIVERY', label: 'Pengiriman', icon: 'local_shipping', statuses: 'IN_DELIVERY,DELIVERED' },
+  { key: 'WAITING', label: 'Menunggu Bayar', icon: 'schedule', statuses: 'WAITING_PAYMENT' },
+  { key: 'DONE', label: 'Selesai', icon: 'check_circle', statuses: 'COMPLETED' },
+  { key: 'CANCEL', label: 'Batal', icon: 'cancel', statuses: 'CANCELLED' },
+];
+
 const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
 const payMethodLabel: Record<string, string> = {
@@ -56,6 +67,7 @@ export default function OrdersPage() {
   const [searchInput, setSearchInput] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const toast = useToast();
   const confirm = useConfirm();
   const { socketStatus } = useNotification();
@@ -70,14 +82,17 @@ export default function OrdersPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  const activeFilter = filterGroups.find(f => f.key === filter);
+
   const fetchData = useCallback(async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
-      const statusParam = filter !== 'ALL' ? `&status=${filter}` : '';
+      const statusParam = activeFilter?.statuses ? `&status=${activeFilter.statuses}` : '';
       const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
       const res = await apiGet<{ data: Order[], meta: any }>(`/orders?limit=20&page=${page}${statusParam}${searchParam}`);
       setOrders(res.data || []);
       setTotalPages(res.meta?.totalPages || 1);
+      setTotalCount(res.meta?.total || 0);
     } catch (err: any) {
       toast.error(err.message || 'Gagal memuat pesanan');
     } finally {
@@ -86,8 +101,6 @@ export default function OrdersPage() {
   }, [filter, page, search]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-
 
   // Auto-refresh when order changes via WebSocket (debounced)
   useEffect(() => {
@@ -130,7 +143,7 @@ export default function OrdersPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Pesanan</h1>
-          <p className="page-subtitle">{orders.length} pesanan</p>
+          <p className="page-subtitle">{totalCount} pesanan{activeFilter && activeFilter.key !== 'ALL' ? ` · ${activeFilter.label}` : ''}</p>
         </div>
       </div>
       <div className="page-body">
@@ -151,10 +164,16 @@ export default function OrdersPage() {
           </div>
         </div>
 
+        {/* Smart filter chips */}
         <div className="chip-group">
-          {['ALL', 'WAITING_PAYMENT', 'RECEIVED', 'PROCESSING', 'IN_DELIVERY', 'COMPLETED', 'CANCELLED'].map(s => (
-            <button key={s} className={`chip ${filter === s ? 'active' : ''}`} onClick={() => setFilter(s)}>
-              {s === 'ALL' ? 'Semua' : statusMap[s]?.label || s}
+          {filterGroups.map(f => (
+            <button
+              key={f.key}
+              className={`chip ${filter === f.key ? 'active' : ''}`}
+              onClick={() => { setFilter(f.key); setPage(1); }}
+              style={f.color && filter !== f.key ? { borderColor: f.color, color: f.color } : undefined}
+            >
+              {f.label}
             </button>
           ))}
         </div>
@@ -165,7 +184,7 @@ export default function OrdersPage() {
           ) : orders.length === 0 ? (
             <div className="empty-state">
               <span className="material-symbols-outlined">receipt_long</span>
-              Belum ada pesanan
+              {search ? 'Tidak ada pesanan yang cocok' : 'Belum ada pesanan'}
             </div>
           ) : (
             <div className="table-responsive">
@@ -175,7 +194,7 @@ export default function OrdersPage() {
               </thead>
               <tbody>
                 {orders.map(o => {
-                  const sm = statusMap[o.orderStatus] || { label: o.orderStatus, badge: 'gray', icon: 'help' };
+                  const sm = statusMap[o.orderStatus] || { label: o.orderStatus, badge: 'gray' };
                   return (
                     <tr
                       key={o.id}

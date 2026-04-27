@@ -18,7 +18,7 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
-  String _paymentMethod = 'GOPAY'; // Default payment method
+  String? _paymentMethod; // No default — user must choose
   final _promoCtrl = TextEditingController();
   bool _loading = false;
   
@@ -38,15 +38,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     super.initState();
     // Default to H+2
     _scheduledDate = DateTime.now().add(const Duration(days: 2));
-
-    // Auto-expand group containing current method
-    if (['GOPAY', 'SHOPEEPAY', 'QRIS'].contains(_paymentMethod)) {
-      _expandedPaymentGroup = 'E-Wallet';
-    } else if (['VA_BCA', 'VA_MANDIRI', 'VA_BNI', 'VA_BRI', 'VA_PERMATA', 'VA_CIMB'].contains(_paymentMethod)) {
-      _expandedPaymentGroup = 'Transfer Bank (Virtual Account)';
-    } else if (['ALFAMART', 'INDOMARET'].contains(_paymentMethod)) {
-      _expandedPaymentGroup = 'Gerai Ritel';
-    }
   }
 
   @override
@@ -96,6 +87,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   void _createOrder(Address address, List<CartItem> cartItems) async {
     if (cartItems.isEmpty) return;
+    if (_paymentMethod == null) {
+      DgSnackbar.showError(context, message: 'Mohon pilih metode pembayaran');
+      return;
+    }
 
     // Check if user has WhatsApp number
     final user = await ref.read(currentUserProvider.future);
@@ -121,7 +116,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         scheduledDate: _isInstant ? null : _scheduledDate,
         deliveryType: _isInstant ? 'INSTANT' : 'REGULAR',
         items: items,
-        paymentMethod: _paymentMethod,
+        paymentMethod: _paymentMethod!,
         promoCode: _appliedPromoCode,
       );
 
@@ -560,6 +555,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ],
                   ),
                 ),
+                if (_paymentMethod == null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: Colors.red.shade600, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Mohon pilih metode pembayaran sebelum melanjutkan pesanan.',
+                              style: AppTypography.bodySmall.copyWith(color: Colors.red.shade700),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 16),
 
                 // Promo code
@@ -698,6 +716,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 data: (addresses) {
                   final hasAddress = addresses.isNotEmpty;
                   final isSlotSelected = _deliverySlot != null || _isInstant;
+                  final isPaymentSelected = _paymentMethod != null;
                   
                   return Row(
                     children: [
@@ -715,7 +734,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         child: DgButton(
                           label: !hasAddress ? 'Pilih Alamat' : 'Buat Pesanan',
                           isLoading: _loading,
-                          onPressed: (hasAddress && isSlotSelected) ? () => _createOrder(addresses.firstWhere((a) => a.isPrimary, orElse: () => addresses.first), cartItems) : null,
+                          onPressed: (hasAddress && isSlotSelected && isPaymentSelected) ? () => _createOrder(addresses.firstWhere((a) => a.isPrimary, orElse: () => addresses.first), cartItems) : null,
                         ),
                       ),
                     ],

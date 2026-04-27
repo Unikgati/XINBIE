@@ -17,7 +17,7 @@ export async function getAddresses(req: AuthRequest, res: Response, next: NextFu
 // POST /api/addresses
 export async function createAddress(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { recipientName, phoneWa, lat, lng, fullAddress, notes, isPrimary } = req.body;
+    const { recipientName, phoneWa, lat, lng, fullAddress, notes, isPrimary, provinceId, cityId, districtId, villageId } = req.body;
 
     if (isPrimary) {
       await prisma.address.updateMany({
@@ -31,10 +31,14 @@ export async function createAddress(req: AuthRequest, res: Response, next: NextF
         userId: req.userId!,
         recipientName,
         phoneWa,
-        lat,
-        lng,
+        lat: lat || null,
+        lng: lng || null,
         fullAddress,
         notes,
+        provinceId: provinceId || null,
+        cityId: cityId || null,
+        districtId: districtId || null,
+        villageId: villageId || null,
         isPrimary: isPrimary || false,
       },
     });
@@ -51,7 +55,7 @@ export async function updateAddress(req: AuthRequest, res: Response, next: NextF
     });
     if (!address) throw new AppError('Alamat tidak ditemukan', 404);
 
-    const { recipientName, phoneWa, lat, lng, fullAddress, notes, isPrimary } = req.body;
+    const { recipientName, phoneWa, lat, lng, fullAddress, notes, isPrimary, provinceId, cityId, districtId, villageId } = req.body;
 
     if (isPrimary === true) {
       await prisma.address.updateMany({
@@ -65,10 +69,14 @@ export async function updateAddress(req: AuthRequest, res: Response, next: NextF
       data: {
         ...(recipientName !== undefined && { recipientName }),
         ...(phoneWa !== undefined && { phoneWa }),
-        ...(lat !== undefined && { lat }),
-        ...(lng !== undefined && { lng }),
+        ...(lat !== undefined && { lat: lat || null }),
+        ...(lng !== undefined && { lng: lng || null }),
         ...(fullAddress !== undefined && { fullAddress }),
         ...(notes !== undefined && { notes }),
+        ...(provinceId !== undefined && { provinceId: provinceId || null }),
+        ...(cityId !== undefined && { cityId: cityId || null }),
+        ...(districtId !== undefined && { districtId: districtId || null }),
+        ...(villageId !== undefined && { villageId: villageId || null }),
         ...(isPrimary !== undefined && { isPrimary }),
       },
     });

@@ -30,6 +30,12 @@ class ApiEndpoints {
   static String address(String id) => '/addresses/$id';
   static String addressSetPrimary(String id) => '/addresses/$id/set-primary';
 
+  // Regions (Wilayah)
+  static const String provinces = '/regions/provinces';
+  static String cities(String provinceId) => '/regions/cities?provinceId=$provinceId';
+  static String districts(String cityId) => '/regions/districts?cityId=$cityId';
+  static String villages(String districtId) => '/regions/villages?districtId=$districtId';
+
   // Delivery
   static const String deliverySlots = '/delivery/slots';
   static const String deliveryOptions = '/delivery/options';

@@ -145,6 +145,43 @@ model ProductVariant {
 }
 
 // ─────────────────────────────────────────
+// Region (Wilayah Indonesia)
+// ─────────────────────────────────────────
+
+model Province {
+  id     String @id // "11"
+  name   String
+  cities City[]
+  @@map("provinces")
+}
+
+model City {
+  id         String   @id // "1101"
+  provinceId String   @map("province_id")
+  name       String
+  province   Province @relation(fields: [provinceId], references: [id])
+  districts  District[]
+  @@map("cities")
+}
+
+model District {
+  id       String   @id // "110101"
+  cityId   String   @map("city_id")
+  name     String
+  city     City     @relation(fields: [cityId], references: [id])
+  villages Village[]
+  @@map("districts")
+}
+
+model Village {
+  id         String   @id // "1101012001"
+  districtId String   @map("district_id")
+  name       String
+  district   District @relation(fields: [districtId], references: [id])
+  @@map("villages")
+}
+
+// ─────────────────────────────────────────
 // Addresses
 // ─────────────────────────────────────────
 
@@ -153,10 +190,14 @@ model Address {
   userId        String   @map("user_id")
   recipientName String   @map("recipient_name")
   phoneWa       String   @map("phone_wa")
-  lat           Float
-  lng           Float
+  lat           Float?
+  lng           Float?
   fullAddress   String   @map("full_address")
   notes         String?
+  provinceId    String?  @map("province_id")
+  cityId        String?  @map("city_id")
+  districtId    String?  @map("district_id")
+  villageId     String?  @map("village_id")
   isPrimary     Boolean  @default(false) @map("is_primary")
   createdAt     DateTime @default(now()) @map("created_at")
 
