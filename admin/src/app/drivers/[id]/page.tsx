@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { TableSkeleton } from '@/components/Skeleton';
@@ -24,6 +25,9 @@ interface DriverDetail {
   ratingAvg: number;
   totalOrdersDone: number;
   isOnline: boolean;
+  lastLat?: number;
+  lastLng?: number;
+  lastLocationAt?: string;
   createdAt: string;
   updatedAt: string;
   stats: {
@@ -50,6 +54,11 @@ const WaIcon = ({ size = 16 }: { size?: number }) => (
 
 import { useNotification } from '@/components/NotificationProvider';
 
+const TrackingMap = dynamic(() => import('@/components/TrackingMap'), { 
+  ssr: false,
+  loading: () => <div className="skeleton" style={{ width: '100%', height: 250, borderRadius: 12 }} />
+});
+
 export default function DriverDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -59,6 +68,7 @@ export default function DriverDetailPage() {
   const [data, setData] = useState<DriverDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -251,17 +261,29 @@ export default function DriverDetailPage() {
             {/* Kartu Profil Utama */}
             <div className="data-card" style={{ padding: 24 }}>
               <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-                <div style={{
-                  width: 72, height: 72, borderRadius: '50%',
-                  background: 'var(--primary-surface)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  overflow: 'hidden', flexShrink: 0,
-                }}>
-                  {data.userAvatarUrl ? (
-                    <img src={data.userAvatarUrl} alt={data.userName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <span className="material-symbols-outlined" style={{ fontSize: 36, color: 'var(--primary)' }}>person</span>
-                  )}
+                <div style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
+                  <div style={{
+                    width: 72, height: 72, borderRadius: '50%',
+                    background: 'var(--primary-surface)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    overflow: 'hidden',
+                  }}>
+                    {data.userAvatarUrl ? (
+                      <img src={data.userAvatarUrl} alt={data.userName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span className="material-symbols-outlined" style={{ fontSize: 36, color: 'var(--primary)' }}>person</span>
+                    )}
+                  </div>
+                  <span style={{
+                    position: 'absolute',
+                    bottom: 2,
+                    right: 2,
+                    width: 16,
+                    height: 16,
+                    borderRadius: '50%',
+                    backgroundColor: data.isOnline ? '#22C55E' : '#9CA3AF',
+                    border: '3px solid white'
+                  }} title={data.isOnline ? 'Online' : 'Offline'} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -270,7 +292,6 @@ export default function DriverDetailPage() {
                       <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{sb.icon}</span>
                       {sb.label}
                     </span>
-                    <span className={`online-dot ${data.isOnline ? 'active' : 'inactive'}`} title={data.isOnline ? 'Online' : 'Offline'} />
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>{data.userEmail}</div>
                   <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 13, color: 'var(--text-primary)' }}>
@@ -399,13 +420,30 @@ export default function DriverDetailPage() {
                   </button>
                 </div>
               )}
-
-              {data.verificationStatus === 'APPROVED' && (
-                <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', color: '#166534', borderRadius: 8, fontWeight: 600 }}>
-                  Driver telah disetujui
-                </div>
-              )}
             </div>
+
+            {/* Peta Lokasi Terakhir */}
+            {data.lastLat && data.lastLng && (
+              <div className="data-card" style={{ padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 16 }}>Lokasi Terakhir</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>
+                      {data.lastLocationAt ? new Date(data.lastLocationAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
+                    <button 
+                      className="btn btn-outline btn-sm" 
+                      style={{ padding: '4px 8px', borderColor: 'transparent' }} 
+                      title="Perbesar Peta"
+                      onClick={() => setIsMapFullscreen(true)}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>fullscreen</span>
+                    </button>
+                  </div>
+                </div>
+                <TrackingMap lat={data.lastLat} lng={data.lastLng} name={data.userName} />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -421,20 +459,41 @@ export default function DriverDetailPage() {
           }}
           onClick={() => setIsLightboxOpen(false)}
         >
-          <div style={{ position: 'absolute', top: 24, right: 24, background: 'rgba(255,255,255,0.1)', borderRadius: '50%', padding: 8, color: '#fff', display: 'flex' }}>
+          <div style={{ position: 'absolute', top: 24, right: 24, background: 'rgba(255,255,255,0.1)', borderRadius: '50%', padding: 8, color: '#fff', display: 'flex', cursor: 'pointer' }}>
              <span className="material-symbols-outlined" style={{ fontSize: 24 }}>close</span>
           </div>
           <img 
             src={data.ktpPhotoUrl} 
             alt={`KTP ${data.userName} Full`}
             style={{
-              maxWidth: '100%', maxHeight: '100%',
-              objectFit: 'contain',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-              borderRadius: 8
+              maxHeight: '90vh', maxWidth: '90vw',
+              objectFit: 'contain', borderRadius: 12,
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
             }}
             onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image itself
           />
+        </div>
+      )}
+
+      {/* Fullscreen Map Lightbox */}
+      {isMapFullscreen && data.lastLat && data.lastLng && (
+        <div 
+          style={{
+            position: 'fixed', inset: 0, zIndex: 99999,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 40
+          }}
+        >
+          <div 
+            style={{ position: 'absolute', top: 24, right: 24, background: 'rgba(255,255,255,0.1)', borderRadius: '50%', padding: 8, color: '#fff', display: 'flex', cursor: 'pointer', zIndex: 1 }}
+            onClick={() => setIsMapFullscreen(false)}
+          >
+             <span className="material-symbols-outlined" style={{ fontSize: 24 }}>close</span>
+          </div>
+          <div style={{ width: '100%', height: '100%', maxWidth: 1000, maxHeight: 800, background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+            <TrackingMap lat={data.lastLat} lng={data.lastLng} name={data.userName} height="100%" />
+          </div>
         </div>
       )}
 

@@ -160,7 +160,7 @@ export default function DriversPage() {
           ) : (
             <div className="table-responsive">
             <table className="data-table table-hover">
-              <thead><tr><th>Driver</th><th>Kontak</th><th>Rating</th><th>Pesanan</th><th>Online</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
+              <thead><tr><th>Driver</th><th>Kontak</th><th>Rating</th><th>Pesanan</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
               <tbody>
                 {drivers.map(d => {
                   const sb = statusBadge[d.verificationStatus] || { label: d.verificationStatus, badge: 'gray', icon: 'help' };
@@ -174,7 +174,19 @@ export default function DriversPage() {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           {isPending && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary, #2563eb)', display: 'inline-block', flexShrink: 0 }} />}
-                          <div className="avatar-circle">{d.userName?.[0] || 'D'}</div>
+                          <div style={{ position: 'relative', display: 'flex' }}>
+                            <div className="avatar-circle">{d.userName?.[0] || 'D'}</div>
+                            <span style={{
+                              position: 'absolute',
+                              bottom: -2,
+                              right: -2,
+                              width: 14,
+                              height: 14,
+                              borderRadius: '50%',
+                              backgroundColor: d.isOnline ? '#22C55E' : '#9CA3AF',
+                              border: '2.5px solid white'
+                            }} title={d.isOnline ? 'Online' : 'Offline'} />
+                          </div>
                           <div>
                             <div style={{ fontWeight: isPending ? 700 : 600 }}>{d.userName}</div>
                             {d.vehicleType && <div style={{ fontSize: 11, color: 'var(--text-hint)' }}>{d.vehicleType} • {d.vehiclePlate}</div>}
@@ -184,7 +196,6 @@ export default function DriversPage() {
                       <td><div style={{ fontSize: 13 }}>{d.userEmail}</div><div style={{ fontSize: 12, color: 'var(--text-hint)' }}>{d.userPhoneWa}</div></td>
                       <td>{d.ratingAvg > 0 ? <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span className="material-symbols-outlined icon-filled" style={{ fontSize: 16, color: '#F59E0B' }}>star</span> {d.ratingAvg.toFixed(1)}</span> : '-'}</td>
                       <td>{d.totalOrdersDone}</td>
-                      <td><span className={`online-dot ${d.isOnline ? 'active' : 'inactive'}`} /> <span style={{ marginLeft: 6, fontSize: 13 }}>{d.isOnline ? 'Online' : 'Offline'}</span></td>
                       <td><span className={`badge ${sb.badge}`}><span className="material-symbols-outlined">{sb.icon}</span> {sb.label}</span></td>
                       <td onClick={e => e.stopPropagation()}>
                         <ActionMenu items={
