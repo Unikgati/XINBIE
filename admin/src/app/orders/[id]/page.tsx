@@ -54,8 +54,8 @@ interface OrderDetail {
     district?: string;
     village?: string;
   };
-  user: { id: string; name: string; email: string; phoneWa: string };
-  driver?: { id: string; name: string; phoneWa: string };
+  user: { id: string; name: string; email: string; phoneWa: string; avatarUrl?: string };
+  driver?: { id: string; name: string; phoneWa: string; avatarUrl?: string; driverProfile?: { id: string } };
   deliverySlot?: { day: string; startTime: string; endTime: string };
   scheduledDate?: string;
   items: OrderItem[];
@@ -599,9 +599,13 @@ export default function OrderDetailPage() {
                 onClick={() => router.push(`/users/${order.user.id}`)}
                 title="Lihat Detail Pelanggan"
               >
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--primary-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 20 }}>person</span>
-                </div>
+                {order.user.avatarUrl ? (
+                  <img src={order.user.avatarUrl} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--primary-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 20 }}>person</span>
+                  </div>
+                )}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--primary)' }}>{order.user.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{order.user.email}</div>
@@ -633,15 +637,25 @@ export default function OrderDetailPage() {
             {order.driver && (
               <div className="data-card" style={{ padding: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Driver</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--info-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span className="material-symbols-outlined" style={{ color: 'var(--info)', fontSize: 20 }}>local_shipping</span>
+                <div 
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, cursor: 'pointer' }}
+                  onClick={() => router.push(`/drivers/${order.driver!.driverProfile?.id || order.driver!.id}`)}
+                  title="Lihat Detail Driver"
+                >
+                  {order.driver!.avatarUrl ? (
+                    <img src={order.driver!.avatarUrl} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--primary-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 20 }}>local_shipping</span>
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--primary)' }}>{order.driver.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Driver Mitra</div>
                   </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{order.driver.name}</div>
-                    <div style={{ fontSize: 12 }}><WaLink phone={order.driver.phoneWa} /></div>
-                  </div>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--text-hint)' }}>chevron_right</span>
                 </div>
+                {order.driver.phoneWa && <WaLink phone={order.driver.phoneWa} />}
               </div>
             )}
 

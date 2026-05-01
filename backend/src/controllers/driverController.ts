@@ -94,6 +94,7 @@ export async function getVerificationStatus(req: AuthRequest, res: Response, nex
 
     res.json({
       status: profile.verificationStatus,
+      isOnline: profile.isOnline,
       ktpPhotoUrl: profile.ktpPhotoUrl,
       rejectionReason: profile.rejectionReason,
     });

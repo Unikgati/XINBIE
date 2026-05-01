@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import path from 'path';
 
 // Initialize Firebase Admin SDK
 // Uses GOOGLE_APPLICATION_CREDENTIALS env var or service account JSON
@@ -11,8 +12,9 @@ export function initFirebase() {
     const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
 
     if (serviceAccountPath) {
+      const absolutePath = path.resolve(process.cwd(), serviceAccountPath);
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const serviceAccount = require(serviceAccountPath);
+      const serviceAccount = require(absolutePath);
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });

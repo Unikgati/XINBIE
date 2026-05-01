@@ -83,4 +83,27 @@ class SocketService {
       _socket?.off('payment:update', callback);
     }
   }
+
+  /// Listen for real-time incoming orders.
+  void onOrderNew(Function(Map<String, dynamic>) callback) {
+    if (_socket == null) return;
+    
+    offOrderNew();
+
+    void wrappedCallback(dynamic data) {
+      if (data is Map) {
+        callback(Map<String, dynamic>.from(data));
+      }
+    }
+
+    _listeners['order:new'] = wrappedCallback;
+    _socket?.on('order:new', wrappedCallback);
+  }
+
+  void offOrderNew() {
+    final callback = _listeners.remove('order:new');
+    if (callback != null && _socket != null) {
+      _socket?.off('order:new', callback);
+    }
+  }
 }

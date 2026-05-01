@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ui_kit/theme/app_colors.dart';
+import 'package:ui_kit/theme/app_typography.dart';
+import 'package:ui_kit/widgets/dg_badge.dart';
+import 'package:ui_kit/widgets/dg_button.dart';
+import 'package:ui_kit/widgets/dg_snackbar.dart';
+import 'package:driver_app/screens/home/incoming_order_overlay.dart';
 import 'package:ui_kit/ui_kit.dart';
 import 'package:core/core.dart';
 import '../../providers/driver_providers.dart';
@@ -17,10 +23,49 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Connect socket for real-time updates
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(socketServiceProvider).connect();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final socket = ref.read(socketServiceProvider);
+      await socket.connect();
+      print('🟢 Socket connected, attaching order:new listener');
+      socket.onOrderNew((data) {
+        print('📦 order:new received: $data');
+        _handleIncomingOrder(data);
+      });
+      ref.read(onlineStatusProvider.notifier).sync();
     });
+  }
+
+  Future<void> _handleIncomingOrder(Map<String, dynamic> data) async {
+    if (!mounted) return;
+    
+    final accepted = await IncomingOrderOverlay.show(context, data);
+    if (accepted == true) {
+      final orderId = data['orderId'] as String?;
+      if (orderId != null) {
+        try {
+          // Tampilkan loading sebentar
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: CircularProgressIndicator()),
+          );
+          
+          await ref.read(driverRepositoryProvider).acceptOrder(orderId);
+          if (mounted) context.pop(); // tutup loading
+          ref.invalidate(driverActiveOrdersProvider);
+          if (mounted) DgSnackbar.showSuccess(context, message: 'Berhasil menerima orderan!');
+        } catch (e) {
+          if (mounted) context.pop(); // tutup loading
+          if (mounted) DgSnackbar.showError(context, message: 'Gagal menerima orderan', error: e);
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    ref.read(socketServiceProvider).offOrderNew();
+    super.dispose();
   }
 
   Future<void> _toggleOnline() async {
@@ -50,7 +95,6 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
     final authState = ref.watch(driverAuthNotifierProvider);
     final isOnline = ref.watch(onlineStatusProvider);
     final asyncOrders = ref.watch(driverActiveOrdersProvider);
-    final asyncEarnings = ref.watch(driverEarningsProvider(null));
 
     final userName = authState.maybeWhen(
       authenticated: (user) => user.name,
@@ -63,7 +107,6 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
         color: AppColors.primary,
         onRefresh: () async {
           ref.invalidate(driverActiveOrdersProvider);
-          ref.invalidate(driverEarningsProvider(null));
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -73,22 +116,26 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
             SliverToBoxAdapter(
               child: Stack(
                 children: [
-                  Container(
-                    width: double.infinity,
-                    height: 220,
-                    decoration: const BoxDecoration(
-                      gradient: AppColors.heroGradient,
-                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-                    ),
-                  ),
-                  Positioned(
-                    right: 10,
-                    top: 20, // Put it near top instead of bottom so it doesn't get overlapped by cards
-                    child: Image.asset(
-                      'assets/images/mascot_driver.png',
-                      height: 180,
-                      fit: BoxFit.contain,
-                    ),
+                  Stack(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        height: 220,
+                        decoration: const BoxDecoration(
+                          gradient: AppColors.heroGradient,
+                          borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+                        ),
+                      ),
+                      Positioned(
+                        right: 10,
+                        bottom: 0, // Nempel dengan bawah gradient
+                        child: Image.asset(
+                          'assets/images/mascot_driver.png',
+                          height: 180,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ],
                   ),
                   SafeArea(
                     bottom: false,
@@ -150,67 +197,22 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                           child: Column(
                             children: [
                               // Online toggle
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.shadow,
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                              ElevatedButton.icon(
+                                onPressed: _togglingOnline ? null : _toggleOnline,
+                                icon: _togglingOnline
+                                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.power_settings_new),
+                                label: Text(isOnline ? 'Nonaktifkan' : 'Aktifkan'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isOnline ? AppColors.error : Colors.black,
+                                  disabledBackgroundColor: isOnline ? AppColors.error : Colors.black,
+                                  foregroundColor: Colors.white,
+                                  disabledForegroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                  shape: const StadiumBorder(),
+                                  textStyle: AppTypography.h4.copyWith(color: Colors.white),
+                                  elevation: 4,
                                 ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(children: [
-                                      Container(
-                                        width: 12, height: 12,
-                                        decoration: BoxDecoration(
-                                          color: isOnline ? AppColors.success : AppColors.textHint,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        isOnline ? 'Sedang Online' : 'Kamu Offline',
-                                        style: AppTypography.labelLarge.copyWith(
-                                          color: isOnline ? AppColors.primaryDark : AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ]),
-                                    _togglingOnline
-                                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                                        : Switch(
-                                            value: isOnline,
-                                            activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                                            thumbColor: WidgetStateProperty.all(isOnline ? AppColors.primary : AppColors.textHint),
-                                            onChanged: (_) => _toggleOnline(),
-                                          ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              // Stats
-                              asyncEarnings.when(
-                                data: (data) {
-                                  final todayOrders = data['todayOrders'] as int? ?? 0;
-                                  final todayEarnings = data['todayEarnings'] as int? ?? 0;
-                                  return Row(children: [
-                                    _StatCard('Hari Ini', '$todayOrders', 'pesanan', Icons.receipt_long, AppColors.primary),
-                                    const SizedBox(width: 12),
-                                    _StatCard('Pendapatan', 'Rp ${_formatK(todayEarnings)}', 'hari ini', Icons.account_balance_wallet, AppColors.warning),
-                                  ]);
-                                },
-                                loading: () => Row(children: [
-                                  Expanded(child: _ShimmerCard()),
-                                  const SizedBox(width: 12),
-                                  Expanded(child: _ShimmerCard()),
-                                ]),
-                                error: (_, __) => const SizedBox(),
                               ),
                             ],
                           ),
@@ -222,15 +224,6 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                 ],
               ),
             ),
-
-            // ── Active Orders Title ──
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text('Pesanan Aktif', style: AppTypography.h4),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
             // ── Active Orders List ──
             if (isOnline)
@@ -254,7 +247,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                               style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 120), // Padding for floating nav bar
+                            const SizedBox(height: 200), // Push the empty state up to align center visually
                           ],
                         ),
                       ),
@@ -336,7 +329,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                       const SizedBox(height: 12),
                       Text('Kamu sedang offline', style: AppTypography.h4.copyWith(color: AppColors.textSecondary)),
                       Text('Nyalakan toggle untuk menerima pesanan', style: AppTypography.bodySmall.copyWith(color: AppColors.textHint)),
-                      const SizedBox(height: 120),
+                      const SizedBox(height: 200), // Push the empty state up to align center visually
                     ],
                   ),
                 ),
@@ -359,43 +352,6 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
     if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}jt';
     if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K';
     return amount.toString();
-  }
-}
-
-// ── Stat Card ──
-class _StatCard extends StatelessWidget {
-  const _StatCard(this.label, this.value, this.sub, this.icon, this.color);
-  final String label, value, sub;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 4)],
-        ),
-        child: Row(children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(value, style: AppTypography.h3),
-            Text(sub, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
-          ]),
-        ]),
-      ),
-    );
   }
 }
 
@@ -452,19 +408,6 @@ class _OrderCard extends StatelessWidget {
 }
 
 // ── Shimmer Widgets ──
-class _ShimmerCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 72,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const DgShimmer(width: double.infinity, height: 72, borderRadius: 16),
-    );
-  }
-}
 
 class _ShimmerOrderCard extends StatelessWidget {
   @override

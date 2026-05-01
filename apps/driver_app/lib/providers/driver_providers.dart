@@ -68,6 +68,19 @@ class OnlineStatusNotifier extends StateNotifier<bool> {
 
   final DriverRepository _driverRepo;
 
+  Future<void> sync() async {
+    try {
+      final status = await _driverRepo.getVerificationStatus();
+      final isOnline = status['isOnline'] as bool? ?? false;
+      state = isOnline;
+      if (isOnline) {
+        await BackgroundLocationService().startService();
+      }
+    } catch (_) {
+      // Ignore on error
+    }
+  }
+
   Future<void> toggle() async {
     final newStatus = !state;
     await _driverRepo.setOnlineStatus(newStatus);

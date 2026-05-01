@@ -40,11 +40,17 @@ export default function TrackingMap({ lat, lng, name, height = 250 }: TrackingMa
     markerRef.current = marker;
 
     // Fix map not loading tiles properly inside modals/lightboxes
-    setTimeout(() => {
-      map.invalidateSize();
+    const timer = setTimeout(() => {
+      if (mapInstance.current) {
+        map.invalidateSize();
+      }
     }, 100);
 
-    return () => { map.remove(); mapInstance.current = null; };
+    return () => { 
+      clearTimeout(timer);
+      map.remove(); 
+      mapInstance.current = null; 
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

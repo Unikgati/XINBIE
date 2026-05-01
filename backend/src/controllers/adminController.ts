@@ -3,7 +3,7 @@ import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { processAndUploadImage, processAndUploadImages } from '../middleware/upload';
-import { emitToAdmins, notifyOrderStatus } from '../websocket';
+import { emitToAdmins, notifyOrderStatus, broadcastOrderOffer } from '../websocket';
 import { sendPushToMultiple, sendPushNotification } from '../utils/firebase';
 
 // ═══════════════════════════════════════
@@ -323,7 +323,7 @@ export async function adminGetOrderDetail(req: AuthRequest, res: Response, next:
       where: { id: req.params.id },
       include: {
         user: { select: { id: true, name: true, email: true, phoneWa: true, avatarUrl: true } },
-        driver: { select: { id: true, name: true, phoneWa: true } },
+        driver: { select: { id: true, name: true, phoneWa: true, avatarUrl: true, driverProfile: { select: { id: true } } } },
         deliverySlot: true,
         items: {
           include: {
@@ -380,6 +380,20 @@ export async function adminUpdateOrderStatus(req: AuthRequest, res: Response, ne
           title: '🔔 Pesanan Baru!',
           body: `Pesanan ${updatedOrder.code} menunggu driver`,
           data: { type: 'new_order', orderId: req.params.id },
+        });
+      }
+
+      // 🔴 Send websocket event for Interruptive UI (IncomingOrderOverlay)
+      const fullOrder = await prisma.order.findUnique({
+        where: { id: req.params.id },
+      });
+      if (fullOrder) {
+        broadcastOrderOffer(req.params.id, {
+          orderId: fullOrder.id,
+          code: fullOrder.code,
+          grandTotal: fullOrder.grandTotal,
+          deliveryFee: fullOrder.deliveryFee,
+          addressSnapshot: fullOrder.addressSnapshot,
         });
       }
     }
