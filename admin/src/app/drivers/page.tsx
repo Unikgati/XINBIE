@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import ActionMenu from '@/components/ActionMenu';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { TableSkeleton } from '@/components/Skeleton';
+import { getSocket } from '@/lib/socket';
 import { apiGet, apiPut } from '@/lib/api';
 
 interface Driver {
@@ -14,6 +16,8 @@ interface Driver {
   userEmail: string;
   userPhoneWa: string;
   verificationStatus: string;
+  ktpPhotoUrl?: string;
+  rejectionReason?: string;
   ratingAvg: number;
   totalOrdersDone: number;
   isOnline: boolean;
@@ -27,16 +31,21 @@ const statusBadge: Record<string, { label: string; badge: string; icon: string }
   REJECTED: { label: 'Ditolak', badge: 'red', icon: 'block' },
 };
 
+import { useNotification } from '@/components/NotificationProvider';
+
 export default function DriversPage() {
+  const router = useRouter();
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
   const toast = useToast();
   const confirm = useConfirm();
+  const { decrementPendingDriversCount, socketStatus } = useNotification();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const statusParam = filter !== 'ALL' ? `?status=${filter}` : '';
       const res = await apiGet<Driver[]>(`/drivers${statusParam}`);
       setDrivers(Array.isArray(res) ? res : []);
@@ -49,36 +58,75 @@ export default function DriversPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleVerify = async (id: string, status: 'APPROVED' | 'REJECTED', name: string) => {
+  // Auto-refresh when new driver registers via WebSocket (debounced)
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const debouncedRefresh = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => fetchData(false), 500);
+    };
+
+    socket.on('driver:new_pending', debouncedRefresh);
+    socket.on('driver:status', debouncedRefresh);
+    return () => {
+      socket.off('driver:new_pending', debouncedRefresh);
+      socket.off('driver:status', debouncedRefresh);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [fetchData, socketStatus]);
+
+  const handleVerify = async (e: React.MouseEvent, id: string, status: 'APPROVED' | 'REJECTED', name: string) => {
+    e.stopPropagation();
     const isApprove = status === 'APPROVED';
+    let rejectionReason = '';
+
+    if (!isApprove) {
+      const reason = window.prompt(`Alasan menolak "${name}":`);
+      if (reason === null) return; // cancelled
+      rejectionReason = reason;
+    }
+
     const ok = await confirm({
       title: isApprove ? 'Approve Driver' : 'Reject Driver',
-      message: isApprove ? `Setujui "${name}" sebagai driver aktif?` : `Tolak pendaftaran "${name}"? Berikan alasan penolakan jika perlu.`,
+      message: isApprove
+        ? `Setujui "${name}" sebagai driver aktif?`
+        : `Tolak pendaftaran "${name}"?\nAlasan: ${rejectionReason || '(tidak ada)'}`,
       confirmLabel: isApprove ? 'Approve' : 'Reject',
       danger: !isApprove,
     });
     if (!ok) return;
     try {
-      await apiPut(`/drivers/${id}/verify`, { status });
+      await apiPut(`/drivers/${id}/verify`, { status, rejectionReason });
       toast.success(`Driver "${name}" ${isApprove ? 'disetujui' : 'ditolak'}`);
+      const driver = drivers.find(d => d.id === id);
+      if (driver?.verificationStatus === 'PENDING') {
+        decrementPendingDriversCount();
+      }
       fetchData();
     } catch (err: any) {
       toast.error(err.message || 'Gagal memproses');
     }
   };
 
-  const handleWhatsApp = (phone: string) => {
+  const handleWhatsApp = (e: React.MouseEvent, phone: string) => {
+    e.stopPropagation();
     if (phone) window.open(`https://wa.me/${phone.replace(/^0/, '62')}`, '_blank');
   };
 
   const onlineCount = drivers.filter(d => d.isOnline).length;
+  const pendingCount = drivers.filter(d => d.verificationStatus === 'PENDING').length;
 
   return (
     <>
       <div className="page-header">
         <div>
           <h1 className="page-title">Driver</h1>
-          <p className="page-subtitle">{drivers.length} driver terdaftar &bull; {onlineCount} online</p>
+          <p className="page-subtitle">
+            {drivers.length} driver terdaftar &bull; {onlineCount} online
+            {pendingCount > 0 && <span style={{ color: 'var(--orange)', fontWeight: 600 }}> &bull; {pendingCount} menunggu verifikasi</span>}
+          </p>
         </div>
       </div>
       <div className="page-body">
@@ -86,6 +134,17 @@ export default function DriversPage() {
           {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map(s => (
             <button key={s} className={`chip ${filter === s ? 'active' : ''}`} onClick={() => setFilter(s)}>
               {s === 'ALL' ? 'Semua' : statusBadge[s]?.label || s}
+              {s === 'PENDING' && pendingCount > 0 && (
+                <span style={{
+                  background: 'var(--orange)',
+                  color: '#fff',
+                  borderRadius: 10,
+                  padding: '1px 7px',
+                  fontSize: 11,
+                  marginLeft: 6,
+                  fontWeight: 700,
+                }}>{pendingCount}</span>
+              )}
             </button>
           ))}
         </div>
@@ -100,18 +159,24 @@ export default function DriversPage() {
             </div>
           ) : (
             <div className="table-responsive">
-            <table className="data-table">
+            <table className="data-table table-hover">
               <thead><tr><th>Driver</th><th>Kontak</th><th>Rating</th><th>Pesanan</th><th>Online</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
               <tbody>
                 {drivers.map(d => {
                   const sb = statusBadge[d.verificationStatus] || { label: d.verificationStatus, badge: 'gray', icon: 'help' };
+                  const isPending = d.verificationStatus === 'PENDING';
                   return (
-                    <tr key={d.id}>
+                    <tr 
+                      key={d.id} 
+                      onClick={() => router.push(`/drivers/${d.id}`)} 
+                      style={{ cursor: 'pointer', fontWeight: isPending ? 600 : 'normal', background: isPending ? 'var(--primary-surface, #f0f7ff)' : undefined }}
+                    >
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          {isPending && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary, #2563eb)', display: 'inline-block', flexShrink: 0 }} />}
                           <div className="avatar-circle">{d.userName?.[0] || 'D'}</div>
                           <div>
-                            <div style={{ fontWeight: 600 }}>{d.userName}</div>
+                            <div style={{ fontWeight: isPending ? 700 : 600 }}>{d.userName}</div>
                             {d.vehicleType && <div style={{ fontSize: 11, color: 'var(--text-hint)' }}>{d.vehicleType} • {d.vehiclePlate}</div>}
                           </div>
                         </div>
@@ -121,13 +186,13 @@ export default function DriversPage() {
                       <td>{d.totalOrdersDone}</td>
                       <td><span className={`online-dot ${d.isOnline ? 'active' : 'inactive'}`} /> <span style={{ marginLeft: 6, fontSize: 13 }}>{d.isOnline ? 'Online' : 'Offline'}</span></td>
                       <td><span className={`badge ${sb.badge}`}><span className="material-symbols-outlined">{sb.icon}</span> {sb.label}</span></td>
-                      <td>
+                      <td onClick={e => e.stopPropagation()}>
                         <ActionMenu items={
-                          d.verificationStatus === 'PENDING' ? [
-                            { icon: 'check_circle', label: 'Approve', onClick: () => handleVerify(d.id, 'APPROVED', d.userName) },
-                            { icon: 'cancel', label: 'Reject', onClick: () => handleVerify(d.id, 'REJECTED', d.userName), danger: true },
+                          d.verificationStatus === 'PENDING' && d.ktpPhotoUrl ? [
+                            { icon: 'check_circle', label: 'Approve', onClick: (e) => handleVerify(e as any, d.id, 'APPROVED', d.userName) },
+                            { icon: 'cancel', label: 'Reject', onClick: (e) => handleVerify(e as any, d.id, 'REJECTED', d.userName), danger: true },
                           ] : [
-                            { icon: 'chat', label: 'Hubungi via WA', onClick: () => handleWhatsApp(d.userPhoneWa) },
+                            { icon: 'chat', label: 'Hubungi via WA', onClick: (e) => handleWhatsApp(e as any, d.userPhoneWa) },
                           ]
                         } />
                       </td>

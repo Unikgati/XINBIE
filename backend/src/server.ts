@@ -11,6 +11,7 @@ import { config } from './config';
 import { ensureBucket } from './config/minio';
 import { errorHandler } from './middleware/errorHandler';
 import { initWebSocket } from './websocket';
+import { initFirebase } from './utils/firebase';
 
 // Routes
 import authRoutes from './routes/auth';
@@ -78,6 +79,7 @@ initWebSocket(server);
 async function start() {
   try {
     await ensureBucket();
+    initFirebase();
     server.listen(config.port, () => {
       console.log(`\n🚀 ${config.appName} API running on port ${config.port}`);
       console.log(`📍 ${config.apiUrl}`);

@@ -1,27 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ui_kit/ui_kit.dart';
+import 'package:core/core.dart';
+import '../../providers/driver_providers.dart';
 
-class DriverProfileScreen extends StatelessWidget {
+class DriverProfileScreen extends ConsumerWidget {
   const DriverProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(driverAuthNotifierProvider);
+    final asyncEarnings = ref.watch(driverEarningsProvider(null));
+
+    final user = authState.maybeWhen(
+      authenticated: (u) => u,
+      orElse: () => null,
+    );
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // Header
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 color: AppColors.surface,
                 child: Column(children: [
-                  CircleAvatar(radius: 40, backgroundColor: AppColors.primarySurface, child: Text('TD', style: AppTypography.h2.copyWith(color: AppColors.primary))),
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: AppColors.primarySurface,
+                    backgroundImage: user?.avatarUrl != null
+                        ? NetworkImage(AppConfig.fixImageUrl(user!.avatarUrl!))
+                        : null,
+                    child: user?.avatarUrl == null
+                        ? Text(
+                            (user?.name ?? 'D').isNotEmpty ? (user?.name ?? 'D')[0].toUpperCase() : 'D',
+                            style: AppTypography.h2.copyWith(color: AppColors.primary),
+                          )
+                        : null,
+                  ),
                   const SizedBox(height: 12),
-                  Text('Test Driver', style: AppTypography.h3),
-                  Text('driver@example.com', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                  Text(user?.name ?? 'Driver', style: AppTypography.h3),
+                  Text(user?.email ?? '', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -29,7 +53,7 @@ class DriverProfileScreen extends StatelessWidget {
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Icon(Icons.verified, color: AppColors.primary, size: 16),
                       const SizedBox(width: 4),
-                      Text('Terverifikasi', style: AppTypography.labelSmall.copyWith(color: AppColors.primaryDark)),
+                      Text('Driver Terverifikasi', style: AppTypography.labelSmall.copyWith(color: AppColors.primaryDark)),
                     ]),
                   ),
                 ]),
@@ -40,13 +64,30 @@ class DriverProfileScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 color: AppColors.surface,
-                child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-                  _Stat('⭐', '4.8', 'Rating'),
-                  Container(width: 1, height: 40, color: AppColors.border),
-                  _Stat('📦', '50', 'Pesanan'),
-                  Container(width: 1, height: 40, color: AppColors.border),
-                  _Stat('📅', '3 bln', 'Bergabung'),
-                ]),
+                child: asyncEarnings.when(
+                  data: (data) {
+                    final rating = (data['rating'] as num?)?.toStringAsFixed(1) ?? '-';
+                    final totalOrders = data['totalOrders'] as int? ?? 0;
+                    final joinedDate = user?.createdAt;
+                    final joinedStr = joinedDate != null
+                        ? '${_monthsDiff(joinedDate)} bln'
+                        : '-';
+
+                    return Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+                      _Stat('⭐', rating, 'Rating'),
+                      Container(width: 1, height: 40, color: AppColors.border),
+                      _Stat('📦', '$totalOrders', 'Pesanan'),
+                      Container(width: 1, height: 40, color: AppColors.border),
+                      _Stat('📅', joinedStr, 'Bergabung'),
+                    ]);
+                  },
+                  loading: () => Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+                    DgShimmer(width: 60, height: 40, borderRadius: 8),
+                    DgShimmer(width: 60, height: 40, borderRadius: 8),
+                    DgShimmer(width: 60, height: 40, borderRadius: 8),
+                  ]),
+                  error: (_, __) => const SizedBox(),
+                ),
               ),
               const SizedBox(height: 8),
 
@@ -64,10 +105,31 @@ class DriverProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
+              // Logout
               Container(
                 color: AppColors.surface,
-                child: _Menu(Icons.logout, 'Keluar', () {
-                  context.go('/login');
+                child: _Menu(Icons.logout, 'Keluar', () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: const Text('Keluar'),
+                      content: const Text('Yakin ingin keluar dari akun driver?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                          child: const Text('Keluar'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await ref.read(driverAuthNotifierProvider.notifier).logout();
+                    ref.read(socketServiceProvider).disconnect();
+                    if (context.mounted) context.go('/login');
+                  }
                 }, color: AppColors.error),
               ),
               const SizedBox(height: 16),
@@ -78,6 +140,11 @@ class DriverProfileScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  int _monthsDiff(DateTime from) {
+    final now = DateTime.now();
+    return (now.year - from.year) * 12 + now.month - from.month;
   }
 }
 

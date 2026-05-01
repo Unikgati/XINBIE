@@ -4,26 +4,67 @@ import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { processAndUploadImage } from '../middleware/upload';
 import { createCommission, createCodSettlement, getCommissionSettings } from '../utils/commission';
+import { sendPushNotification } from '../utils/firebase';
+import { emitToAdmins } from '../websocket';
 
 // POST /api/driver/register
 export async function registerDriver(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const existing = await prisma.driverProfile.findUnique({
+    const { vehicleType, vehiclePlate, phone } = req.body;
+
+    let profile = await prisma.driverProfile.findUnique({
       where: { userId: req.userId! },
     });
-    if (existing) throw new AppError('Anda sudah terdaftar sebagai driver', 409);
 
-    const profile = await prisma.driverProfile.create({
-      data: { userId: req.userId! },
+    if (profile) {
+      // Already registered — return existing profile with fresh DRIVER tokens (idempotent)
+      const { generateAccessToken, generateRefreshToken } = await import('../utils/jwt');
+      const accessToken = generateAccessToken(req.userId!, 'DRIVER');
+      const refreshToken = generateRefreshToken(req.userId!, 'DRIVER');
+      await prisma.refreshToken.create({
+        data: {
+          userId: req.userId!,
+          token: refreshToken,
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        },
+      });
+      return res.json({ ...profile, accessToken, refreshToken });
+    }
+
+    profile = await prisma.driverProfile.create({
+      data: {
+        userId: req.userId!,
+        vehicleType: vehicleType || null,
+        vehiclePlate: vehiclePlate || null,
+      },
     });
 
-    // Update user role
+    // Update user role + phone
     await prisma.user.update({
       where: { id: req.userId },
-      data: { role: 'DRIVER' },
+      data: {
+        role: 'DRIVER',
+        ...(phone ? { phoneWa: phone } : {}),
+      },
     });
 
-    res.status(201).json(profile);
+    // Notify admins about new pending driver
+    emitToAdmins('driver:new_pending', { driverId: profile.id });
+
+    // Re-issue tokens with updated DRIVER role
+    const { generateAccessToken, generateRefreshToken } = await import('../utils/jwt');
+    const accessToken = generateAccessToken(req.userId!, 'DRIVER');
+    const refreshToken = generateRefreshToken(req.userId!, 'DRIVER');
+
+    await prisma.refreshToken.create({
+      data: {
+        userId: req.userId!,
+        token: refreshToken,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    res.status(201).json({ ...profile, accessToken, refreshToken });
   } catch (err) { next(err); }
 }
 
@@ -53,6 +94,7 @@ export async function getVerificationStatus(req: AuthRequest, res: Response, nex
 
     res.json({
       status: profile.verificationStatus,
+      ktpPhotoUrl: profile.ktpPhotoUrl,
       rejectionReason: profile.rejectionReason,
     });
   } catch (err) { next(err); }
@@ -74,6 +116,10 @@ export async function toggleOnline(req: AuthRequest, res: Response, next: NextFu
     await prisma.driverProfile.update({
       where: { userId: req.userId! },
       data: { isOnline },
+    });
+
+    import('../websocket').then(ws => {
+      ws.emitToAdmins('driver:status', { driverId: req.userId, isOnline });
     });
 
     res.json({ isOnline, message: isOnline ? 'Anda sekarang online' : 'Anda offline' });
@@ -152,6 +198,16 @@ export async function acceptOrder(req: AuthRequest, res: Response, next: NextFun
         data: { orderId: order.id, status: 'IN_DELIVERY', actorId: req.userId, note: 'Driver menerima pesanan' },
       }),
     ]);
+
+    // Notify user that driver accepted
+    const user = await prisma.user.findUnique({ where: { id: order.userId }, select: { fcmToken: true } });
+    if (user?.fcmToken) {
+      await sendPushNotification(user.fcmToken, {
+        title: '🚚 Driver Menuju Lokasi',
+        body: 'Driver sedang mengambil pesanan Anda',
+        data: { type: 'order_update', orderId: order.id },
+      });
+    }
 
     res.json({ message: 'Pesanan diterima' });
   } catch (err) { next(err); }

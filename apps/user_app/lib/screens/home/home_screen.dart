@@ -62,6 +62,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Kalkulasi padding bawah untuk memberikan ruang pada floating navigation bar
     final bottomPadding = MediaQuery.of(context).padding.bottom + 90;
 
+    // If categories fail = server unreachable → show single full-page error
+    final hasConnectionError = categoriesAsync.hasError;
+
+    if (hasConnectionError) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.wifi_off_rounded, size: 64, color: AppColors.textSecondary.withValues(alpha: 0.5)),
+                  const SizedBox(height: 20),
+                  Text('Tidak dapat terhubung', style: AppTypography.h4),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Periksa koneksi internet Anda\ndan coba lagi',
+                    style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      ref.invalidate(categoriesProvider);
+                      ref.invalidate(featuredProductsProvider);
+                      ref.invalidate(promoProductsProvider);
+                      ref.invalidate(paginatedProductsProvider);
+                    },
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Coba Lagi'),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
@@ -190,9 +235,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             );
                           },
                           loading: () => DgShimmer.categoryList(),
-                          error: (err, stack) => const Center(
-                            child: Text('Gagal memuat kategori', style: TextStyle(color: Colors.red)),
-                          ),
+                          error: (err, stack) => const SizedBox(height: 80),
                         ),
                       ),
                       
@@ -282,9 +325,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: DgShimmer.productGrid(count: 4),
                 ),
               ),
-              error: (e, _) => SliverToBoxAdapter(
-                child: Center(child: Text('Error memuat produk: $e', style: const TextStyle(color: Colors.red))),
-              ),
+              error: (e, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
               data: (allProducts) {
                 return SliverMainAxisGroup(slivers: [
                   SliverToBoxAdapter(

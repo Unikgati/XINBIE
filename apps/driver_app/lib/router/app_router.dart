@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 
 import '../screens/splash/driver_splash_screen.dart';
 import '../screens/auth/driver_login_screen.dart';
+import '../screens/auth/driver_otp_screen.dart';
+import '../screens/auth/driver_forgot_password_screen.dart';
+import '../screens/auth/driver_reset_password_screen.dart';
 import '../screens/registration/driver_register_screen.dart';
 import '../screens/registration/ktp_upload_screen.dart';
 import '../screens/registration/verification_pending_screen.dart';
@@ -49,8 +52,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       );
 
       final isSplash = state.matchedLocation == '/splash';
-      final isGoingToAuth = state.matchedLocation == '/login' ||
+
+      // All public/flow routes that don't require auth
+      final isPublicRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
+          state.matchedLocation == '/otp' ||
+          state.matchedLocation == '/forgot-password' ||
+          state.matchedLocation == '/reset-password' ||
           state.matchedLocation == '/upload-ktp' ||
           state.matchedLocation == '/verification-pending';
 
@@ -58,12 +66,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      if (!isAuth && !isGoingToAuth) {
-        return '/login'; // driver app defaults to login
+      // Not authenticated → must go to public routes
+      if (!isAuth && !isPublicRoute) {
+        return '/login';
       }
 
-      if (isAuth && isGoingToAuth) {
-        return '/home';
+      // Authenticated + going to login/register ONLY → go through splash to check verification
+      if (isAuth &&
+          (state.matchedLocation == '/login' ||
+           state.matchedLocation == '/register')) {
+        return '/splash';
       }
 
       return null;
@@ -72,6 +84,33 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, __) => const DriverSplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const DriverLoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const DriverRegisterScreen()),
+      GoRoute(
+        path: '/otp',
+        builder: (_, state) {
+          final q = state.uri.queryParameters;
+          return DriverOtpScreen(
+            email: q['email'] ?? '',
+            type: q['type'] ?? 'verification',
+            phone: q['phone'] ?? '',
+            vehicleType: q['vehicleType'] ?? 'Motor',
+            vehiclePlate: q['vehiclePlate'] ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, __) => const DriverForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (_, state) {
+          final q = state.uri.queryParameters;
+          return DriverResetPasswordScreen(
+            email: q['email'] ?? '',
+            otp: q['otp'] ?? '',
+          );
+        },
+      ),
       GoRoute(path: '/upload-ktp', builder: (_, __) => const KtpUploadScreen()),
       GoRoute(path: '/verification-pending', builder: (_, __) => const VerificationPendingScreen()),
 

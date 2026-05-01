@@ -18,14 +18,18 @@ interface OrderNotification {
 
 interface NotificationContextType {
   pendingCount: number;
+  pendingDriversCount: number;
   decrementPendingCount: () => void;
+  decrementPendingDriversCount: () => void;
   notifications: OrderNotification[];
   socketStatus: SocketStatus;
 }
 
 const NotificationContext = createContext<NotificationContextType>({
   pendingCount: 0,
+  pendingDriversCount: 0,
   decrementPendingCount: () => {},
+  decrementPendingDriversCount: () => {},
   notifications: [],
   socketStatus: 'disconnected',
 });
@@ -73,18 +77,21 @@ function showBrowserNotification(order: OrderNotification) {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-/** Fetch unread count from backend */
-async function fetchUnreadCount(): Promise<number> {
+/** Fetch unread counts from backend */
+async function fetchUnreadCount(): Promise<{ orders: number; drivers: number }> {
   const token = getAuthToken();
-  if (!token) return 0;
+  if (!token) return { orders: 0, drivers: 0 };
   try {
     const res = await fetch(`${API_URL}/admin/orders/unread-count`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    return typeof data.unreadCount === 'number' ? data.unreadCount : 0;
+    return {
+      orders: typeof data.unreadCount === 'number' ? data.unreadCount : 0,
+      drivers: typeof data.pendingDriversCount === 'number' ? data.pendingDriversCount : 0,
+    };
   } catch {
-    return 0;
+    return { orders: 0, drivers: 0 };
   }
 }
 
@@ -102,6 +109,7 @@ function getBroadcastChannel(): BroadcastChannel | null {
 
 export default function NotificationProvider({ children }: { children: ReactNode }) {
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingDriversCount, setPendingDriversCount] = useState(0);
   const [notifications, setNotifications] = useState<OrderNotification[]>([]);
   const [socketStatus, setSocketStatus] = useState<SocketStatus>('disconnected');
   const toast = useToast();
@@ -127,15 +135,25 @@ export default function NotificationProvider({ children }: { children: ReactNode
     // Fetch on first mount OR when socket reconnects
     if (!hasFetchedRef.current || socketStatus === 'connected') {
       hasFetchedRef.current = true;
-      fetchUnreadCount().then(setPendingCount);
+      fetchUnreadCount().then(counts => {
+        setPendingCount(counts.orders);
+        setPendingDriversCount(counts.drivers);
+      });
     }
   }, [pathname, socketStatus]);
 
   const decrementPendingCount = useCallback(() => {
     setPendingCount(prev => {
       const next = Math.max(0, prev - 1);
-      // ─── Fix #2: Broadcast to other tabs ───
       channelRef.current?.postMessage({ type: 'sync', count: next });
+      return next;
+    });
+  }, []);
+
+  const decrementPendingDriversCount = useCallback(() => {
+    setPendingDriversCount(prev => {
+      const next = Math.max(0, prev - 1);
+      channelRef.current?.postMessage({ type: 'sync_drivers', count: next });
       return next;
     });
   }, []);
@@ -151,8 +169,14 @@ export default function NotificationProvider({ children }: { children: ReactNode
       if (type === 'sync' && typeof count === 'number') {
         setPendingCount(count);
       }
+      if (type === 'sync_drivers' && typeof count === 'number') {
+        setPendingDriversCount(count);
+      }
       if (type === 'refetch') {
-        fetchUnreadCount().then(setPendingCount);
+        fetchUnreadCount().then(counts => {
+          setPendingCount(counts.orders);
+          setPendingDriversCount(counts.drivers);
+        });
       }
     };
 
@@ -199,6 +223,17 @@ export default function NotificationProvider({ children }: { children: ReactNode
       showBrowserNotification(data);
     };
 
+    const handleNewDriver = (data: { driverId: string }) => {
+      setPendingDriversCount(prev => {
+        const next = prev + 1;
+        channelRef.current?.postMessage({ type: 'sync_drivers', count: next });
+        return next;
+      });
+
+      playNotificationSound();
+      toast.success('Pendaftaran driver baru menunggu verifikasi!');
+    };
+
     const handleStatusUpdate = (data: { orderId: string; code?: string; status: string; paymentStatus?: string }) => {
       if (data.paymentStatus === 'PAID') {
         playNotificationSound();
@@ -207,18 +242,24 @@ export default function NotificationProvider({ children }: { children: ReactNode
     };
 
     socket.on('order:new', handleNewOrder);
+    socket.on('driver:new_pending', handleNewDriver);
     socket.on('order:statusUpdate', handleStatusUpdate);
 
     return () => {
       // Only remove OUR specific listeners, not all listeners for these events
       socket.off('order:new', handleNewOrder);
+      socket.off('driver:new_pending', handleNewDriver);
       socket.off('order:statusUpdate', handleStatusUpdate);
       listenersAttached.current = false;
     };
   }, [pathname, toast]);
 
   return (
-    <NotificationContext.Provider value={{ pendingCount, decrementPendingCount, notifications, socketStatus }}>
+    <NotificationContext.Provider value={{ 
+      pendingCount, decrementPendingCount, 
+      pendingDriversCount, decrementPendingDriversCount, 
+      notifications, socketStatus 
+    }}>
       {children}
     </NotificationContext.Provider>
   );

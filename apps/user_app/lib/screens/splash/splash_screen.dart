@@ -58,16 +58,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: FadeTransition(
-          opacity: _fadeIn,
-          child: ScaleTransition(
-            scale: _scale,
-            child: SvgPicture.asset(
-              'assets/images/logo.svg',
-              width: 200,
-              fit: BoxFit.contain,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: AppColors.onboardingGradient,
+        ),
+        child: Center(
+          child: FadeTransition(
+            opacity: _fadeIn,
+            child: ScaleTransition(
+              scale: _scale,
+              child: SvgPicture.asset(
+                'assets/images/logo.svg',
+                width: 200,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         ),

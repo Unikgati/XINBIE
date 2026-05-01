@@ -17,6 +17,7 @@ export 'models/delivery_slot.dart';
 export 'models/promo_code.dart';
 export 'models/notification_model.dart';
 export 'models/driver_profile.dart';
+export 'models/driver_wallet.dart';
 export 'models/pickup_point.dart';
 export 'models/cart_item.dart';
 export 'models/region.dart';
@@ -51,3 +52,7 @@ export 'utils/error_handler.dart';
 // Constants
 export 'constants/enums.dart';
 export 'constants/app_config.dart';
+
+// Services
+export 'services/notification_service.dart';
+export 'services/location_service.dart';

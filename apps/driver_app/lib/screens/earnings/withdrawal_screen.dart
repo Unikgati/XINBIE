@@ -19,11 +19,11 @@ class _WithdrawalScreenState extends ConsumerState<WithdrawalScreen> {
   void _submit(int balance) async {
     final amount = int.tryParse(_amountController.text) ?? 0;
     if (amount < _minWithdrawal) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Minimum penarikan Rp ${_minWithdrawal.toString()}')));
+      DgSnackbar.showError(context, message: 'Minimum penarikan Rp ${_minWithdrawal.toString()}');
       return;
     }
     if (amount > balance) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saldo tidak cukup')));
+      DgSnackbar.showError(context, message: 'Saldo tidak cukup');
       return;
     }
 
@@ -38,18 +38,12 @@ class _WithdrawalScreenState extends ConsumerState<WithdrawalScreen> {
       ref.invalidate(driverWalletProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Permintaan penarikan berhasil diajukan!'),
-          backgroundColor: AppColors.primary,
-        ));
+        DgSnackbar.showSuccess(context, message: 'Permintaan penarikan berhasil diajukan!');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Gagal: $e'),
-          backgroundColor: AppColors.error,
-        ));
+        DgSnackbar.showError(context, message: 'Gagal', error: e);
       }
     } finally {
       if (mounted) {
@@ -73,7 +67,16 @@ class _WithdrawalScreenState extends ConsumerState<WithdrawalScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Tarik Saldo')),
       body: asyncEarnings.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(children: [
+            DgShimmer(width: double.infinity, height: 100, borderRadius: 16),
+            const SizedBox(height: 24),
+            DgShimmer(width: double.infinity, height: 60, borderRadius: 12),
+            const SizedBox(height: 24),
+            DgShimmer(width: double.infinity, height: 80, borderRadius: 12),
+          ]),
+        ),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (earningsData) {
           final balance = earningsData['balance'] as int? ?? 0;
@@ -134,7 +137,7 @@ class _WithdrawalScreenState extends ConsumerState<WithdrawalScreen> {
                 Text('Transfer ke', style: AppTypography.labelLarge),
                 const SizedBox(height: 8),
                 asyncBank.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () => DgShimmer(width: double.infinity, height: 60, borderRadius: 12),
                   error: (e, _) => Center(child: Text('Gagal memuat bank: $e')),
                   data: (bank) => Container(
                     padding: const EdgeInsets.all(16),

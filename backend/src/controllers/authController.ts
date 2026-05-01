@@ -8,8 +8,6 @@ import { AppError } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/auth';
 import { sendOTP } from '../utils/mailer';
 import redis from '../config/redis';
-import { AuthRequest } from '../middleware/auth';
-import { sendOTP } from '../utils/mailer';
 
 // POST /api/auth/register
 export async function register(req: Request, res: Response, next: NextFunction) {

@@ -119,11 +119,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine bottom sheet height (approx 65% of screen to fit all form elements)
-    final bottomSheetHeight = MediaQuery.of(context).size.height * 0.65;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardOpen = keyboardHeight > 0;
+
+    // When keyboard open → sheet grows to keep form visible
+    final bottomSheetHeight = isKeyboardOpen
+        ? screenHeight * 0.65 + keyboardHeight
+        : screenHeight * 0.65;
 
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Handle keyboard manually via SingleChildScrollView inside the sheet
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           // Layer 1: Gradient Background
@@ -150,186 +156,186 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
 
-          // Layer 3: Sliding Mascot (Behind the bottom sheet)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: bottomSheetHeight - 40, // Let mascot sink behind the sheet slightly
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Image.asset(
-                'assets/images/mascot_login.png',
-                fit: BoxFit.contain,
+          // Layer 3: Mascot (hidden when keyboard open)
+          if (!isKeyboardOpen)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: bottomSheetHeight - 40,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Image.asset(
+                  'assets/images/mascot_login.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
-          ),
 
-          // Layer 4: Fixed White Bottom Sheet with Form
-          Align(
-            alignment: Alignment.bottomCenter,
+          // Layer 4: White Bottom Sheet with Form
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: bottomSheetHeight.clamp(0, screenHeight * 0.9),
             child: Container(
-              height: bottomSheetHeight,
-              width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
               ),
               child: SafeArea(
                 top: false,
-                child: Padding(
-                  // Handle keyboard padding dynamically
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom,
-                  ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Title Area
-                          Center(
-                            child: Column(
-                              children: [
-                                Text('Selamat Datang!', style: AppTypography.h2),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Masuk ke akun Dapur Gizi kamu',
-                                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          // Email
-                          Text('Email', style: AppTypography.labelLarge),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _emailCtrl,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: Validators.email,
-                            decoration: const InputDecoration(
-                              hintText: 'contoh@email.com',
-                              prefixIcon: Icon(Icons.email_outlined),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Password
-                          Text('Password', style: AppTypography.labelLarge),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _passCtrl,
-                            obscureText: _obscure,
-                            validator: (v) => v == null || v.isEmpty ? 'Password wajib diisi' : null,
-                            decoration: InputDecoration(
-                              hintText: 'Masukkan password',
-                              prefixIcon: const Icon(Icons.lock_outlined),
-                              suffixIcon: IconButton(
-                                icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
-                                onPressed: () => setState(() => _obscure = !_obscure),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Forgot password
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () => context.push('/forgot-password'),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: Text(
-                                'Lupa Password?',
-                                style: AppTypography.bodySmall.copyWith(color: AppColors.primary),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Login button
-                          DgButton(
-                            label: 'Masuk',
-                            onPressed: _login,
-                            isLoading: _loading,
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Divider
-                          Row(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title Area
+                        Center(
+                          child: Column(
                             children: [
-                              const Expanded(child: Divider()),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  'atau',
-                                  style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
-                                ),
-                              ),
-                              const Expanded(child: Divider()),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Google login
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: (_loading || _googleLoading) ? null : _loginWithGoogle,
-                              icon: _googleLoading 
-                                  ? const SizedBox(
-                                      width: 24, height: 24, 
-                                      child: CircularProgressIndicator(strokeWidth: 2)
-                                    )
-                                  : SvgPicture.asset(
-                                      'assets/images/google_logo.svg',
-                                      height: 24,
-                                    ),
-                              label: Text(
-                                _googleLoading ? 'Memproses...' : 'Masuk dengan Google', 
-                                style: const TextStyle(color: AppColors.textPrimary)
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          // Register link
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
+                              Text('Selamat Datang!', style: AppTypography.h2),
+                              const SizedBox(height: 4),
                               Text(
-                                'Belum punya akun? ',
+                                'Masuk ke akun Dapur Gizi kamu',
                                 style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
                               ),
-                              GestureDetector(
-                                onTap: () {
-                                  final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
-                                  final redirectParam = redirect != null ? '?redirect=${Uri.encodeComponent(redirect)}' : '';
-                                  context.push('/register$redirectParam');
-                                },
-                                child: Text(
-                                  'Daftar',
-                                  style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
-                                ),
-                              ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Email
+                        Text('Email', style: AppTypography.labelLarge),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: Validators.email,
+                          decoration: const InputDecoration(
+                            hintText: 'contoh@email.com',
+                            prefixIcon: Icon(Icons.email_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Password
+                        Text('Password', style: AppTypography.labelLarge),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _passCtrl,
+                          obscureText: _obscure,
+                          validator: (v) => v == null || v.isEmpty ? 'Password wajib diisi' : null,
+                          decoration: InputDecoration(
+                            hintText: 'Masukkan password',
+                            prefixIcon: const Icon(Icons.lock_outlined),
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                              onPressed: () => setState(() => _obscure = !_obscure),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Forgot password
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => context.push('/forgot-password'),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Lupa Password?',
+                              style: AppTypography.bodySmall.copyWith(color: AppColors.primary),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Login button
+                        DgButton(
+                          label: 'Masuk',
+                          onPressed: _login,
+                          isLoading: _loading,
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Divider
+                        Row(
+                          children: [
+                            const Expanded(child: Divider()),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                'atau',
+                                style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ),
+                            const Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Google login
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: (_loading || _googleLoading) ? null : _loginWithGoogle,
+                            icon: _googleLoading 
+                                ? const SizedBox(
+                                    width: 24, height: 24, 
+                                    child: CircularProgressIndicator(strokeWidth: 2)
+                                  )
+                                : SvgPicture.asset(
+                                    'assets/images/google_logo.svg',
+                                    height: 24,
+                                  ),
+                            label: Text(
+                              _googleLoading ? 'Memproses...' : 'Masuk dengan Google', 
+                              style: const TextStyle(color: AppColors.textPrimary)
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Register link
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Belum punya akun? ',
+                              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+                                final redirectParam = redirect != null ? '?redirect=${Uri.encodeComponent(redirect)}' : '';
+                                context.push('/register$redirectParam');
+                              },
+                              child: Text(
+                                'Daftar',
+                                style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Extra space for keyboard
+                        SizedBox(height: keyboardHeight > 0 ? keyboardHeight : 0),
+                      ],
                     ),
                   ),
                 ),

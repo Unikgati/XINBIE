@@ -33,7 +33,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { pendingCount, socketStatus } = useNotification();
+  const { pendingCount, pendingDriversCount, socketStatus } = useNotification();
 
   const statusDot: Record<string, { color: string; title: string; pulse?: boolean }> = {
     connected: { color: '#4CAF50', title: 'Terhubung' },
@@ -85,40 +85,46 @@ export default function Sidebar() {
         {navItems.map((section) => (
           <div key={section.section} className="nav-section">
             {!collapsed && <div className="nav-section-label">{section.section}</div>}
-            {section.items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`nav-item ${pathname === item.href ? 'active' : ''}`}
-                title={collapsed ? item.label : undefined}
-                style={{ position: 'relative' }}
-              >
-                <span className="material-symbols-outlined">{item.icon}</span>
-                {!collapsed && <span className="nav-label">{item.label}</span>}
-                {item.href === '/orders' && pendingCount > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    top: 6,
-                    right: collapsed ? 4 : 12,
-                    background: '#F44336',
-                    color: '#fff',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    minWidth: 18,
-                    height: 18,
-                    borderRadius: 9,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 5px',
-                    lineHeight: 1,
-                    boxShadow: '0 1px 3px rgba(244,67,54,0.4)',
-                  }}>
-                    {pendingCount > 99 ? '99+' : pendingCount}
-                  </span>
-                )}
-              </Link>
-            ))}
+            {section.items.map((item) => {
+              let count = 0;
+              if (item.href === '/orders') count = pendingCount;
+              if (item.href === '/drivers') count = pendingDriversCount;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`nav-item ${pathname === item.href ? 'active' : ''}`}
+                  title={collapsed ? item.label : undefined}
+                  style={{ position: 'relative' }}
+                >
+                  <span className="material-symbols-outlined">{item.icon}</span>
+                  {!collapsed && <span className="nav-label">{item.label}</span>}
+                  {count > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: 6,
+                      right: collapsed ? 4 : 12,
+                      background: '#F44336',
+                      color: '#fff',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      minWidth: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 5px',
+                      lineHeight: 1,
+                      boxShadow: '0 1px 3px rgba(244,67,54,0.4)',
+                    }}>
+                      {count > 99 ? '99+' : count}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         ))}
       </nav>

@@ -15,7 +15,24 @@ class DriverEarningsScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Penghasilan')),
       body: asyEarnings.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(children: [
+            DgShimmer(width: double.infinity, height: 160, borderRadius: 20),
+            const SizedBox(height: 16),
+            Row(children: [
+              Expanded(child: DgShimmer(width: double.infinity, height: 80, borderRadius: 16)),
+              const SizedBox(width: 12),
+              Expanded(child: DgShimmer(width: double.infinity, height: 80, borderRadius: 16)),
+            ]),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: DgShimmer(width: double.infinity, height: 80, borderRadius: 16)),
+              const SizedBox(width: 12),
+              Expanded(child: DgShimmer(width: double.infinity, height: 80, borderRadius: 16)),
+            ]),
+          ]),
+        ),
         error: (e, stack) => Center(child: Text('Gagal memuat data: $e')),
         data: (data) {
           final balance = data['balance'] as int? ?? 0;

@@ -2,8 +2,10 @@ import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { verifyToken } from '../utils/jwt';
 import redis from '../config/redis';
+import prisma from '../config/database';
 
 let io: Server;
+const disconnectTimers = new Map<string, NodeJS.Timeout>();
 
 export function initWebSocket(server: HttpServer) {
   io = new Server(server, {
@@ -40,6 +42,15 @@ export function initWebSocket(server: HttpServer) {
       socket.join('admins');
     }
 
+    // Handle grace period for driver reconnection
+    if (role === 'DRIVER') {
+      const timer = disconnectTimers.get(userId);
+      if (timer) {
+        clearTimeout(timer);
+        disconnectTimers.delete(userId);
+      }
+    }
+
     console.log(`🔌 ${role} connected: ${userId}`);
 
     // Driver location update
@@ -63,8 +74,27 @@ export function initWebSocket(server: HttpServer) {
       io.to('admins').emit('order:accepted', { ...data, driverId: userId });
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
       console.log(`🔌 ${role} disconnected: ${userId}`);
+      
+      if (role === 'DRIVER') {
+        // Wait 30 seconds before marking offline (Grace Period for network drops)
+        const timer = setTimeout(async () => {
+          try {
+            await prisma.driverProfile.update({
+              where: { userId },
+              data: { isOnline: false },
+            });
+            console.log(`📡 Driver ${userId} marked OFFLINE due to timeout`);
+            emitToAdmins('driver:status', { driverId: userId, isOnline: false });
+          } catch (e) {
+            console.error(`Failed to mark driver offline: ${userId}`, e);
+          }
+          disconnectTimers.delete(userId);
+        }, 30000); // 30 seconds
+
+        disconnectTimers.set(userId, timer);
+      }
     });
   });
 

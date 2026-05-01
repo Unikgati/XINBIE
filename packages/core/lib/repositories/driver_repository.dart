@@ -10,7 +10,7 @@ class DriverRepository {
 
   final ApiClient _api;
 
-  Future<void> register({
+  Future<Map<String, dynamic>> register({
     required String name,
     required String email,
     required String phone,
@@ -18,7 +18,7 @@ class DriverRepository {
     required String vehicleType,
     required String vehiclePlate,
   }) async {
-    await _api.post(ApiEndpoints.driverRegister, data: {
+    final response = await _api.post(ApiEndpoints.driverRegister, data: {
       'name': name,
       'email': email,
       'phone': phone,
@@ -26,6 +26,7 @@ class DriverRepository {
       'vehicleType': vehicleType,
       'vehiclePlate': vehiclePlate,
     });
+    return response.data as Map<String, dynamic>;
   }
 
   Future<void> uploadKtp(String filePath) async {
@@ -41,7 +42,7 @@ class DriverRepository {
   }
 
   Future<void> setOnlineStatus(bool online) async {
-    await _api.put(ApiEndpoints.driverOnlineStatus, data: {'online': online});
+    await _api.put(ApiEndpoints.driverOnlineStatus, data: {'isOnline': online});
   }
 
   Future<void> updateLocation({
@@ -49,8 +50,8 @@ class DriverRepository {
     required double longitude,
   }) async {
     await _api.put(ApiEndpoints.driverLocation, data: {
-      'latitude': latitude,
-      'longitude': longitude,
+      'lat': latitude,
+      'lng': longitude,
     });
   }
 
@@ -65,7 +66,7 @@ class DriverRepository {
   }
 
   Future<void> acceptOrder(String id) async {
-    await _api.post(ApiEndpoints.driverOrderAccept(id));
+    await _api.put(ApiEndpoints.driverOrderAccept(id));
   }
 
   Future<void> rejectOrder(String id) async {

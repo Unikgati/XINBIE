@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { processAndUploadImage, processAndUploadImages } from '../middleware/upload';
 import { emitToAdmins, notifyOrderStatus } from '../websocket';
+import { sendPushToMultiple, sendPushNotification } from '../utils/firebase';
 
 // ═══════════════════════════════════════
 // Dashboard
@@ -364,16 +365,36 @@ export async function adminUpdateOrderStatus(req: AuthRequest, res: Response, ne
     emitToAdmins('order:statusUpdate', { orderId: req.params.id, status });
     notifyOrderStatus(updatedOrder.userId, req.params.id, status);
 
+    // Push notification to online drivers when WAITING_DRIVER
+    if (status === 'WAITING_DRIVER') {
+      const onlineDrivers = await prisma.driverProfile.findMany({
+        where: { isOnline: true, verificationStatus: 'APPROVED' },
+        select: { user: { select: { fcmToken: true } } },
+      });
+      const tokens = onlineDrivers
+        .map((d) => d.user.fcmToken)
+        .filter((t): t is string => !!t);
+
+      if (tokens.length > 0) {
+        await sendPushToMultiple(tokens, {
+          title: '🔔 Pesanan Baru!',
+          body: `Pesanan ${updatedOrder.code} menunggu driver`,
+          data: { type: 'new_order', orderId: req.params.id },
+        });
+      }
+    }
+
     res.json({ message: 'Status pesanan diperbarui' });
   } catch (err) { next(err); }
 }
 
 export async function adminGetUnreadCount(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const count = await prisma.order.count({
-      where: { isReadAdmin: false },
-    });
-    res.json({ unreadCount: count });
+    const [unreadCount, pendingDriversCount] = await Promise.all([
+      prisma.order.count({ where: { isReadAdmin: false } }),
+      prisma.driverProfile.count({ where: { verificationStatus: 'PENDING' } })
+    ]);
+    res.json({ unreadCount, pendingDriversCount });
   } catch (err) { next(err); }
 }
 
@@ -410,6 +431,66 @@ export async function adminGetDrivers(req: AuthRequest, res: Response, next: Nex
       userPhoneWa: d.user.phoneWa, userAvatarUrl: d.user.avatarUrl,
       user: undefined,
     })));
+  } catch (err) { next(err); }
+}
+
+export async function adminGetDriverDetail(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const driverId = req.params.id;
+    const driver = await prisma.driverProfile.findUnique({
+      where: { id: driverId },
+      include: {
+        user: { select: { name: true, email: true, phoneWa: true, avatarUrl: true, isActive: true } },
+      },
+    });
+
+    if (!driver) throw new AppError('Driver tidak ditemukan', 404);
+
+    const [totalOrders, lastOrder] = await Promise.all([
+      prisma.order.count({ where: { driverId } }),
+      prisma.order.findFirst({
+        where: { driverId },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    const orders = await prisma.order.findMany({
+      where: { driverId },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id: true, code: true, orderStatus: true, paymentStatus: true,
+        grandTotal: true, createdAt: true, isReadAdmin: true,
+        _count: { select: { items: true } },
+        user: { select: { name: true } },
+      },
+    });
+
+    res.json({
+      ...driver,
+      userName: driver.user.name,
+      userEmail: driver.user.email,
+      userPhoneWa: driver.user.phoneWa,
+      userAvatarUrl: driver.user.avatarUrl,
+      userIsActive: driver.user.isActive,
+      user: undefined,
+      stats: {
+        totalOrders,
+        lastOrderAt: lastOrder?.createdAt || null,
+      },
+      orders: orders.map(o => ({
+        id: o.id,
+        code: o.code,
+        orderStatus: o.orderStatus,
+        paymentStatus: o.paymentStatus,
+        grandTotal: o.grandTotal,
+        createdAt: o.createdAt,
+        isReadAdmin: o.isReadAdmin,
+        itemCount: o._count.items,
+        customerName: o.user.name,
+      })),
+    });
   } catch (err) { next(err); }
 }
 

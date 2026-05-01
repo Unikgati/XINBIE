@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/core.dart';
+import '../services/background_service.dart';
 
 /// Driver auth notifier — extends base auth with driver-specific flows.
 class DriverAuthNotifier extends StateNotifier<AuthState> {
@@ -43,6 +44,11 @@ class DriverAuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Set authenticated state directly (e.g. after OTP verification).
+  void setAuthenticated(AuthState authState) {
+    state = authState;
+  }
+
   Future<void> logout() async {
     try {
       await _authRepo.logout();
@@ -66,6 +72,12 @@ class OnlineStatusNotifier extends StateNotifier<bool> {
     final newStatus = !state;
     await _driverRepo.setOnlineStatus(newStatus);
     state = newStatus;
+    
+    if (newStatus) {
+      await BackgroundLocationService().startService();
+    } else {
+      BackgroundLocationService().stopService();
+    }
   }
 }
 

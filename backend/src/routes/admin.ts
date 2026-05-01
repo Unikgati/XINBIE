@@ -36,6 +36,7 @@ router.put('/orders/:id/read', admin.adminMarkOrderAsRead);
 
 // Drivers
 router.get('/drivers', admin.adminGetDrivers);
+router.get('/drivers/:id', admin.adminGetDriverDetail);
 router.put('/drivers/:id/verify', admin.adminVerifyDriver);
 router.get('/drivers/:id/financial', admin.adminGetDriverFinancial);
 router.post('/drivers/:id/adjustment', admin.adminDriverAdjustment);
