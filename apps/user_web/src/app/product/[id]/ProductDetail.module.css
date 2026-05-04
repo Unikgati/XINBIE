@@ -1,0 +1,288 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+.breadcrumb {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+}
+
+.breadcrumb a {
+  color: var(--color-primary-dark);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.imageSection {
+  position: sticky;
+  top: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mainImageWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1/1;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.thumbnailGrid {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.thumbnail {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+  background-color: var(--color-surface);
+}
+
+.thumbnailActive {
+  border-color: var(--color-primary-dark);
+}
+
+.infoSection {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.categoryBadge {
+  background-color: var(--color-primary-surface);
+  color: var(--color-primary-dark);
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.priceContainer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.activePrice {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--color-price-active);
+}
+
+.discountBox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.strikethroughPrice {
+  font-size: 16px;
+  color: var(--color-price-strikethrough);
+  text-decoration: line-through;
+}
+
+.discountBadge {
+  background-color: var(--color-error);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--color-divider);
+  width: 100%;
+}
+
+.metaInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metaLabel {
+  color: var(--color-text-secondary);
+  width: 100px;
+}
+
+.metaValue {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.variantsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.variantsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.variantButton {
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: white;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.variantButton:hover {
+  border-color: var(--color-primary-light);
+}
+
+.variantButtonActive {
+  border-color: var(--color-primary-dark);
+  background-color: var(--color-primary-surface);
+  color: var(--color-primary-dark);
+}
+
+.actionSection {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background-color: #FAFAFA;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.addToCartBtn {
+  flex-grow: 1;
+  background-color: var(--color-primary-action);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.addToCartBtn:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+}
+
+.addToCartBtn:disabled {
+  background-color: var(--color-text-hint);
+  cursor: not-allowed;
+}
+
+.descriptionSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.descriptionText {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.relatedSection {
+  margin-top: 48px;
+}
+
+.relatedTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 32px 0 24px 0;
+}
+
+.relatedGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .imageSection {
+    position: relative;
+    top: 0;
+  }
+  .actionSection {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+    z-index: 50;
+    background-color: white;
+    padding: 16px;
+  }
+}

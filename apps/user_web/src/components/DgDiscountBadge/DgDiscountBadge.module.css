@@ -1,0 +1,29 @@
+.badgeContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  position: absolute;
+  top: 12px;
+  left: -6px;
+  z-index: 10;
+}
+
+.mainBadge {
+  padding: 6px 10px;
+  background: linear-gradient(to bottom right, var(--color-primary-action), var(--color-primary-dark));
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  border-radius: 12px 12px 12px 0; /* Matches Flutter: TopLeft 12, TopRight 12, BottomRight 12, BottomLeft 0 */
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* The folded ribbon triangle effect */
+.foldTriangle {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 6px 6px 0;
+  border-color: transparent var(--color-primary-dark) transparent transparent;
+  filter: brightness(0.7); /* Darken the fold to make it look like a shadow */
+}

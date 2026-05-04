@@ -10,12 +10,16 @@ export function getAuthToken(): string | null {
 export function setAuthToken(token: string) {
   if (typeof window !== 'undefined') {
     localStorage.setItem('dapurgizi_admin_token', token);
+    // Sync to cookie for middleware auth check
+    document.cookie = `admin_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   }
 }
 
 export function clearAuthToken() {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('dapurgizi_admin_token');
+    // Remove cookie
+    document.cookie = 'admin_token=; path=/; max-age=0';
   }
 }
 

@@ -1,0 +1,128 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 24px 60px;
+}
+
+/* Categories Section */
+.categoriesSection {
+  margin-bottom: 32px;
+}
+
+.categoriesWrapper {
+  background-color: var(--color-surface);
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.categoryItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  width: calc(25% - 16px);
+  max-width: 100px;
+  transition: transform 0.2s;
+}
+
+.categoryItem:hover {
+  transform: translateY(-4px);
+}
+
+.categoryIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.fallbackIcon {
+  font-size: 24px;
+}
+
+.categoryName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Banners Section */
+.bannersSection {
+  margin-bottom: 40px;
+}
+
+.bannersCarousel {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+}
+
+.bannersCarousel::-webkit-scrollbar {
+  display: none;
+}
+
+.bannerItem {
+  scroll-snap-align: center;
+  position: relative;
+  flex: 0 0 100%;
+  aspect-ratio: 21/9;
+  max-height: 400px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  background-color: #eee;
+}
+
+.bannerImage {
+  transition: transform 0.3s;
+}
+
+.bannerItem:hover .bannerImage {
+  transform: scale(1.05);
+}
+
+/* Products Section */
+.productSection {
+  margin-bottom: 48px;
+}
+
+.sectionTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  margin: 0 0 24px 0;
+}
+
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+.emptyText {
+  color: var(--color-text-secondary);
+  font-size: 16px;
+}
+
