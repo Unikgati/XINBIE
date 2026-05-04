@@ -41,6 +41,9 @@ interface CartState {
   
   /** Clear entire cart */
   clearCart: () => void;
+
+  /** Validate cart items against backend, remove stale/invalid items */
+  validateCart: () => Promise<string[]>;
 }
 
 const matchItem = (item: CartItem, productId: string, variantId?: string | null) =>
@@ -113,6 +116,52 @@ export const useCartStore = create<CartState>()(
       totalPrice: () => get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
 
       clearCart: () => set({ items: [] }),
+
+      validateCart: async () => {
+        const { items } = get();
+        if (items.length === 0) return [];
+
+        const removedNames: string[] = [];
+        const validItems: CartItem[] = [];
+
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+        for (const item of items) {
+          try {
+            const res = await fetch(`${apiUrl}/products/${item.productId}`);
+            if (!res.ok) {
+              removedNames.push(item.name);
+              continue;
+            }
+            const product = await res.json();
+            // Check if product is still active and in stock
+            if (!product.isActive) {
+              removedNames.push(item.name);
+              continue;
+            }
+            if (!product.isUnlimitedStock && product.stockQty <= 0) {
+              removedNames.push(item.name);
+              continue;
+            }
+            // Update price if changed
+            validItems.push({
+              ...item,
+              price: product.discountPrice || product.price,
+              originalPrice: product.price,
+              imageUrl: product.images?.[0] || item.imageUrl,
+            });
+          } catch {
+            // Network error — keep item, don't remove
+            validItems.push(item);
+          }
+        }
+
+        if (removedNames.length > 0) {
+          set({ items: validItems });
+        }
+
+        return removedNames;
+      },
     }),
     {
       name: 'dapurgizi-cart',

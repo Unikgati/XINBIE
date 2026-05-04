@@ -292,3 +292,44 @@
   color: var(--color-text-secondary);
   font-weight: 500;
 }
+
+/* Removed Items Notice */
+.removedNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #FFF3E0;
+  border: 1px solid #FFE0B2;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: #E65100;
+  line-height: 1.5;
+}
+
+.removedIcon {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.removedList {
+  font-weight: 600;
+}
+
+.removedClose {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: #E65100;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.removedClose:hover {
+  opacity: 1;
+}

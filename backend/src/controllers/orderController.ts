@@ -152,11 +152,11 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
           break;
         case 'ALFAMART':
           payment_type = 'cstore';
-          additionalParams.cstore = { store: 'alfamart', message: 'DapurGizi' };
+          additionalParams.cstore = { store: 'alfamart', message: 'Dapurgizi' };
           break;
         case 'INDOMARET':
           payment_type = 'cstore';
-          additionalParams.cstore = { store: 'indomaret', message: 'DapurGizi' };
+          additionalParams.cstore = { store: 'indomaret', message: 'Dapurgizi' };
           break;
         default:
           payment_type = 'bank_transfer';

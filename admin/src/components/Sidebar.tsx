@@ -11,8 +11,8 @@ const navItems = [
     { href: '/orders', icon: 'shopping_bag', label: 'Pesanan' },
   ]},
   { section: 'Katalog', items: [
-    { href: '/products', icon: 'inventory_2', label: 'Produk' },
     { href: '/categories', icon: 'category', label: 'Kategori' },
+    { href: '/products', icon: 'inventory_2', label: 'Produk' },
   ]},
   { section: 'Pengguna', items: [
     { href: '/drivers', icon: 'local_shipping', label: 'Driver' },

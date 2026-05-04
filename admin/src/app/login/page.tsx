@@ -349,7 +349,7 @@ export default function LoginPage() {
             </form>
 
             <div className="login-footer">
-              © {new Date().getFullYear()} DapurGizi
+              © {new Date().getFullYear()} Dapurgizi
             </div>
           </div>
 
@@ -360,7 +360,7 @@ export default function LoginPage() {
             </div>
             <img
               src="/mascot-admin.webp"
-              alt="DapurGizi Mascot"
+              alt="Dapurgizi Mascot"
               className="login-mascot"
               width={340}
               height={451}

@@ -61,7 +61,7 @@ export default function LoginPage() {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <h1 className={styles.title}>Masuk ke DapurGizi</h1>
+          <h1 className={styles.title}>Masuk ke Dapurgizi</h1>
           <p className={styles.subtitle}>Selamat datang kembali, Bunda!</p>
         </div>
 

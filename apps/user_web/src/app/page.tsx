@@ -61,15 +61,23 @@ export default async function Home() {
     );
   };
 
+  const hasCategories = categories && categories.length > 0;
+  const hasBanners = banners && banners.length > 0;
+  const hasAnyProducts = featuredProducts.length > 0 || promoProducts.length > 0 || allProducts.length > 0;
+  const isCompletelyEmpty = !hasCategories && !hasBanners && !hasAnyProducts;
+
   return (
     <main className={styles.main}>
       <div className={styles.container}>
         {/* Promo Banners as Hero */}
-        <div style={{ marginTop: '24px' }}>
-          <DgBannerCarousel banners={banners} />
-        </div>
+        {hasBanners && (
+          <div style={{ marginTop: '24px' }}>
+            <DgBannerCarousel banners={banners} />
+          </div>
+        )}
+
         {/* Categories (Floating) */}
-        {categories && categories.length > 0 && (
+        {hasCategories && (
           <section className={styles.categoriesSection}>
             <div className={styles.categoriesWrapper}>
               {categories.slice(0, 8).map((cat: any) => (
@@ -88,12 +96,10 @@ export default async function Home() {
           </section>
         )}
 
-
-
         {/* Featured Products */}
         {featuredProducts.length > 0 && (
           <section className={styles.productSection}>
-            <h2 className={styles.sectionTitle}>Pilihan DapurGizi 🔥</h2>
+            <h2 className={styles.sectionTitle}>Pilihan Dapurgizi 🔥</h2>
             {renderProductGrid(featuredProducts)}
           </section>
         )}
@@ -107,10 +113,29 @@ export default async function Home() {
         )}
 
         {/* All Products */}
-        <section className={styles.productSection}>
-          <h2 className={styles.sectionTitle}>Belanja Harianmu 🛒</h2>
-          {renderProductGrid(allProducts)}
-        </section>
+        {allProducts.length > 0 && (
+          <section className={styles.productSection}>
+            <h2 className={styles.sectionTitle}>Belanja Harianmu 🛒</h2>
+            {renderProductGrid(allProducts)}
+          </section>
+        )}
+
+        {/* Professional Empty State */}
+        {isCompletelyEmpty && (
+          <section className={styles.emptyState}>
+            <div className={styles.emptyStateIcon}>
+              <span className="material-symbols-outlined" style={{ fontSize: '64px', color: 'var(--color-primary)' }}>
+                storefront
+              </span>
+            </div>
+            <h2 className={styles.emptyStateTitle}>Toko Sedang Disiapkan</h2>
+            <p className={styles.emptyStateDesc}>
+              Produk segar dan berkualitas sedang dalam perjalanan. 
+              Nantikan katalog lengkap dari Dapurgizi!
+            </p>
+
+          </section>
+        )}
       </div>
     </main>
   );

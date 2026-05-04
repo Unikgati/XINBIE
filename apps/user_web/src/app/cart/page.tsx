@@ -9,27 +9,45 @@ import { useCartStore } from '@/store/cartStore';
 
 export default function CartPage() {
   const [mounted, setMounted] = useState(false);
+  const [validating, setValidating] = useState(true);
+  const [removedItems, setRemovedItems] = useState<string[]>([]);
   
   const cartItems = useCartStore((s) => s.items);
   const totalQty = useCartStore((s) => s.totalQuantity());
   const totalPrice = useCartStore((s) => s.totalPrice());
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const clearCart = useCartStore((s) => s.clearCart);
+  const validateCart = useCartStore((s) => s.validateCart);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    validateCart().then((removed) => {
+      if (removed.length > 0) setRemovedItems(removed);
+      setValidating(false);
+    });
+  }, [validateCart]);
 
   const formatRp = (n: number) => {
     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
-  if (!mounted) {
+  if (!mounted || validating) {
     return <div className={`app-container ${styles.container}`}><div className={styles.loading}>Memuat keranjang...</div></div>;
   }
 
   return (
     <div className={`app-container ${styles.container}`}>
+      {removedItems.length > 0 && (
+        <div className={styles.removedNotice}>
+          <span className={styles.removedIcon}>⚠️</span>
+          <div>
+            <strong>Beberapa produk dihapus dari keranjang</strong> karena sudah tidak tersedia:
+            <span className={styles.removedList}> {removedItems.join(', ')}</span>
+          </div>
+          <button className={styles.removedClose} onClick={() => setRemovedItems([])}>✕</button>
+        </div>
+      )}
+
       {cartItems.length === 0 ? (
         <div className={styles.emptyState}>
           <h2 className={styles.emptyTitle}>Keranjang Kosong</h2>

@@ -74,7 +74,7 @@ export function useGoogleSignIn(
       text: 'signin_with',
       shape: 'rectangular',
       logo_alignment: 'left',
-      width: googleButtonRef.current.offsetWidth || 300,
+      width: Math.min(googleButtonRef.current.clientWidth, 400) || 300,
     });
 
     initializedRef.current = true;

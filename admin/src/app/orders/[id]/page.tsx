@@ -226,7 +226,7 @@ export default function OrderDetailPage() {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Invoice ${order.code} - DapurGizi</title>
+  <title>Invoice ${order.code} - Dapurgizi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -268,7 +268,7 @@ export default function OrderDetailPage() {
     <div class="brand">
       <div class="brand-icon">${logoSvg}</div>
       <div>
-        <h1>DapurGizi</h1>
+        <h1>Dapurgizi</h1>
         <p>Makanan Sehat untuk Keluarga</p>
       </div>
     </div>
@@ -320,7 +320,7 @@ export default function OrderDetailPage() {
   </div>
 
   <div class="footer">
-    <p>Terima kasih telah berbelanja di DapurGizi</p>
+    <p>Terima kasih telah berbelanja di Dapurgizi</p>
     <p style="margin-top:4px">Invoice ini dicetak pada ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
   </div>
 </body>

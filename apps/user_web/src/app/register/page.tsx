@@ -66,7 +66,7 @@ export default function RegisterPage() {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <h1 className={styles.title}>Daftar DapurGizi</h1>
+          <h1 className={styles.title}>Daftar Dapurgizi</h1>
           <p className={styles.subtitle}>Bergabung dan nikmati kemudahan belanja dapur!</p>
         </div>
 

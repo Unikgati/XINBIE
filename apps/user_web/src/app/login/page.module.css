@@ -183,15 +183,6 @@
   width: 100%;
 }
 
-/* Make Google's rendered button fill the container width */
-.googleButtonContainer > div {
-  width: 100% !important;
-}
-
-.googleButtonContainer iframe {
-  width: 100% !important;
-}
-
 .googleIcon {
   width: 20px;
   height: 20px;

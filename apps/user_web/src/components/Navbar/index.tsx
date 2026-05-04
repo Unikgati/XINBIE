@@ -49,7 +49,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link href="/" className={styles.logo}>
           <span className={styles.logoText}>Dapur</span>
-          <span className={styles.logoHighlight}>Gizi</span>
+          <span className={styles.logoHighlight}>gizi</span>
         </Link>
 
         {/* Search Bar */}
@@ -60,21 +60,14 @@ export default function Navbar() {
             className={styles.searchInput} 
           />
           <button className={styles.searchButton}>
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>search</span>
           </button>
         </div>
 
         {/* Actions */}
         <div className={styles.actionsContainer}>
           <Link href="/cart" className={styles.cartButton}>
-            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="9" cy="21" r="1"></circle>
-              <circle cx="20" cy="21" r="1"></circle>
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-            </svg>
+            <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>shopping_cart</span>
             {mounted && totalQty > 0 && (
               <span className={styles.cartBadge}>
                 {totalQty > 99 ? '99+' : totalQty}
@@ -105,11 +98,7 @@ export default function Navbar() {
                   </Link>
                   <div className={styles.dropdownDivider}></div>
                   <button className={styles.dropdownItem} onClick={handleLogout}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                      <polyline points="16 17 21 12 16 7"></polyline>
-                      <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '8px' }}>logout</span>
                     Keluar
                   </button>
                 </div>
