@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import DOMPurify from 'isomorphic-dompurify';
 import styles from './ProductDetail.module.css';
 import DgQuantitySelector from '@/components/DgQuantitySelector';
 import DgProductCard from '@/components/DgProductCard';
@@ -12,6 +13,7 @@ interface Variant {
   id: string;
   name: string;
   price?: number;
+  discountPrice?: number;
 }
 
 interface Product {
@@ -35,6 +37,17 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
     product.variants?.length > 0 ? product.variants[0] : null
   );
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
+  const [isCollapsible, setIsCollapsible] = useState(false);
+  const descRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (descRef.current) {
+      if (descRef.current.scrollHeight > 140) {
+        setIsCollapsible(true);
+      }
+    }
+  }, [product.description]);
 
   // Cart store
   const cartQty = useCartStore((s) => s.getQuantity(product.id, selectedVariant?.id));
@@ -57,9 +70,17 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
   const images = product.images?.length ? product.images : [];
   const mainImage = images.length > 0 ? images[activeImageIndex] : null;
 
-  const basePrice = selectedVariant?.price || product.price;
-  const hasDiscount = product.discountPrice != null && product.discountPrice < basePrice && !selectedVariant?.price;
-  const displayPrice = hasDiscount ? product.discountPrice! : basePrice;
+  let basePrice = product.price;
+  let finalPrice = product.discountPrice && product.discountPrice > 0 ? product.discountPrice : basePrice;
+
+  if (selectedVariant && selectedVariant.price && selectedVariant.price > 0) {
+    basePrice = selectedVariant.price;
+    finalPrice = selectedVariant.discountPrice && selectedVariant.discountPrice > 0 ? selectedVariant.discountPrice : basePrice;
+  }
+
+  const hasDiscount = finalPrice < basePrice;
+  const displayPrice = finalPrice;
+  const calculatedDiscountPercent = hasDiscount ? Math.round(((basePrice - finalPrice) / basePrice) * 100) : 0;
 
   const isOutOfStock = !product.isUnlimitedStock && product.stockQty <= 0;
 
@@ -125,24 +146,32 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
               ))}
             </div>
           )}
+
+          {/* Promo Banner */}
+          <div className={styles.promoBanner}>
+            <div className={styles.promoTextContainer}>
+              <div className={styles.promoTitle}>Belanja Dapur Lebih Aman & Terpercaya</div>
+              <div className={styles.promoSubtitle}>Sayur, buah, dan bahan segar langsung dari sumber terbaik.</div>
+            </div>
+            <img src="/images/mascot_driver.png" alt="Mascot" className={styles.promoMascot} />
+          </div>
         </div>
 
         {/* Right: Info */}
         <div className={styles.infoSection}>
-          <div>
+          <div className={styles.headerGroup}>
             <div className={styles.categoryBadge}>{product.categoryName || 'Produk'}</div>
-          </div>
-          
-          <h1 className={styles.title}>{product.name}</h1>
-          
-          <div className={styles.priceContainer}>
-            <span className={styles.activePrice}>Rp {formatRp(displayPrice)}</span>
-            {hasDiscount && (
-              <div className={styles.discountBox}>
-                <span className={styles.discountBadge}>{product.discountPercent}% OFF</span>
-                <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
-              </div>
-            )}
+            <h1 className={styles.title}>{product.name}</h1>
+            
+            <div className={styles.priceContainer}>
+              <span className={styles.activePrice}>Rp {formatRp(displayPrice)}</span>
+              {hasDiscount && (
+                <div className={styles.discountBox}>
+                  <span className={styles.discountBadge}>{calculatedDiscountPercent}% OFF</span>
+                  <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={styles.divider} />
@@ -166,15 +195,21 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
             <div className={styles.variantsSection}>
               <h3 className={styles.sectionTitle}>Pilih Varian:</h3>
               <div className={styles.variantsGrid}>
-                {product.variants.map(v => (
-                  <button 
-                    key={v.id} 
-                    className={`${styles.variantButton} ${selectedVariant?.id === v.id ? styles.variantButtonActive : ''}`}
-                    onClick={() => setSelectedVariant(v)}
-                  >
-                    {v.name}
-                  </button>
-                ))}
+                {product.variants.map(v => {
+                  const isDiscounted = v.discountPrice != null && v.price != null && v.discountPrice > 0 && v.discountPrice < v.price;
+                  return (
+                    <button 
+                      key={v.id} 
+                      className={`${styles.variantButton} ${selectedVariant?.id === v.id ? styles.variantButtonActive : ''}`}
+                      onClick={() => setSelectedVariant(v)}
+                    >
+                      {v.name}
+                      {isDiscounted && (
+                        <div className={styles.variantDiscountCorner}>%</div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -200,9 +235,31 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
 
           <div className={styles.descriptionSection}>
             <h3 className={styles.sectionTitle}>Deskripsi Produk</h3>
-            <p className={styles.descriptionText}>
-              {product.description || 'Tidak ada deskripsi.'}
-            </p>
+            {product.description ? (
+              <div className={styles.descriptionContainer}>
+                <div 
+                  ref={descRef}
+                  className={`${styles.descriptionHtml} ${!isDescExpanded && isCollapsible ? styles.collapsed : ''}`}
+                  dangerouslySetInnerHTML={{ 
+                    __html: DOMPurify.sanitize(product.description.replace(/&nbsp;/g, ' ')) 
+                  }} 
+                />
+                {!isDescExpanded && isCollapsible && <div className={styles.descriptionFade} />}
+                {isCollapsible && (
+                  <button 
+                    className={styles.toggleDescBtn} 
+                    onClick={() => setIsDescExpanded(!isDescExpanded)}
+                  >
+                    {isDescExpanded ? 'Tutup Deskripsi' : 'Baca Selengkapnya'}
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+                      {isDescExpanded ? 'expand_less' : 'expand_more'}
+                    </span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className={styles.descriptionText}>Tidak ada deskripsi.</p>
+            )}
           </div>
 
         </div>

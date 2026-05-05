@@ -85,6 +85,7 @@ export default function ProductsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [formVariants, setFormVariants] = useState<FormVariant[]>([]);
+  const [deletedVariants, setDeletedVariants] = useState<string[]>([]);
   const [productCategory, setProductCategory] = useState('');
   const [formName, setFormName] = useState('');
   const [formPrice, setFormPrice] = useState('');
@@ -135,6 +136,9 @@ export default function ProductsPage() {
   };
 
   const removeFormVariant = (tempId: string) => {
+    if (tempId.includes('-')) {
+      setDeletedVariants(prev => [...prev, tempId]);
+    }
     setFormVariants(prev => prev.filter(v => v.tempId !== tempId));
   };
 
@@ -168,6 +172,7 @@ export default function ProductsPage() {
     setEditingId(null);
     setFormName(''); setFormPrice(''); setFormCostPrice(''); setFormDiscountPrice('');
     setFormStock(''); setFormUnit(''); setFormDesc(''); setFormVariants([]);
+    setDeletedVariants([]);
     setFormImages([]); setExistingImages([]);
     setProductCategory(categories[0]?.id || '');
   };
@@ -235,7 +240,17 @@ export default function ProductsPage() {
       }
 
       // Handle variants mapping
-      if (prodId && formVariants.length > 0) {
+      if (prodId) {
+        // 1. Delete removed variants
+        for (const delId of deletedVariants) {
+          try {
+            await apiDelete(`/variants/${delId}`);
+          } catch (e) {
+            console.error('Failed to delete variant', delId);
+          }
+        }
+
+        // 2. Create or Update current variants
         for (const v of formVariants) {
           const varData = new FormData();
           varData.append('name', v.name);

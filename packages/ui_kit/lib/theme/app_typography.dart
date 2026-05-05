@@ -6,7 +6,7 @@ class AppTypography {
   AppTypography._();
 
   // Base font
-  static TextStyle get _base => GoogleFonts.poppins();
+  static TextStyle get _base => GoogleFonts.plusJakartaSans();
 
   // Headings
   static TextStyle get h1 => _base.copyWith(

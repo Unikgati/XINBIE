@@ -90,7 +90,7 @@
 .name {
   font-size: 14px;
   font-weight: 500;
-  color: var(--color-primary-dark);
+  color: var(--color-text-primary);
   margin: 0 0 4px 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -111,7 +111,7 @@
 .activePrice {
   font-size: 15px;
   font-weight: 700;
-  color: var(--color-primary-dark);
+  color: var(--color-price-active);
 }
 
 .strikethroughPrice {

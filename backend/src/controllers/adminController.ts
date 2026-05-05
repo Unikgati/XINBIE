@@ -127,6 +127,11 @@ const parseProductData = (body: any) => {
     data.discountPercent = null;
   }
 
+  // Clean up HTML description (replace &nbsp; with space to fix word wrapping issues in clients)
+  if (data.description) {
+    data.description = data.description.replace(/&nbsp;/g, ' ');
+  }
+
   return data;
 };
 
