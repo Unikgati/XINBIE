@@ -25,6 +25,7 @@ router.delete('/variants/:id', admin.adminDeleteVariant);
 // Categories
 router.get('/categories', admin.adminGetCategories);
 router.post('/categories', upload.single('icon'), admin.adminCreateCategory);
+router.put('/categories/reorder', admin.adminReorderCategories);
 router.put('/categories/:id', upload.single('icon'), admin.adminUpdateCategory);
 
 // Orders

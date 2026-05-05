@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { TableSkeleton } from '@/components/Skeleton';
 import { Pagination } from '@/components/Pagination';
+import RichTextEditor from '@/components/RichTextEditor';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 
 interface Variant {
@@ -28,9 +29,11 @@ interface Product {
   discountPrice?: number;
   discountPercent?: number;
   unit?: string;
+  images?: string[];
   stockQty: number;
   isActive: boolean;
   isFeatured: boolean;
+  isUnlimitedStock?: boolean;
   categoryId?: string;
   category: { id: string; name: string };
   variants: Variant[];
@@ -90,7 +93,10 @@ export default function ProductsPage() {
   const [formStock, setFormStock] = useState('');
   const [formUnit, setFormUnit] = useState('');
   const [formDesc, setFormDesc] = useState('');
+  const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [generateSuccess, setGenerateSuccess] = useState(false);
   const [formImages, setFormImages] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -136,12 +142,47 @@ export default function ProductsPage() {
     setFormVariants(prev => prev.map(v => v.tempId === tempId ? { ...v, [field]: value } : v));
   };
 
+  const handleGenerateDesc = async () => {
+    if (!formName) {
+      toast.error('Masukkan nama produk terlebih dahulu');
+      return;
+    }
+    try {
+      setGeneratingDesc(true);
+      const catName = categories.find(c => c.id === productCategory)?.name || '';
+      const res = await apiPost<any>('/ai/generate-desc', { productName: formName, categoryName: catName });
+      if (res && res.description) {
+        setFormDesc(res.description);
+        toast.success('Deskripsi berhasil di-generate!');
+        setGenerateSuccess(true);
+        setTimeout(() => setGenerateSuccess(false), 2000);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal generate AI');
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
+
   const resetForm = () => {
     setEditingId(null);
     setFormName(''); setFormPrice(''); setFormCostPrice(''); setFormDiscountPrice('');
     setFormStock(''); setFormUnit(''); setFormDesc(''); setFormVariants([]);
-    setFormImages([]);
+    setFormImages([]); setExistingImages([]);
     setProductCategory(categories[0]?.id || '');
+  };
+
+  const handleCloseModal = async () => {
+    if (formName || formPrice || formImages.length > 0) {
+      const ok = await confirm({
+        title: 'Tutup Form?',
+        message: 'Anda memiliki perubahan yang belum disimpan. Yakin ingin menutup form?',
+        confirmLabel: 'Tutup',
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    setShowModal(false);
   };
 
   const openModal = () => { resetForm(); setShowModal(true); };
@@ -156,6 +197,8 @@ export default function ProductsPage() {
     setFormStock(String(p.stockQty || 0));
     setFormUnit(p.unit || 'pcs');
     setFormDesc(p.description || '');
+    setExistingImages(p.images || []);
+    setFormImages([]);
     setFormVariants(p.variants ? p.variants.map(v => ({
       tempId: v.id,
       name: v.name,
@@ -438,11 +481,11 @@ export default function ProductsPage() {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={handleCloseModal}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3><span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>{editingId ? 'edit' : 'add_shopping_cart'}</span> {editingId ? 'Edit Produk' : 'Tambah Produk'}</h3>
-              <button className="btn btn-outline btn-icon" onClick={() => setShowModal(false)}><span className="material-symbols-outlined">close</span></button>
+              <button className="btn btn-outline btn-icon" onClick={handleCloseModal}><span className="material-symbols-outlined">close</span></button>
             </div>
             <div className="modal-body">
               <div className="form-group"><label className="form-label">Nama Produk</label><input className="form-input" placeholder="Masukkan nama produk" value={formName} onChange={e => setFormName(e.target.value)} /></div>
@@ -456,17 +499,23 @@ export default function ProductsPage() {
               </div>
               <div style={formVariants.length > 0 ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                  <div className="form-group"><label className="form-label">Harga Beli (Rp)</label><input className="form-input" type="number" placeholder="HPP" value={formCostPrice} onChange={e => setFormCostPrice(e.target.value)} /></div>
+                  <div className="form-group">
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      Harga Beli (Rp)
+                      <div className="tooltip-wrapper">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--text-hint)', cursor: 'help', pointerEvents: 'auto' }}>info</span>
+                        <span className="tooltip-text">Harga beli hanya terlihat di admin panel. Tidak ditampilkan ke pelanggan.</span>
+                      </div>
+                    </label>
+                    <input className="form-input" type="number" placeholder="HPP" value={formCostPrice} onChange={e => setFormCostPrice(e.target.value)} />
+                  </div>
                   <div className="form-group"><label className="form-label">Harga Jual (Rp)</label><input className="form-input" type="number" placeholder="0" value={formPrice} onChange={e => setFormPrice(e.target.value)} /></div>
                   <div className="form-group"><label className="form-label">Harga Diskon (Rp)</label><input className="form-input" type="number" placeholder="Opsional" value={formDiscountPrice} onChange={e => setFormDiscountPrice(e.target.value)} /></div>
                 </div>
                 {formVariants.length > 0 && (
                   <div style={{ fontSize: 12, color: 'var(--warning)', marginTop: -8, marginBottom: 12 }}>* Harga utama diabaikan karena produk memiliki varian.</div>
                 )}
-                <div className="alert info" style={{ fontSize: 12 }}>
-                  <span className="material-symbols-outlined">info</span>
-                  Harga beli hanya terlihat di admin panel. Tidak ditampilkan ke pelanggan.
-                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div className="form-group"><label className="form-label">Stok</label><input className="form-input" type="number" placeholder="0" value={formStock} onChange={e => setFormStock(e.target.value)} /></div>
                   <div className="form-group">
@@ -483,15 +532,58 @@ export default function ProductsPage() {
                   </div>
                 </div>
               </div>
-              <div className="form-group"><label className="form-label">Deskripsi</label><textarea className="form-input" rows={3} placeholder="Deskripsi produk..." value={formDesc} onChange={e => setFormDesc(e.target.value)} /></div>
+              <div className="form-group">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <label className="form-label" style={{ marginBottom: 0 }}>Deskripsi</label>
+                  <button 
+                    type="button" 
+                    onClick={handleGenerateDesc}
+                    disabled={generatingDesc || generateSuccess}
+                    className="btn btn-outline btn-icon ai-generate-btn" 
+                    title="Generate Deskripsi dengan AI"
+                    style={{ borderRadius: 100, borderColor: generateSuccess ? 'var(--success)' : 'transparent', background: generateSuccess ? 'var(--success-surface)' : 'var(--surface)' }}
+                  >
+                    {generatingDesc ? (
+                      <span className="spinner" style={{ width: 18, height: 18, borderBottomColor: 'var(--primary)' }}></span>
+                    ) : generateSuccess ? (
+                      <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--success)' }}>check_circle</span>
+                    ) : (
+                      <span className="material-symbols-outlined gradient-icon" style={{ fontSize: 20 }}>auto_awesome</span>
+                    )}
+                  </button>
+                </div>
+                <RichTextEditor 
+                  value={formDesc} 
+                  onChange={setFormDesc} 
+                  placeholder={generatingDesc ? "Sedang di-generate oleh AI..." : "Deskripsi produk..."} 
+                  loading={generatingDesc} 
+                />
+              </div>
 
               <div className="form-group">
                 <label className="form-label">
                   Foto Produk
                 </label>
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
+                  {/* Existing images from server */}
+                  {existingImages.map((url, idx) => (
+                    <div key={`existing-${idx}`} style={{ 
+                      width: 80, height: 80, borderRadius: 'var(--radius-md)', 
+                      background: 'var(--divider)', position: 'relative', overflow: 'hidden',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}>
+                      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button type="button" 
+                        onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Newly uploaded images */}
                   {formImages.map((file, idx) => (
-                    <div key={idx} style={{ 
+                    <div key={`new-${idx}`} style={{ 
                       width: 80, height: 80, borderRadius: 'var(--radius-md)', 
                       background: 'var(--divider)', position: 'relative', overflow: 'hidden',
                       boxShadow: 'var(--shadow-sm)'
@@ -505,44 +597,47 @@ export default function ProductsPage() {
                     </div>
                   ))}
 
-                  {formImages.length === 0 && (
-                    <label className="upload-tile hover-scale" style={{ 
-                      width: 80, height: 80, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                      cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
-                      background: 'var(--primary-surface)'
-                    }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 24, marginBottom: 4, color: 'var(--primary-light)' }}>add_photo_alternate</span>
-                      <span style={{ fontSize: 10, fontWeight: 500 }}>Upload Foto</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        style={{ display: 'none' }} 
-                        onChange={e => setFormImages(e.target.files?.length ? [e.target.files[0]] : [])} 
-                      />
-                    </label>
-                  )}
+                  {/* Upload button - always visible so user can add more */}
+                  <label className="upload-tile hover-scale" style={{ 
+                    width: 80, height: 80, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                    cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
+                    background: 'var(--primary-surface)'
+                  }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 24, marginBottom: 4, color: 'var(--primary-light)' }}>add_photo_alternate</span>
+                    <span style={{ fontSize: 10, fontWeight: 500 }}>{existingImages.length > 0 || formImages.length > 0 ? 'Ganti' : 'Upload'}</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      style={{ display: 'none' }} 
+                      onChange={e => {
+                        if (e.target.files?.length) {
+                          setFormImages([e.target.files[0]]);
+                          setExistingImages([]);
+                        }
+                      }} 
+                    />
+                  </label>
                 </div>
               </div>
 
               {/* Variant Section */}
               <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 16, marginTop: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <label className="form-label" style={{ margin: 0 }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18, verticalAlign: -3, marginRight: 4 }}>tune</span>
+                  <label className="form-label" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, verticalAlign: -3 }}>tune</span>
                     Varian Produk ({formVariants.length})
+                    <div className="tooltip-wrapper">
+                      <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--text-hint)', cursor: 'help' }}>info</span>
+                      <span className="tooltip-text">Tambahkan varian jika produk memiliki pilihan ukuran, kemasan, atau tipe.</span>
+                    </div>
                   </label>
                   <button className="btn btn-outline btn-sm" type="button" onClick={addFormVariant}>
                     <span className="material-symbols-outlined">add</span> Tambah Varian
                   </button>
                 </div>
 
-                {formVariants.length === 0 ? (
-                  <div className="alert info" style={{ fontSize: 12 }}>
-                    <span className="material-symbols-outlined">info</span>
-                    Tambahkan varian jika produk memiliki pilihan ukuran, kemasan, atau tipe.
-                  </div>
-                ) : (
+                {formVariants.length === 0 ? null : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {formVariants.map((v, idx) => (
                       <div key={v.tempId} style={{ padding: 14, background: 'var(--primary-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--divider)' }}>

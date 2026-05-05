@@ -25,6 +25,7 @@ import notificationRoutes from './routes/notification';
 import adminRoutes from './routes/admin';
 import paymentRoutes from './routes/payment';
 import promoRoutes from './routes/promo';
+import aiRoutes from './routes/ai';
 
 const app = express();
 const server = createServer(app);
@@ -63,6 +64,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/promos', promoRoutes);
+app.use('/api/admin/ai', aiRoutes);
 
 // 404
 app.use((req, res) => {

@@ -7,8 +7,8 @@ import DgBannerCarousel from "@/components/DgBannerCarousel";
 
 async function fetchApi(endpoint: string) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, { 
-      cache: 'no-store' 
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+      cache: 'no-store'
     });
     if (!res.ok) return null;
     return await res.json();
@@ -20,10 +20,10 @@ async function fetchApi(endpoint: string) {
 
 export default async function Home() {
   const [
-    categories, 
-    banners, 
-    featuredRes, 
-    promoRes, 
+    categories,
+    banners,
+    featuredRes,
+    promoRes,
     allRes
   ] = await Promise.all([
     fetchApi('/categories'),
@@ -44,7 +44,7 @@ export default async function Home() {
     return (
       <div className={styles.productGrid}>
         {products.map((product: any) => (
-          <DgProductCard 
+          <DgProductCard
             key={product.id}
             id={product.id}
             name={product.name}
@@ -81,7 +81,7 @@ export default async function Home() {
           <section className={styles.categoriesSection}>
             <div className={styles.categoriesWrapper}>
               {categories.slice(0, 8).map((cat: any) => (
-                <Link href={`/category/${cat.id}`} key={cat.id} className={styles.categoryItem}>
+                <Link href={`/category/${cat.slug}`} key={cat.id} className={styles.categoryItem}>
                   <div className={styles.categoryIcon} style={{ backgroundColor: `${cat.bgColor}1A` }}>
                     {cat.iconUrl ? (
                       <Image src={cat.iconUrl} alt={cat.name} width={36} height={36} unoptimized />
@@ -130,7 +130,7 @@ export default async function Home() {
             </div>
             <h2 className={styles.emptyStateTitle}>Toko Sedang Disiapkan</h2>
             <p className={styles.emptyStateDesc}>
-              Produk segar dan berkualitas sedang dalam perjalanan. 
+              Produk segar dan berkualitas sedang dalam perjalanan.
               Nantikan katalog lengkap dari Dapurgizi!
             </p>
 

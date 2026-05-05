@@ -403,3 +403,24 @@
   cursor: not-allowed;
   transform: none;
 }
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px 16px 80px;
+  }
+  
+  .orderItem {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .orderImage {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .rightCol {
+    position: static;
+  }
+}

@@ -89,7 +89,7 @@ export async function adminGetProducts(req: AuthRequest, res: Response, next: Ne
         where, skip, take: parseInt(limit as string),
         orderBy: { createdAt: 'desc' },
         include: {
-          category: { select: { name: true } },
+          category: { select: { id: true, name: true } },
           variants: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } },
           _count: { select: { orderItems: true } },
         },
@@ -114,7 +114,7 @@ const parseProductData = (body: any) => {
   if (data.discountPrice !== undefined) data.discountPrice = parseInt(data.discountPrice) || null;
   if (data.weightGram !== undefined) data.weightGram = parseInt(data.weightGram) || null;
   if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 1;
-  
+
   // Convert booleans
   if (data.isActive !== undefined) data.isActive = String(data.isActive) === 'true';
   if (data.isFeatured !== undefined) data.isFeatured = String(data.isFeatured) === 'true';
@@ -253,13 +253,19 @@ export async function adminGetCategories(req: AuthRequest, res: Response, next: 
   } catch (err) { next(err); }
 }
 
+function generateSlug(text: string) {
+  return text.toString().toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-');
+}
+
 export async function adminCreateCategory(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     let iconUrl: string | undefined;
     if (req.file) iconUrl = await processAndUploadImage(req.file, 'categories');
 
+    let slug = generateSlug(req.body.name);
+
     const category = await prisma.category.create({
-      data: { ...req.body, iconUrl },
+      data: { ...req.body, iconUrl, slug },
     });
     res.status(201).json(category);
   } catch (err) { next(err); }
@@ -272,9 +278,29 @@ export async function adminUpdateCategory(req: AuthRequest, res: Response, next:
 
     const data: any = { ...req.body };
     if (iconUrl) data.iconUrl = iconUrl;
+    if (data.name) {
+      data.slug = generateSlug(data.name);
+    }
 
     const category = await prisma.category.update({ where: { id: req.params.id }, data });
     res.json(category);
+  } catch (err) { next(err); }
+}
+
+export async function adminReorderCategories(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      throw new AppError('orderedIds wajib berupa array', 400);
+    }
+
+    await prisma.$transaction(
+      orderedIds.map((id: string, index: number) =>
+        prisma.category.update({ where: { id }, data: { sortOrder: index + 1 } })
+      )
+    );
+
+    res.json({ message: 'Urutan kategori diperbarui' });
   } catch (err) { next(err); }
 }
 
@@ -1015,18 +1041,18 @@ export async function adminUpdateDeliverySlotsByDay(req: AuthRequest, res: Respo
   try {
     const dayOfWeek = parseInt(req.params.day);
     const { slots, maxOrders, cutoffHours } = req.body;
-    
+
     // slots is an array of: { label, startTime, endTime, isActive }
-    
+
     const results = [];
-    
+
     for (const slotDef of slots) {
       const { label, startTime, endTime, isActive } = slotDef;
-      
+
       const existing = await prisma.deliverySlot.findFirst({
         where: { dayOfWeek, label }
       });
-      
+
       if (existing) {
         if (isActive) {
           // Update to active with new times
@@ -1060,7 +1086,7 @@ export async function adminUpdateDeliverySlotsByDay(req: AuthRequest, res: Respo
         }
       }
     }
-    
+
     res.json({ message: 'Jadwal berhasil diperbarui', slots: results });
   } catch (err) { next(err); }
 }
@@ -1069,7 +1095,7 @@ export async function adminUpdateDeliverySlot(req: AuthRequest, res: Response, n
   try {
     const { id } = req.params;
     const { dayOfWeek, label, startTime, endTime, maxOrders, cutoffHours, isActive } = req.body;
-    
+
     const slot = await prisma.deliverySlot.update({
       where: { id },
       data: {
@@ -1089,7 +1115,7 @@ export async function adminUpdateDeliverySlot(req: AuthRequest, res: Response, n
 export async function adminDeleteDeliverySlot(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
-    
+
     const count = await prisma.order.count({ where: { deliverySlotId: id } });
     if (count > 0) {
       // Soft delete

@@ -265,6 +265,9 @@
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding-bottom: 100px;
+  }
   .grid {
     grid-template-columns: 1fr;
     gap: 32px;
@@ -284,5 +287,9 @@
     z-index: 50;
     background-color: white;
     padding: 16px;
+  }
+  .relatedGrid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
   }
 }

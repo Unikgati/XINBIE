@@ -54,10 +54,10 @@ export default function Navbar() {
 
         {/* Search Bar */}
         <div className={styles.searchContainer}>
-          <input 
-            type="text" 
-            placeholder="Cari sayur, daging, buah..." 
-            className={styles.searchInput} 
+          <input
+            type="text"
+            placeholder="Cari sayur, daging, buah..."
+            className={styles.searchInput}
           />
           <button className={styles.searchButton}>
             <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>search</span>
@@ -66,18 +66,24 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className={styles.actionsContainer}>
-          <Link href="/cart" className={styles.cartButton}>
+          {authed && (
+            <Link href="/notifications" className={styles.iconButton}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>notifications</span>
+            </Link>
+          )}
+
+          <Link href="/cart" className={`${styles.iconButton} ${styles.cartIconButton}`}>
             <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>shopping_cart</span>
             {mounted && totalQty > 0 && (
-              <span className={styles.cartBadge}>
+              <span className={styles.badge}>
                 {totalQty > 99 ? '99+' : totalQty}
               </span>
             )}
           </Link>
-          
+
           {authed && user ? (
             <div className={styles.profileContainer} ref={dropdownRef}>
-              <button 
+              <button
                 className={styles.avatarButton}
                 onClick={() => setDropdownOpen(!dropdownOpen)}
               >

@@ -50,7 +50,7 @@ html, body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   min-height: 100vh;
@@ -81,4 +81,28 @@ button {
   background: none;
   cursor: pointer;
   font-family: inherit;
+}
+
+/* Shimmer Loading Effect Utilities */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.shimmer {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(to right, #f6f7f8 4%, #edeef1 25%, #f6f7f8 36%);
+  background-size: 1000px 100%;
+}
+
+.shimmer-rounded {
+  border-radius: 8px;
+}
+
+.shimmer-circle {
+  border-radius: 50%;
 }
