@@ -90,13 +90,23 @@ export default function CartPage() {
                 {cartItems.map((item, idx) => (
                   <div key={`${item.productId}-${item.variantId || 'base'}-${idx}`} className={styles.cartItem}>
                     <div className={styles.itemImage}>
-                      <Image 
-                        src={item.imageUrl || '/images/placeholder.png'} 
-                        alt={item.name} 
-                        fill 
-                        style={{ objectFit: 'cover' }} 
-                        unoptimized
-                      />
+                      {item.imageUrl ? (
+                        <Image 
+                          src={item.imageUrl} 
+                          alt={item.name} 
+                          fill 
+                          style={{ objectFit: 'cover' }} 
+                          unoptimized
+                        />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f5' }}>
+                          <svg viewBox="0 0 24 24" width="32" height="32" stroke="#bdbdbd" strokeWidth="1" fill="none">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                          </svg>
+                        </div>
+                      )}
                     </div>
                     <div className={styles.itemDetails}>
                       <div className={styles.itemName} title={item.name}>{item.name}</div>

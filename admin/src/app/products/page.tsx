@@ -647,6 +647,7 @@ export default function ProductsPage() {
                       <span className="tooltip-text">Tambahkan varian jika produk memiliki pilihan ukuran, kemasan, atau tipe.</span>
                     </div>
                   </label>
+
                   <button className="btn btn-outline btn-sm" type="button" onClick={addFormVariant}>
                     <span className="material-symbols-outlined">add</span> Tambah Varian
                   </button>

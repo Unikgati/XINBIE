@@ -4,6 +4,7 @@ import Image from 'next/image';
 import styles from "./page.module.css";
 import DgProductCard from "@/components/DgProductCard";
 import DgBannerCarousel from "@/components/DgBannerCarousel";
+import InfiniteProductList from "@/components/InfiniteProductList";
 
 async function fetchApi(endpoint: string) {
   try {
@@ -29,13 +30,14 @@ export default async function Home() {
     fetchApi('/categories'),
     fetchApi('/banners'),
     fetchApi('/products?featured=true&limit=4'),
-    fetchApi('/products?promo=true&limit=4'),
+    fetchApi('/products?promo=true&limit=5'),
     fetchApi('/products?limit=8')
   ]);
 
   const featuredProducts = featuredRes?.data || [];
   const promoProducts = promoRes?.data || [];
   const allProducts = allRes?.data || [];
+  const allMeta = allRes?.meta || { total: 0, page: 1, limit: 8, totalPages: 1 };
 
   const renderProductGrid = (products: any[]) => {
     if (!products || products.length === 0) {
@@ -116,7 +118,7 @@ export default async function Home() {
         {allProducts.length > 0 && (
           <section className={styles.productSection}>
             <h2 className={styles.sectionTitle}>Belanja Harianmu 🛒</h2>
-            {renderProductGrid(allProducts)}
+            <InfiniteProductList initialProducts={allProducts} initialMeta={allMeta} />
           </section>
         )}
 

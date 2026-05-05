@@ -60,7 +60,7 @@ Tanpa markdown block (\`\`\`html). Langsung berikan string HTML-nya. Jangan terl
       htmlDesc = htmlDesc.replace(/^```\n?/, '').replace(/\n?```$/, '');
     }
 
-    res.json({ description: htmlDesc });
+  res.json({ description: htmlDesc });
   } catch (err: any) {
     console.error('AI Gen Error:', err);
     res.status(500).json({ message: 'Terjadi kesalahan internal saat memanggil AI.' });
