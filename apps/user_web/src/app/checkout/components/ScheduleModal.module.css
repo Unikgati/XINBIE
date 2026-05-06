@@ -1,0 +1,219 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end; /* Bottom sheet look on mobile */
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@media (min-width: 768px) {
+  .overlay {
+    align-items: center; /* Center modal on desktop */
+    animation: none; /* No animation on desktop */
+  }
+}
+
+.modal {
+  background-color: white;
+  width: 100%;
+  max-width: 500px;
+  border-radius: 24px 24px 0 0; /* Rounded top for bottom sheet */
+  padding: 0;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .modal {
+    border-radius: 24px;
+    max-height: 80vh;
+    animation: none; /* No animation on desktop */
+  }
+}
+
+.header {
+  padding: 20px 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.handle {
+  width: 40px;
+  height: 4px;
+  background-color: #E0E0E0;
+  border-radius: 2px;
+  align-self: center;
+  margin-bottom: -4px;
+}
+
+@media (min-width: 768px) {
+  .handle {
+    display: none;
+  }
+}
+
+.titleGroup {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+.closeBtn {
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px 20px;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+  margin-top: 8px;
+}
+
+/* Date Picker */
+.dateList {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none; /* Hide scrollbar for clean look */
+}
+
+.dateList::-webkit-scrollbar {
+  display: none;
+}
+
+.dateItem {
+  min-width: 64px;
+  height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.dateItemActive {
+  background-color: var(--color-primary-action);
+  color: white;
+}
+
+.dateItemInactive {
+  background-color: #F5F5F5;
+  color: var(--color-text-primary);
+}
+
+.dayLabel {
+  font-size: 10px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.dateValue {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Slots */
+.slotList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.slotItem {
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1.5px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.slotItemActive {
+  background-color: var(--color-primary-surface);
+  border-color: var(--color-primary-action);
+}
+
+.slotItemInactive {
+  background-color: #F5F5F5;
+}
+
+.slotLabel {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.slotItemActive .slotLabel {
+  color: var(--color-primary-dark);
+}
+
+.slotTime {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.footer {
+  padding: 16px 20px 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.confirmBtn {
+  width: 100%;
+  background-color: var(--color-primary-action);
+  color: white;
+  border: none;
+  border-radius: 100px;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.confirmBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

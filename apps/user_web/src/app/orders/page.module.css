@@ -243,17 +243,16 @@
 .orderCard {
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  padding: 24px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
   background-color: white;
-  transition: box-shadow 0.2s, border-color 0.2s;
+  transition: all 0.2s;
   text-decoration: none;
 }
 
 .orderCard:hover {
-  border-color: var(--color-primary);
+  border-color: var(--color-primary-light);
   box-shadow: var(--shadow-sm);
 }
 
@@ -261,103 +260,101 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 16px;
-  border-bottom: 1px dashed var(--color-divider);
 }
 
 .orderHeaderLeft {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
-.orderIcon {
-  color: var(--color-primary);
+.orderIconWrapper {
+  width: 36px;
+  height: 36px;
+  background-color: var(--color-primary-surface);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary-dark);
 }
 
 .orderCode {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-primary-dark);
   margin: 0;
 }
 
 .orderDate {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   margin: 0;
 }
 
 .badge {
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 700;
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--color-divider);
+  margin: 12px 0;
 }
 
 .orderBody {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
 }
 
-.itemImage {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1px solid var(--color-border);
-}
-
-.itemDetails {
+.itemSummary {
   flex: 1;
+  min-width: 0;
 }
 
-.itemTitle {
-  font-size: 16px;
-  font-weight: 600;
+.itemNames {
+  font-size: 14px;
+  font-weight: 500;
   color: var(--color-text-primary);
   margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.itemSubtitle {
-  font-size: 14px;
-  color: var(--color-text-secondary);
+.itemCount {
+  font-size: 12px;
+  color: var(--color-text-hint);
   margin: 0;
 }
 
-.orderFooter {
+.orderTotal {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.totalInfo {
+  text-align: right;
 }
 
 .totalLabel {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
   color: var(--color-text-secondary);
   margin: 0;
 }
 
 .totalValue {
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--color-primary-dark);
   margin: 0;
 }
 
-.payBtn {
-  background-color: var(--color-primary);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background-color 0.2s;
-  display: inline-block;
-}
-
-.payBtn:hover {
-  background-color: var(--color-primary-dark);
-}

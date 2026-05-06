@@ -1,0 +1,31 @@
+.container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+}
+
+.item {
+  color: var(--color-primary-dark);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.item:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.current {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.separator {
+  color: var(--color-text-hint);
+  font-size: 12px;
+  user-select: none;
+}

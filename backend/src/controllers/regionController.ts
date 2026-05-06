@@ -12,7 +12,7 @@ export async function getProvinces(req: Request, res: Response, next: NextFuncti
       try {
         const response = await fetch('https://raw.githubusercontent.com/emsifa/api-wilayah-indonesia/master/static/api/provinces.json');
         if (response.ok) {
-          const apiProvinces = await response.json();
+          const apiProvinces = await response.json() as any[];
           if (apiProvinces && apiProvinces.length > 0) {
             await prisma.province.createMany({
               data: apiProvinces.map((p: any) => ({ id: p.id, name: p.name })),
@@ -48,7 +48,7 @@ export async function getCities(req: Request, res: Response, next: NextFunction)
       try {
         const response = await fetch(`https://raw.githubusercontent.com/emsifa/api-wilayah-indonesia/master/static/api/regencies/${provinceId}.json`);
         if (response.ok) {
-          const apiCities = await response.json();
+          const apiCities = await response.json() as any[];
           if (apiCities && apiCities.length > 0) {
             await prisma.city.createMany({
               data: apiCities.map((c: any) => ({
@@ -91,7 +91,7 @@ export async function getDistricts(req: Request, res: Response, next: NextFuncti
       try {
         const response = await fetch(`https://raw.githubusercontent.com/emsifa/api-wilayah-indonesia/master/static/api/districts/${cityId}.json`);
         if (response.ok) {
-          const apiDistricts = await response.json();
+          const apiDistricts = await response.json() as any[];
           if (apiDistricts && apiDistricts.length > 0) {
             await prisma.district.createMany({
               data: apiDistricts.map((d: any) => ({
@@ -136,7 +136,7 @@ export async function getVillages(req: Request, res: Response, next: NextFunctio
       try {
         const response = await fetch(`https://raw.githubusercontent.com/emsifa/api-wilayah-indonesia/master/static/api/villages/${districtId}.json`);
         if (response.ok) {
-          const apiVillages = await response.json();
+          const apiVillages = await response.json() as any[];
           if (apiVillages && apiVillages.length > 0) {
             await prisma.village.createMany({
               data: apiVillages.map((v: any) => ({

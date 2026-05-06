@@ -56,12 +56,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  message: { message: 'Terlalu banyak request, coba lagi nanti' },
-});
-app.use('/api/', limiter);
+import { apiLimiter } from './middleware/rateLimit';
+app.use('/api/', apiLimiter);
 
 // Health check
 app.get('/health', (req, res) => {

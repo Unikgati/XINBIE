@@ -7,6 +7,7 @@ import styles from './page.module.css';
 import { useAuthStore, User } from '@/store/authStore';
 import { useSnackbarStore } from '@/store/snackbarStore';
 import { api } from '@/lib/api';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -71,6 +72,7 @@ export default function ProfilePage() {
 
   return (
     <div className={`app-container ${styles.container}`}>
+      <Breadcrumbs items={[{ label: 'Beranda', href: '/' }, { label: 'Profil' }]} />
       <div className={styles.profileGrid}>
         
         {/* Sidebar */}

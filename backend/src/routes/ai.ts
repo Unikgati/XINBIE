@@ -60,7 +60,7 @@ PENTING: KEMBALIKAN OUTPUT HANYA DALAM BENTUK JSON murni (TANPA markdown \`\`\`j
       })
     });
 
-    const data = await response.json();
+    const data = await response.json() as any;
     
     if (!response.ok) {
       console.error('Kimi API Error:', data);

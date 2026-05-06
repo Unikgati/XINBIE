@@ -48,4 +48,7 @@ export const config = {
   nominatim: {
     url: process.env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org',
   },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+  },
 };

@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import styles from './page.module.css';
 import { useSnackbarStore } from '@/store/snackbarStore';
 import { getSocket } from '@/lib/socket';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function PaymentPage() {
   const { id } = useParams();
@@ -204,6 +205,13 @@ export default function PaymentPage() {
   return (
     <main className={styles.main}>
       <div className={`app-container ${styles.container}`}>
+        <Breadcrumbs 
+          items={[
+            { label: 'Beranda', href: '/' }, 
+            { label: 'Pesanan Saya', href: '/orders' }, 
+            { label: 'Pembayaran' }
+          ]} 
+        />
         {/* Progress Header */}
         <div className={styles.pageHeader}>
           <div className={styles.headerInfo}>

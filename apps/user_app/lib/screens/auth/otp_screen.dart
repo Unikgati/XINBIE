@@ -21,9 +21,41 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   final _pinController = TextEditingController();
   final _focusNode = FocusNode();
   bool _loading = false;
+  bool _isResending = false;
+  
+  Timer? _timer;
+  int _secondsRemaining = 60;
+  bool _canResend = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    setState(() {
+      _canResend = false;
+      _secondsRemaining = 60;
+    });
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining == 0) {
+        setState(() {
+          _canResend = true;
+          _timer?.cancel();
+        });
+      } else {
+        setState(() {
+          _secondsRemaining--;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _pinController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -173,7 +205,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
                   ),
                   GestureDetector(
-                    onTap: () async {
+                    onTap: (_canResend && !_isResending) ? () async {
+                      setState(() => _isResending = true);
                       try {
                         await ref.read(authRepositoryProvider).resendOtp(
                           email: widget.email,
@@ -181,16 +214,21 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                         );
                         if (mounted) {
                           DgSnackbar.showSuccess(context, message: 'OTP baru telah dikirim');
+                          _startTimer();
                         }
                       } catch (e) {
                         if (mounted) {
                           DgSnackbar.showError(context, message: 'Gagal', error: e);
                         }
+                      } finally {
+                        if (mounted) setState(() => _isResending = false);
                       }
-                    },
+                    } : null,
                     child: Text(
-                      'Kirim Ulang',
-                      style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
+                      _canResend ? 'Kirim Ulang' : 'Kirim Ulang ($_secondsRemaining)',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: (_canResend && !_isResending) ? AppColors.primary : AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ],

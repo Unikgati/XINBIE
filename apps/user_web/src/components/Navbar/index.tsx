@@ -43,8 +43,17 @@ export default function Navbar() {
     router.push('/login');
   };
 
+  // Routes where we want to hide header on mobile to be more "app-like"
+  const isAppFlow = 
+    pathname.startsWith('/cart') || 
+    pathname.startsWith('/checkout') || 
+    pathname.startsWith('/payment') || 
+    pathname.startsWith('/orders/') || 
+    pathname.startsWith('/product/') || 
+    pathname.startsWith('/profile');
+
   return (
-    <nav className={styles.navbar}>
+    <nav className={`${styles.navbar} ${isAppFlow ? styles.hideOnMobile : ''}`}>
       <div className={styles.navContainer}>
         {/* Logo */}
         <Link href="/" className={styles.logo}>

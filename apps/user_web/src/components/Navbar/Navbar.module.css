@@ -298,4 +298,8 @@
   .cartIconButton {
     display: none !important;
   }
+
+  .hideOnMobile {
+    display: none !important;
+  }
 }

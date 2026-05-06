@@ -12,6 +12,7 @@ import { useCartStore } from '@/store/cartStore';
 import { useSnackbarStore } from '@/store/snackbarStore';
 import ProductImageGallery from './ProductImageGallery';
 import CookingVideoSection from './CookingVideoSection';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Variant {
   id: string;
@@ -129,9 +130,13 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
 
   return (
     <div className={styles.container}>
-      <div className={styles.breadcrumb}>
-        <Link href="/">Beranda</Link> &gt; <Link href={`/category/${product.categoryName}`}>{product.categoryName || 'Produk'}</Link> &gt; <span style={{color: 'var(--color-text-primary)'}}>{product.name}</span>
-      </div>
+      <Breadcrumbs 
+        items={[
+          { label: 'Beranda', href: '/' },
+          { label: product.categoryName || 'Produk', href: `/category/${product.categoryName}` },
+          { label: product.name }
+        ]} 
+      />
 
       <div className={styles.grid}>
         {/* Left: Images */}
@@ -310,6 +315,39 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
           </div>
         </section>
       )}
+      {/* Mobile Sticky Footer */}
+      <div className={styles.mobileStickyFooter}>
+        <div className={styles.stickyTopRow}>
+          <div className={styles.stickyPriceCol}>
+            <span className={styles.stickyPriceLabel}>Sub total:</span>
+            <span className={styles.stickyPriceValue}>Rp {formatRp(displayPrice * quantity)}</span>
+          </div>
+          <DgQuantitySelector 
+            quantity={quantity} 
+            onChanged={setQuantity} 
+            min={1} 
+            max={product.isUnlimitedStock ? 99 : product.stockQty}
+            large
+          />
+        </div>
+        <div className={styles.stickyBottomRow}>
+          <button 
+            className={styles.stickyAddToCartBtn} 
+            disabled={isOutOfStock} 
+            onClick={handleAddToCart}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
+            Keranjang
+          </button>
+          <button 
+            className={styles.stickyBuyNowBtn} 
+            disabled={isOutOfStock} 
+            onClick={handleBuyNow}
+          >
+            Beli Langsung
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

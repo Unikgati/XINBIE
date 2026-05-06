@@ -6,21 +6,22 @@ import Link from 'next/link';
 import styles from './page.module.css';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 function getStatusBadge(status: string) {
   switch (status) {
-    case 'WAITING_PAYMENT': return { label: 'Menunggu Pembayaran', icon: '📋' };
+    case 'WAITING_PAYMENT': return { label: 'Menunggu Pembayaran', icon: 'receipt_long' };
     case 'RECEIVED':
-    case 'PAID': return { label: 'Pesanan Diterima', icon: '💳' };
+    case 'PAID': return { label: 'Pesanan Diterima', icon: 'account_balance_wallet' };
     case 'PROCESSING':
-    case 'PREPARING': return { label: 'Sedang Disiapkan', icon: '📦' };
+    case 'PREPARING': return { label: 'Sedang Disiapkan', icon: 'inventory_2' };
     case 'WAITING_DRIVER':
-    case 'READY_FOR_DELIVERY': return { label: 'Menunggu Kurir', icon: '🚚' };
-    case 'IN_DELIVERY': return { label: 'Sedang Dikirim', icon: '🚚' };
+    case 'READY_FOR_DELIVERY': return { label: 'Menunggu Kurir', icon: 'local_shipping' };
+    case 'IN_DELIVERY': return { label: 'Sedang Dikirim', icon: 'local_shipping' };
     case 'DELIVERED':
-    case 'COMPLETED': return { label: 'Selesai', icon: '✅' };
-    case 'CANCELLED': return { label: 'Dibatalkan', icon: '❌' };
-    default: return { label: status, icon: '📋' };
+    case 'COMPLETED': return { label: 'Selesai', icon: 'where_to_vote' };
+    case 'CANCELLED': return { label: 'Dibatalkan', icon: 'cancel' };
+    default: return { label: status, icon: 'receipt_long' };
   }
 }
 
@@ -105,12 +106,14 @@ export default function OrderDetailPage() {
 
   return (
     <div className={`app-container ${styles.container}`}>
-      <Link href="/orders" className={styles.backLink}>
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none">
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-        Kembali ke Pesanan
-      </Link>
+      <Breadcrumbs 
+        items={[
+          { label: 'Beranda', href: '/' }, 
+          { label: 'Profil', href: '/profile' }, 
+          { label: 'Pesanan Saya', href: '/orders' }, 
+          { label: `Detail Pesanan` }
+        ]} 
+      />
 
       <div className={styles.grid}>
         {/* Left Column */}
@@ -118,7 +121,7 @@ export default function OrderDetailPage() {
           {/* Status Card */}
           <div className={styles.statusCard}>
             <h2 className={styles.statusLabel}>
-              <span>{badge.icon}</span> {badge.label}
+              <span className="material-symbols-outlined" style={{ fontSize: '24px', verticalAlign: 'middle' }}>{badge.icon}</span> {badge.label}
             </h2>
 
             {!isCancelled && (
@@ -127,13 +130,13 @@ export default function OrderDetailPage() {
                   <React.Fragment key={i}>
                     {i > 0 && <div className={`${styles.stepLine} ${i <= step ? styles.active : ''}`} />}
                     <div className={`${styles.stepIcon} ${i <= step ? styles.active : ''}`} title={label}>
-                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none">
-                        {i === 0 && <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>}
-                        {i === 1 && <><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></>}
-                        {i === 2 && <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></>}
-                        {i === 3 && <><rect x="1" y="3" width="15" height="13" rx="2" ry="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>}
-                        {i === 4 && <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>}
-                      </svg>
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                        {i === 0 && 'receipt_long'}
+                        {i === 1 && 'account_balance_wallet'}
+                        {i === 2 && 'inventory_2'}
+                        {i === 3 && 'local_shipping'}
+                        {i === 4 && 'where_to_vote'}
+                      </span>
                     </div>
                   </React.Fragment>
                 ))}

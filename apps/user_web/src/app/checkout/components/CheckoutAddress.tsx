@@ -26,8 +26,10 @@ export default function CheckoutAddress({ address, loading }: CheckoutAddressPro
   return (
     <section className={styles.section}>
       <div className={styles.sectionHeader}>
-        <span className={styles.sectionTitle}>ALAMAT PENGIRIMAN</span>
-        <Link href="/profile/address" className={styles.addAddressBtn} style={{ padding: '6px 12px', fontSize: '12px', textDecoration: 'none' }}>
+        <div className={styles.sectionTitleGroup}>
+          <h2 className={styles.sectionTitle}>Alamat Pengiriman</h2>
+        </div>
+        <Link href="/profile/address" className={styles.sectionAction} style={{ textDecoration: 'none' }}>
           Ganti Alamat
         </Link>
       </div>
@@ -43,7 +45,7 @@ export default function CheckoutAddress({ address, loading }: CheckoutAddressPro
             <h3 className={styles.recipient}>{address.recipientName}</h3>
             <p className={styles.addressText}>
               {address.fullAddress}<br />
-              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+              <span style={{ fontSize: '12px', color: '#9E9E9E' }}>
                 {[
                   address.village?.name,
                   address.district?.name,
@@ -52,12 +54,12 @@ export default function CheckoutAddress({ address, loading }: CheckoutAddressPro
                 ].filter(Boolean).join(', ')}
               </span>
             </p>
+            <div className={styles.addressDivider}></div>
             <div className={styles.contactRow}>
-              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              <span className={styles.contactText}>{address.phoneWa}</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                person
+              </span>
+              <span className={styles.contactText}>{address.recipientName} - {address.phoneWa}</span>
             </div>
           </>
         ) : (

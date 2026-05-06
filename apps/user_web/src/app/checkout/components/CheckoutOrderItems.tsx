@@ -27,7 +27,9 @@ export default function CheckoutOrderItems({ items, totalQty }: CheckoutOrderIte
   return (
     <section className={styles.section}>
       <div className={styles.sectionHeader}>
-        <span className={styles.sectionTitle}>DETAIL PESANAN ({totalQty} Produk)</span>
+        <div className={styles.sectionTitleGroup}>
+          <h2 className={styles.sectionTitle}>Detail Pesanan ({totalQty} Produk)</h2>
+        </div>
       </div>
       <div className={styles.orderList}>
         {items.map((item, idx) => (

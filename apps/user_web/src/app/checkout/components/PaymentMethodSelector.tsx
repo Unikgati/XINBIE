@@ -118,6 +118,25 @@ export default function PaymentMethodSelector({ selectedMethod, onSelect }: Paym
             {selectedMethod === 'COD' && <div className={styles.radioInner}></div>}
           </div>
         </div>
+        
+        {!selectedMethod && (
+          <div style={{ 
+            marginTop: '16px', 
+            padding: '14px 16px', 
+            backgroundColor: '#FFEBEE', 
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <span className="material-symbols-outlined" style={{ color: '#E53935', fontSize: '20px' }}>
+              error_outline
+            </span>
+            <p style={{ margin: 0, fontSize: '13px', color: '#C62828', fontWeight: 500, lineHeight: 1.4 }}>
+              Mohon pilih metode pembayaran sebelum melanjutkan pesanan.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

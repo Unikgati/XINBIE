@@ -6,8 +6,8 @@ import Image from 'next/image';
 import styles from './page.module.css';
 import DgQuantitySelector from '@/components/DgQuantitySelector';
 import { useCartStore } from '@/store/cartStore';
-
 import DgSkeleton from '@/components/DgSkeleton';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function CartPage() {
   const [mounted, setMounted] = useState(false);
@@ -65,6 +65,7 @@ export default function CartPage() {
 
   return (
     <div className={`app-container ${styles.container}`}>
+      <Breadcrumbs items={[{ label: 'Beranda', href: '/' }, { label: 'Keranjang' }]} />
       {removedItems.length > 0 && (
         <div className={styles.removedNotice}>
           <span className={styles.removedIcon}>⚠️</span>
@@ -75,7 +76,6 @@ export default function CartPage() {
           <button className={styles.removedClose} onClick={() => setRemovedItems([])}>✕</button>
         </div>
       )}
-
       {cartItems.length === 0 ? (
         <div className={styles.emptyState}>
           <h2 className={styles.emptyTitle}>Keranjang Kosong</h2>
@@ -84,14 +84,14 @@ export default function CartPage() {
         </div>
       ) : (
         <>
-          <h1 className={styles.pageTitle}>Keranjang Belanja</h1>
-          
           <div className={styles.contentGrid}>
             <div className={styles.leftCol}>
               <div className={styles.summaryHeader}>
-                <span className={styles.itemCount}>{cartItems.length} Produk Tersimpan</span>
-                <button className={styles.clearAllBtn} onClick={clearCart}>Hapus Semua</button>
+                <span className={styles.itemCount}>{cartItems.length} Produk</span>
+                <button className={styles.clearAllBtn} onClick={clearCart}>Clear All</button>
               </div>
+              
+              <h1 className={styles.desktopPageTitle}>Keranjang Belanja</h1>
 
               <div className={styles.itemList}>
                 {cartItems.map((item, idx) => (
@@ -107,25 +107,25 @@ export default function CartPage() {
                         />
                       ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f5' }}>
-                          <svg viewBox="0 0 24 24" width="32" height="32" stroke="#bdbdbd" strokeWidth="1" fill="none">
-                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <path d="M16 10a4 4 0 0 1-8 0"></path>
-                          </svg>
+                          <span className="material-symbols-outlined" style={{ color: '#bdbdbd' }}>shopping_bag</span>
                         </div>
                       )}
                     </div>
+                    
                     <div className={styles.itemDetails}>
-                      <div className={styles.itemName} title={item.name}>{item.name}</div>
-                      <div className={styles.itemPrice}>Rp {formatRp(item.price)}</div>
-                      <div className={styles.itemUnit}>/{item.unit}</div>
-                    </div>
-                    <div className={styles.itemAction}>
-                      <DgQuantitySelector 
-                        quantity={item.quantity} 
-                        onChanged={(newQty) => updateQuantity(item.productId, newQty, item.variantId)} 
-                        compact 
-                      />
+                      <div className={styles.itemMainInfo}>
+                        <div className={styles.itemName} title={item.name}>{item.name}</div>
+                        <div className={styles.itemPrice}>Rp {formatRp(item.price)}</div>
+                        <div className={styles.itemUnit}>/{item.unit}</div>
+                      </div>
+                      
+                      <div className={styles.itemAction}>
+                        <DgQuantitySelector 
+                          quantity={item.quantity} 
+                          onChanged={(newQty) => updateQuantity(item.productId, newQty, item.variantId)} 
+                          compact 
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -158,6 +158,17 @@ export default function CartPage() {
                 </Link>
               </div>
             </div>
+          </div>
+
+          {/* Mobile Sticky Footer */}
+          <div className={styles.mobileStickyFooter}>
+            <div className={styles.stickyPriceCol}>
+              <span className={styles.stickyPriceLabel}>Grand Total</span>
+              <span className={styles.stickyPriceValue}>Rp {formatRp(totalPrice)}</span>
+            </div>
+            <Link href="/checkout" className={styles.stickyCheckoutBtn}>
+              Checkout
+            </Link>
           </div>
         </>
       )}

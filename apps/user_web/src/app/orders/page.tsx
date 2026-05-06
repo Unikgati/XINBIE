@@ -6,6 +6,7 @@ import Link from 'next/link';
 import styles from './page.module.css';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 function getStatusBadge(status: string) {
   switch (status) {
@@ -75,6 +76,13 @@ export default function OrdersPage() {
 
   return (
     <div className={`app-container ${styles.container}`}>
+      <Breadcrumbs 
+        items={[
+          { label: 'Beranda', href: '/' }, 
+          { label: 'Profil', href: '/profile' }, 
+          { label: 'Pesanan Saya' }
+        ]} 
+      />
       <div className={styles.profileGrid}>
         
         {/* Sidebar */}
@@ -170,28 +178,30 @@ export default function OrdersPage() {
             <div className={styles.orderList}>
               {displayOrders.map(order => {
                 const badge = getStatusBadge(order.orderStatus);
-                const firstItem = order.items && order.items.length > 0 ? order.items[0] : null;
-                const otherItemsCount = (order.items?.length || 0) - 1;
-                const itemsTitle = firstItem ? firstItem.productSnapshot?.name || 'Item' : 'Pesanan Kosong';
-                const itemsSubtitle = otherItemsCount > 0 ? `dan ${otherItemsCount} barang lainnya` : '';
-                const itemImage = firstItem?.productSnapshot?.images?.[0];
                 
                 return (
-                  <Link href={`/orders/${order.id}`} key={order.id} className={styles.orderCard}>
+                  <div 
+                    key={order.id} 
+                    className={styles.orderCard}
+                    onClick={() => router.push(`/orders/${order.id}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <div className={styles.orderHeader}>
                       <div className={styles.orderHeaderLeft}>
-                        <svg className={styles.orderIcon} viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">
-                          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                          <line x1="3" y1="6" x2="21" y2="6"></line>
-                          <path d="M16 10a4 4 0 0 1-8 0"></path>
-                        </svg>
+                        <div className={styles.orderIconWrapper}>
+                          <svg className={styles.orderIcon} viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2.5" fill="none">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                          </svg>
+                        </div>
                         <div>
+                          <h4 className={styles.orderCode}>Pesanan #{order.code}</h4>
                           <p className={styles.orderDate}>
                             {new Date(order.createdAt).toLocaleDateString('id-ID', { 
                               day: 'numeric', month: 'short', year: 'numeric' 
                             })}
                           </p>
-                          <h4 className={styles.orderCode}>Pesanan #{order.code}</h4>
                         </div>
                       </div>
                       <span className={styles.badge} style={{ backgroundColor: badge.bg, color: badge.color }}>
@@ -199,42 +209,26 @@ export default function OrdersPage() {
                       </span>
                     </div>
                     
+                    <div className={styles.divider}></div>
+                    
                     <div className={styles.orderBody}>
-                      {itemImage ? (
-                        <img src={itemImage} alt={itemsTitle} className={styles.itemImage} />
-                      ) : (
-                        <div className={styles.itemImage} style={{backgroundColor: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                          <svg viewBox="0 0 24 24" width="24" height="24" stroke="#9CA3AF" strokeWidth="2" fill="none">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                            <polyline points="21 15 16 10 5 21"></polyline>
-                          </svg>
-                        </div>
-                      )}
-                      <div className={styles.itemDetails}>
-                        <p className={styles.itemTitle}>{itemsTitle}</p>
-                        {itemsSubtitle && <p className={styles.itemSubtitle}>{itemsSubtitle}</p>}
-                      </div>
-                    </div>
-
-                    <div className={styles.orderFooter}>
-                      {order.orderStatus === 'WAITING_PAYMENT' && (
-                        <Link 
-                          href={`/payment/${order.id}`} 
-                          className={styles.payBtn}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Bayar Sekarang
-                        </Link>
-                      )}
-                      <div style={{textAlign: 'right', marginLeft: 'auto'}}>
-                        <p className={styles.totalLabel}>Total Belanja</p>
-                        <p className={styles.totalValue}>
-                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(order.grandTotal)}
+                      <div className={styles.itemSummary}>
+                        <p className={styles.itemNames}>
+                          {order.items?.map((i: any) => i.productSnapshot?.name || 'Item').join(', ')}
                         </p>
+                        <p className={styles.itemCount}>{order.items?.length || 0} produk</p>
+                      </div>
+                      
+                      <div className={styles.orderTotal}>
+                        <div className={styles.totalInfo}>
+                          <p className={styles.totalLabel}>Total Belanja</p>
+                          <p className={styles.totalValue}>
+                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(order.grandTotal)}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>

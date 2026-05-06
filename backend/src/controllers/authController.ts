@@ -8,6 +8,10 @@ import { AppError } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/auth';
 import { sendOTP } from '../utils/mailer';
 import redis from '../config/redis';
+import { OAuth2Client } from 'google-auth-library';
+import { config } from '../config';
+
+const googleClient = new OAuth2Client(config.google.clientId);
 
 // POST /api/auth/register
 export async function register(req: Request, res: Response, next: NextFunction) {
@@ -138,7 +142,24 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 export async function googleAuth(req: Request, res: Response, next: NextFunction) {
   try {
     const { idToken, name, email, avatarUrl, googleId } = req.body;
-    // In production: verify idToken with Google. For now, trust client.
+    
+    // Verify token if clientId is configured
+    if (config.google.clientId) {
+      try {
+        const ticket = await googleClient.verifyIdToken({
+          idToken,
+          audience: config.google.clientId,
+        });
+        const payload = ticket.getPayload();
+        if (!payload || payload.email !== email || payload.sub !== googleId) {
+          throw new AppError('Google token verification failed', 401);
+        }
+      } catch (err) {
+        throw new AppError('Invalid Google token', 401);
+      }
+    } else {
+      console.warn('⚠️ GOOGLE_CLIENT_ID not set, skipping token verification (UNSECURE)');
+    }
 
     let user = await prisma.user.findUnique({ where: { googleId } });
 

@@ -27,7 +27,7 @@ export async function getNotifications(req: AuthRequest, res: Response, next: Ne
 export async function markAsRead(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     await prisma.notification.updateMany({
-      where: { id: req.params.id, userId: req.userId! },
+      where: { id: req.params.id as string, userId: req.userId! },
       data: { isRead: true },
     });
     res.json({ message: 'Notifikasi dibaca' });

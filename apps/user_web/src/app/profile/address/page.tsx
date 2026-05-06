@@ -8,6 +8,7 @@ import MapPicker from '@/components/MapPicker';
 import styles from './page.module.css';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function AddressPage() {
   const router = useRouter();
@@ -294,6 +295,13 @@ export default function AddressPage() {
 
   return (
     <div className={`app-container ${styles.container}`}>
+      <Breadcrumbs 
+        items={[
+          { label: 'Beranda', href: '/' }, 
+          { label: 'Profil', href: '/profile' }, 
+          { label: 'Alamat Pengiriman' }
+        ]} 
+      />
       <div className={styles.profileGrid}>
         
         {/* Sidebar */}

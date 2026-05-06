@@ -9,10 +9,13 @@ import { useCartStore } from '@/store/cartStore';
 import { api } from '@/lib/api';
 import { useSnackbarStore } from '@/store/snackbarStore';
 import DgSkeleton from '@/components/DgSkeleton';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 import CheckoutAddress from './components/CheckoutAddress';
 import CheckoutOrderItems from './components/CheckoutOrderItems';
 import PaymentMethodSelector from './components/PaymentMethodSelector';
+import CheckoutSchedule from './components/CheckoutSchedule';
+import ScheduleModal from './components/ScheduleModal';
 import WhatsAppModal from './components/WhatsAppModal';
 import { useAuthStore } from '@/store/authStore';
 
@@ -24,6 +27,15 @@ export default function CheckoutPage() {
   
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [showWaModal, setShowWaModal] = useState(false);
+
+  // Schedule states
+  const [scheduledDate, setScheduledDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 2); // Default H+2
+    return d;
+  });
+  const [deliverySlot, setDeliverySlot] = useState<any>(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   
   const user = useAuthStore((s) => s.user);
   
@@ -36,7 +48,8 @@ export default function CheckoutPage() {
   const totalQty = useCartStore((s) => s.totalQuantity());
   const clearCart = useCartStore((s) => s.clearCart);
 
-  const deliveryFee = cartItems.length > 0 ? 10000 : 0;
+  const isInstant = deliverySlot?.id === 'INSTANT';
+  const deliveryFee = cartItems.length > 0 ? (isInstant ? 10000 : 5000) : 0;
   const grandTotal = subtotal + deliveryFee;
 
   const snackbar = useSnackbarStore();
@@ -82,6 +95,7 @@ export default function CheckoutPage() {
 
     if (!paymentMethod) return snackbar.show('Silakan pilih metode pembayaran', 'error');
     if (!address) return snackbar.show('Silakan tambahkan alamat pengiriman', 'error');
+    if (!deliverySlot) return snackbar.show('Silakan atur jadwal pengiriman', 'error');
 
     if (!currentUser?.phoneWa) {
       setShowWaModal(true);
@@ -96,13 +110,11 @@ export default function CheckoutPage() {
         qty: c.quantity,
       }));
 
-      const scheduledDate = new Date();
-      scheduledDate.setDate(scheduledDate.getDate() + 2);
-
       const orderData = {
         addressId: address.id,
-        deliveryType: 'REGULAR',
-        scheduledDate: scheduledDate.toISOString(),
+        deliverySlotId: isInstant ? null : deliverySlot.id,
+        scheduledDate: isInstant ? null : scheduledDate.toISOString(),
+        deliveryType: isInstant ? 'INSTANT' : 'REGULAR',
         paymentMethod: paymentMethod,
         items,
       };
@@ -153,6 +165,13 @@ export default function CheckoutPage() {
 
   return (
     <div className={`app-container ${styles.container}`}>
+      <Breadcrumbs 
+        items={[
+          { label: 'Beranda', href: '/' }, 
+          { label: 'Keranjang', href: '/cart' }, 
+          { label: 'Checkout' }
+        ]} 
+      />
       <h1 className={styles.pageTitle}>Checkout Pesanan</h1>
 
       <div className={styles.contentGrid}>
@@ -160,6 +179,12 @@ export default function CheckoutPage() {
         <div className={styles.leftCol}>
           
           <CheckoutAddress address={address} loading={loadingAddress} />
+
+          <CheckoutSchedule 
+            scheduledDate={scheduledDate} 
+            deliverySlot={deliverySlot} 
+            onTap={() => setIsScheduleModalOpen(true)} 
+          />
 
           <CheckoutOrderItems items={cartItems} totalQty={totalQty} />
 
@@ -201,7 +226,7 @@ export default function CheckoutPage() {
 
             <button 
               className={styles.checkoutBtn}
-              disabled={!paymentMethod || loading || !address}
+              disabled={!paymentMethod || loading || !address || !deliverySlot}
               onClick={handleCheckout}
             >
               {loading ? 'Memproses...' : 'Buat Pesanan'}
@@ -209,7 +234,22 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
-      
+
+      {/* Mobile Sticky Footer */}
+      <div className={styles.mobileStickyFooter}>
+        <div className={styles.stickyPriceCol}>
+          <span className={styles.stickyPriceLabel}>Grand Total</span>
+          <span className={styles.stickyPriceValue}>Rp {formatRp(grandTotal)}</span>
+        </div>
+        <button 
+          className={styles.stickyCheckoutBtn}
+          disabled={!paymentMethod || loading || !address || !deliverySlot}
+          onClick={handleCheckout}
+        >
+          {loading ? '...' : 'Buat Pesanan'}
+        </button>
+      </div>
+
       {showWaModal && (
         <WhatsAppModal 
           onSuccess={() => {
@@ -219,6 +259,18 @@ export default function CheckoutPage() {
           onClose={() => setShowWaModal(false)} 
         />
       )}
+
+      <ScheduleModal 
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        initialDate={scheduledDate}
+        initialSlot={deliverySlot}
+        onConfirm={(date, slot) => {
+          setScheduledDate(date);
+          setDeliverySlot(slot);
+          setIsScheduleModalOpen(false);
+        }}
+      />
     </div>
   );
 }
