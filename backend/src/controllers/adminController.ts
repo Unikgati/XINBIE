@@ -819,21 +819,61 @@ export async function adminDeleteBanner(req: AuthRequest, res: Response, next: N
 
 export async function adminGetPromos(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const promos = await prisma.promoCode.findMany({ orderBy: { createdAt: 'desc' } });
+    const promos = await prisma.promoCode.findMany({ 
+      include: { categories: true, products: true },
+      orderBy: { createdAt: 'desc' } 
+    });
     res.json(promos);
   } catch (err) { next(err); }
 }
 
 export async function adminCreatePromo(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const promo = await prisma.promoCode.create({ data: req.body });
+    const data = { ...req.body };
+    if (data.startAt) data.startAt = new Date(data.startAt);
+    if (data.endAt) data.endAt = new Date(data.endAt);
+    if (data.value) data.value = Number(data.value);
+    if (data.minOrder) data.minOrder = Number(data.minOrder);
+    if (data.maxDiscount) data.maxDiscount = Number(data.maxDiscount);
+    if (data.totalUsageLimit) data.totalUsageLimit = Number(data.totalUsageLimit);
+    if (data.perUserLimit) data.perUserLimit = Number(data.perUserLimit);
+    if (data.allowCod !== undefined) data.allowCod = String(data.allowCod) === 'true';
+
+    const { categoryIds, productIds, ...promoData } = data;
+
+    const promo = await prisma.promoCode.create({ 
+      data: {
+        ...promoData,
+        categories: categoryIds ? { connect: categoryIds.map((id: string) => ({ id })) } : undefined,
+        products: productIds ? { connect: productIds.map((id: string) => ({ id })) } : undefined,
+      } 
+    });
     res.status(201).json(promo);
   } catch (err) { next(err); }
 }
 
 export async function adminUpdatePromo(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const promo = await prisma.promoCode.update({ where: { id: req.params.id }, data: req.body });
+    const data = { ...req.body };
+    if (data.startAt) data.startAt = new Date(data.startAt);
+    if (data.endAt) data.endAt = new Date(data.endAt);
+    if (data.value) data.value = Number(data.value);
+    if (data.minOrder) data.minOrder = Number(data.minOrder);
+    if (data.maxDiscount) data.maxDiscount = Number(data.maxDiscount);
+    if (data.totalUsageLimit) data.totalUsageLimit = Number(data.totalUsageLimit);
+    if (data.perUserLimit) data.perUserLimit = Number(data.perUserLimit);
+    if (data.allowCod !== undefined) data.allowCod = String(data.allowCod) === 'true';
+
+    const { categoryIds, productIds, ...promoData } = data;
+
+    const promo = await prisma.promoCode.update({ 
+      where: { id: req.params.id }, 
+      data: {
+        ...promoData,
+        categories: categoryIds ? { set: categoryIds.map((id: string) => ({ id })) } : undefined,
+        products: productIds ? { set: productIds.map((id: string) => ({ id })) } : undefined,
+      }
+    });
     res.json(promo);
   } catch (err) { next(err); }
 }

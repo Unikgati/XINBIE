@@ -17,6 +17,7 @@ import PaymentMethodSelector from './components/PaymentMethodSelector';
 import CheckoutSchedule from './components/CheckoutSchedule';
 import ScheduleModal from './components/ScheduleModal';
 import WhatsAppModal from './components/WhatsAppModal';
+import VoucherModal from './components/VoucherModal';
 import { useAuthStore } from '@/store/authStore';
 
 export default function CheckoutPage() {
@@ -27,6 +28,13 @@ export default function CheckoutPage() {
   
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [showWaModal, setShowWaModal] = useState(false);
+
+  // Promo states
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<any>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
 
   // Schedule states
   const [scheduledDate, setScheduledDate] = useState<Date>(() => {
@@ -50,7 +58,7 @@ export default function CheckoutPage() {
 
   const isInstant = deliverySlot?.id === 'INSTANT';
   const deliveryFee = cartItems.length > 0 ? (isInstant ? 10000 : 5000) : 0;
-  const grandTotal = subtotal + deliveryFee;
+  const grandTotal = Math.max(0, subtotal + deliveryFee - discountAmount);
 
   const snackbar = useSnackbarStore();
 
@@ -73,6 +81,13 @@ export default function CheckoutPage() {
       fetchAddress();
     }
   }, [cartItems.length, router, loading, isSuccess]);
+  
+  // Re-validate promo if payment method changes
+  useEffect(() => {
+    if (appliedPromo && paymentMethod) {
+      handleApplyPromo(appliedPromo.code);
+    }
+  }, [paymentMethod]);
 
   const fetchAddress = async () => {
     try {
@@ -87,6 +102,45 @@ export default function CheckoutPage() {
     } finally {
       setLoadingAddress(false);
     }
+  };
+
+  const handleApplyPromo = async (code?: string) => {
+    const codeToUse = code || promoInput;
+    if (!codeToUse) return;
+
+    try {
+      setIsValidatingPromo(true);
+      const res = await api.post<any>('/promos/validate', {
+        code: codeToUse,
+        subtotal,
+        paymentMethod,
+        items: cartItems.map(item => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          qty: item.qty
+        })),
+      });
+
+      if (res.isValid) {
+        setAppliedPromo(res);
+        setDiscountAmount(res.discountAmount);
+        setPromoInput(res.code);
+        snackbar.show('Promo berhasil digunakan!', 'success');
+        setIsVoucherModalOpen(false);
+      }
+    } catch (err: any) {
+      snackbar.show(err.message || 'Kode promo tidak valid', 'error');
+      setAppliedPromo(null);
+      setDiscountAmount(0);
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setDiscountAmount(0);
+    setPromoInput('');
   };
 
   const handleCheckout = async () => {
@@ -116,6 +170,7 @@ export default function CheckoutPage() {
         scheduledDate: isInstant ? null : scheduledDate.toISOString(),
         deliveryType: isInstant ? 'INSTANT' : 'REGULAR',
         paymentMethod: paymentMethod,
+        promoCode: appliedPromo?.code || null,
         items,
       };
 
@@ -198,11 +253,42 @@ export default function CheckoutPage() {
             <h2 className={styles.summaryTitle}>Ringkasan Pesanan</h2>
 
             <div className={styles.promoBox}>
-              <div className={styles.summaryLabel} style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>Makin Hemat Pakai Promo</div>
-              <div className={styles.promoInputWrapper}>
-                <input type="text" placeholder="Masukkan kode promo..." className={styles.promoInput} />
-                <button className={styles.promoApplyBtn}>Pakai</button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <div className={styles.summaryLabel} style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>Makin Hemat Pakai Promo</div>
+                <button 
+                  className={styles.voucherPickerBtn} 
+                  onClick={() => setIsVoucherModalOpen(true)}
+                >
+                  Pilih Voucher
+                </button>
               </div>
+              <div className={styles.promoInputWrapper}>
+                <input 
+                  type="text" 
+                  placeholder="Masukkan kode promo..." 
+                  className={styles.promoInput} 
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                  disabled={!!appliedPromo}
+                />
+                {appliedPromo ? (
+                  <button className={styles.promoRemoveBtn} onClick={handleRemovePromo}>Hapus</button>
+                ) : (
+                  <button 
+                    className={styles.promoApplyBtn} 
+                    onClick={() => handleApplyPromo()}
+                    disabled={isValidatingPromo || !promoInput}
+                  >
+                    {isValidatingPromo ? '...' : 'Pakai'}
+                  </button>
+                )}
+              </div>
+              {appliedPromo && (
+                <div className={styles.appliedPromoText}>
+                  <span className="material-symbols-outlined">check_circle</span>
+                  Promo <b>{appliedPromo.code}</b> berhasil terpasang
+                </div>
+              )}
             </div>
             
             <div className={styles.summaryDivider}></div>
@@ -216,6 +302,13 @@ export default function CheckoutPage() {
               <span className={styles.summaryLabel}>Ongkos Kirim</span>
               <span className={styles.summaryValue}>Rp {formatRp(deliveryFee)}</span>
             </div>
+
+            {discountAmount > 0 && (
+              <div className={`${styles.summaryRow} ${styles.discountRow}`}>
+                <span className={styles.summaryLabel}>Diskon Promo</span>
+                <span className={styles.summaryValue}>-Rp {formatRp(discountAmount)}</span>
+              </div>
+            )}
             
             <div className={styles.summaryDivider}></div>
             
@@ -269,6 +362,16 @@ export default function CheckoutPage() {
           setScheduledDate(date);
           setDeliverySlot(slot);
           setIsScheduleModalOpen(false);
+        }}
+      />
+
+      <VoucherModal 
+        isOpen={isVoucherModalOpen}
+        onClose={() => setIsVoucherModalOpen(false)}
+        subtotal={subtotal}
+        onSelect={(code) => {
+          setPromoInput(code);
+          handleApplyPromo(code);
         }}
       />
     </div>

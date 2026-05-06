@@ -12,6 +12,7 @@ import 'widgets/checkout_schedule_section.dart';
 import 'widgets/checkout_payment_section.dart';
 import 'widgets/checkout_promo_section.dart';
 import 'widgets/checkout_summary_section.dart';
+import 'widgets/voucher_list_bottom_sheet.dart';
 import 'package:intl/intl.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
@@ -46,25 +47,40 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   bool get _isInstant => _deliverySlot?.id == 'INSTANT';
 
-  Future<void> _validatePromo() async {
-    final code = _promoCtrl.text.trim();
-    if (code.isEmpty) return;
+  Future<void> _validatePromo([String? code]) async {
+    final codeToUse = code ?? _promoCtrl.text.trim();
+    if (codeToUse.isEmpty) return;
+
+    if (code != null) {
+      _promoCtrl.text = code;
+    }
 
     setState(() => _isValidatingPromo = true);
     try {
       final subtotal = ref.read(cartSubtotalProvider);
+      final cartItems = ref.read(cartProvider);
       final repo = ref.read(orderRepositoryProvider);
-      final res = await repo.validatePromoCode(code, subtotal.toDouble());
+      final res = await repo.validatePromoCode(
+        codeToUse, 
+        subtotal.toDouble(), 
+        paymentMethod: _paymentMethod,
+        items: cartItems.map((e) => {
+          'productId': e.productId,
+          'variantId': e.variantId,
+          'qty': e.qty
+        }).toList(),
+      );
       
       if (res['isValid'] == true) {
         setState(() {
-          _appliedPromoCode = res['code'] ?? code;
-          _promoDiscountAmount = res['discountAmount'] ?? 0;
+          _appliedPromoCode = res['code'] ?? codeToUse;
+          _promoDiscountAmount = (res['discountAmount'] as num).toInt();
         });
         if (mounted) DgSnackbar.showSuccess(context, message: res['message'] ?? 'Promo berhasil diterapkan');
       }
     } catch (e) {
-      if (mounted) DgSnackbar.showError(context, message: 'Gagal memvalidasi promo', error: e);
+      if (mounted) DgSnackbar.showError(context, message: e.toString().contains('AppError') ? e.toString().split(':').last.trim() : 'Gagal memvalidasi promo');
+      _removePromo();
     } finally {
       if (mounted) setState(() => _isValidatingPromo = false);
     }
@@ -76,6 +92,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _promoDiscountAmount = 0;
       _promoCtrl.clear();
     });
+  }
+
+  Future<void> _openVoucherSheet() async {
+    final subtotal = ref.read(cartSubtotalProvider).toDouble();
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => VoucherListBottomSheet(subtotal: subtotal),
+    );
+
+    if (result != null) {
+      _validatePromo(result);
+    }
   }
 
   void _createOrder(Address address, List<CartItem> cartItems) async {
@@ -200,7 +230,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 const SizedBox(height: 16),
                 CheckoutPaymentSection(
                   selectedMethod: _paymentMethod,
-                  onSelected: (val) => setState(() => _paymentMethod = val),
+                  onSelected: (val) {
+                    setState(() => _paymentMethod = val);
+                    if (_appliedPromoCode != null) {
+                      _validatePromo(_appliedPromoCode);
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
                 CheckoutPromoSection(
@@ -209,6 +244,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   isValidating: _isValidatingPromo,
                   onApply: _validatePromo,
                   onRemove: _removePromo,
+                  onBrowse: _openVoucherSheet,
                 ),
                 const SizedBox(height: 16),
                 CheckoutSummarySection(

@@ -10,7 +10,9 @@ import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/user_providers.dart';
 import '../../providers/banner_provider.dart';
+import '../../providers/promo_provider.dart';
 import '../../widgets/dg_product_bottom_sheet.dart';
+import '../../widgets/dg_promo_voucher_card.dart';
 import 'package:core/core.dart'; // To access AppConfig
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -333,6 +335,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     },
                     loading: () => DgShimmer.banner(),
                     error: (err, stack) => const SizedBox.shrink(),
+                  );
+                },
+              ),
+            ),
+
+            SliverToBoxAdapter(
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final promosAsync = ref.watch(availablePromosProvider);
+                  
+                  return promosAsync.when(
+                    data: (promos) {
+                      if (promos.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                            child: Text('Promo Spesial Untukmu 🎁', style: AppTypography.h4),
+                          ),
+                          SizedBox(
+                            height: 170,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: promos.length,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemBuilder: (context, index) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: DgPromoVoucherCard(
+                                    promo: promos[index],
+                                    onTap: () {
+                                      // Copy code or just show details
+                                      DgSnackbar.showSuccess(context, message: 'Gunakan kode ${promos[index]['code']} saat checkout!');
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+                      child: DgShimmer.productGrid(count: 1), // Simple placeholder
+                    ),
+                    error: (err, _) => const SizedBox.shrink(),
                   );
                 },
               ),

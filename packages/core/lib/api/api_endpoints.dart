@@ -44,6 +44,7 @@ class ApiEndpoints {
 
   // Promo
   static const String promoValidate = '/promos/validate';
+  static const String promosAvailable = '/promos/available';
 
   // Orders
   static const String orders = '/orders';

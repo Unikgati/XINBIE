@@ -7,6 +7,7 @@ class CheckoutPromoSection extends StatelessWidget {
   final bool isValidating;
   final VoidCallback onApply;
   final VoidCallback onRemove;
+  final VoidCallback onBrowse;
 
   const CheckoutPromoSection({
     super.key,
@@ -15,6 +16,7 @@ class CheckoutPromoSection extends StatelessWidget {
     required this.isValidating,
     required this.onApply,
     required this.onRemove,
+    required this.onBrowse,
   });
 
   @override
@@ -36,14 +38,34 @@ class CheckoutPromoSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.local_offer, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(
-                'Punya Kode Promo?',
-                style: AppTypography.labelLarge.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+              Row(
+                children: [
+                  const Icon(Icons.local_offer, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Punya Kode Promo?',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: onBrowse,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  child: const Text(
+                    'Lihat Voucher',
+                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],

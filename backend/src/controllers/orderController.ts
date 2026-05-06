@@ -89,17 +89,68 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
     let discountAmount = 0;
     let promoId: string | null = null;
     if (promoCode) {
-      const promo = await prisma.promoCode.findUnique({ where: { code: promoCode } });
+      const promo = await prisma.promoCode.findUnique({ 
+        where: { code: promoCode.toUpperCase() },
+        include: { categories: true, products: true }
+      });
       if (!promo || !promo.isActive) throw new AppError('Kode promo tidak valid atau sudah tidak aktif', 400);
+      
+      const now = new Date();
+      if (promo.startAt && now < promo.startAt) throw new AppError('Kode promo belum dapat digunakan', 400);
+      if (promo.endAt && now > promo.endAt) throw new AppError('Kode promo sudah kadaluarsa', 400);
+
       if (promo.totalUsageLimit > 0 && promo.usedCount >= promo.totalUsageLimit) throw new AppError('Kuota kode promo sudah habis', 400);
-      if (subtotal < promo.minOrder) throw new AppError(`Minimal belanja Rp ${promo.minOrder} untuk promo ini`, 400);
+      
+      // Payment Method check
+      if (promo.allowedPaymentMethods && promo.allowedPaymentMethods.length > 0) {
+        if (!promo.allowedPaymentMethods.includes(paymentMethod)) {
+          const methodsLabel = promo.allowedPaymentMethods.join(', ');
+          throw new AppError(`Voucher ini hanya berlaku untuk pembayaran: ${methodsLabel}`, 400);
+        }
+      } else {
+        // Fallback to legacy COD check if allowedPaymentMethods is empty
+        if (paymentMethod === 'COD' && !promo.allowCod) {
+          throw new AppError('Kode promo ini hanya berlaku untuk pembayaran non-tunai (Transfer/E-Wallet)', 400);
+        }
+      }
+
+      // Category & Product Scope check
+      let eligibleSubtotal = subtotal;
+      const hasScope = promo.categories.length > 0 || promo.products.length > 0;
+      if (hasScope) {
+        eligibleSubtotal = 0;
+        // itemsDetail was fetched earlier at line 61
+        for (const item of itemsDetail) {
+          const isProductEligible = promo.products.some(p => p.id === item.productId);
+          const isCategoryEligible = promo.categories.some(c => c.id === item.categoryId);
+          if (isProductEligible || isCategoryEligible) {
+            eligibleSubtotal += item.price * item.qty;
+          }
+        }
+        if (eligibleSubtotal === 0) throw new AppError('Voucher tidak dapat digunakan untuk produk di keranjang Anda', 400);
+      }
+
+      if (eligibleSubtotal < promo.minOrder) {
+        if (hasScope) throw new AppError(`Total produk yang memenuhi syarat belum mencapai Rp ${promo.minOrder}`, 400);
+        throw new AppError(`Minimal belanja Rp ${promo.minOrder} untuk promo ini`, 400);
+      }
+
+      // Per-user limit check
+      if (promo.perUserLimit > 0) {
+        const usageCount = await prisma.promoUsage.count({
+          where: { promoCodeId: promo.id, userId: req.userId }
+        });
+        if (usageCount >= promo.perUserLimit) throw new AppError('Anda sudah mencapai batas penggunaan promo ini', 400);
+      }
 
       if (promo.type === 'PERCENT') {
-        discountAmount = Math.floor((subtotal * promo.value) / 100);
+        discountAmount = Math.floor((eligibleSubtotal * promo.value) / 100);
         if (promo.maxDiscount && discountAmount > promo.maxDiscount) discountAmount = promo.maxDiscount;
       } else {
         discountAmount = promo.value;
       }
+      
+      if (discountAmount > eligibleSubtotal) discountAmount = eligibleSubtotal;
       promoId = promo.id;
     }
 
@@ -193,9 +244,38 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
       order = await prisma.$transaction(async (tx) => {
         // Re-validate promo atomically (in case concurrent usage)
         if (promoId && promoCode) {
-          const promo = await tx.promoCode.findUnique({ where: { code: promoCode } });
+          const promo = await tx.promoCode.findUnique({ 
+            where: { code: promoCode.toUpperCase() },
+            include: { categories: true, products: true }
+          });
           if (!promo || !promo.isActive) throw new AppError('Kode promo tidak valid atau sudah tidak aktif', 400);
+          
+          const now = new Date();
+          if (promo.startAt && now < promo.startAt) throw new AppError('Kode promo belum dapat digunakan', 400);
+          if (promo.endAt && now > promo.endAt) throw new AppError('Kode promo sudah kadaluarsa', 400);
+
           if (promo.totalUsageLimit > 0 && promo.usedCount >= promo.totalUsageLimit) throw new AppError('Kuota kode promo sudah habis', 400);
+          
+          if (paymentMethod === 'COD' && !promo.allowCod) {
+            throw new AppError('Kode promo ini hanya berlaku untuk pembayaran non-tunai (Transfer/E-Wallet)', 400);
+          }
+          
+          // Atomic scope re-check
+          const hasScope = promo.categories.length > 0 || promo.products.length > 0;
+          if (hasScope) {
+            const isEligible = itemsDetail.some(item => 
+              promo.products.some(p => p.id === item.productId) || 
+              promo.categories.some(c => c.id === item.categoryId)
+            );
+            if (!isEligible) throw new AppError('Voucher tidak dapat digunakan untuk produk di keranjang Anda', 400);
+          }
+
+          if (promo.perUserLimit > 0) {
+            const usageCount = await tx.promoUsage.count({
+              where: { promoCodeId: promo.id, userId: req.userId }
+            });
+            if (usageCount >= promo.perUserLimit) throw new AppError('Anda sudah mencapai batas penggunaan promo ini', 400);
+          }
         }
 
         const newOrder = await tx.order.create({

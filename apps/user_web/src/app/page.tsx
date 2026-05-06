@@ -8,6 +8,7 @@ import CategoryList from "@/components/sections/CategoryList";
 import FeaturedProducts from "@/components/sections/FeaturedProducts";
 import PromoProducts from "@/components/sections/PromoProducts";
 import AllProductsList from "@/components/sections/AllProductsList";
+import PromoSection from "./components/home/PromoSection";
 
 // Skeletons
 import { 
@@ -33,6 +34,8 @@ export default function Home() {
         <Suspense fallback={<CategorySkeleton />}>
           <CategoryList />
         </Suspense>
+
+        <PromoSection />
 
         <Suspense fallback={<ProductGridSkeleton />}>
           <FeaturedProducts />

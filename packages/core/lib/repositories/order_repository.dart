@@ -63,12 +63,19 @@ class OrderRepository {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> validatePromoCode(String code, double subtotal) async {
+  Future<Map<String, dynamic>> validatePromoCode(String code, double subtotal, {String? paymentMethod, List<Map<String, dynamic>>? items}) async {
     final response = await _api.post(ApiEndpoints.promoValidate, data: {
       'code': code,
       'subtotal': subtotal,
+      if (paymentMethod != null) 'paymentMethod': paymentMethod,
+      if (items != null) 'items': items,
     });
     return response.data as Map<String, dynamic>;
+  }
+
+  Future<List<Map<String, dynamic>>> getAvailablePromos() async {
+    final response = await _api.get(ApiEndpoints.promosAvailable);
+    return (response.data as List).map((e) => e as Map<String, dynamic>).toList();
   }
 }
 

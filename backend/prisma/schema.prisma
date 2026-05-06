@@ -94,6 +94,7 @@ model Category {
   createdAt DateTime @default(now()) @map("created_at")
 
   products Product[]
+  promoCodes PromoCode[]
 
   @@map("categories")
 }
@@ -126,6 +127,7 @@ model Product {
   orderItems OrderItem[]
 
   cookingVideos CookingVideo[] @relation("ProductCookingVideos")
+  promoCodes    PromoCode[]
 
   @@map("products")
 }
@@ -278,9 +280,12 @@ model PromoCode {
   isActive        Boolean   @default(true) @map("is_active")
   startAt         DateTime? @map("start_at")
   endAt           DateTime? @map("end_at")
+  allowCod        Boolean   @default(true) @map("allow_cod")
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  promoUsages PromoUsage[]
+  categories      Category[]
+  products        Product[]
+  promoUsages     PromoUsage[]
 
   @@map("promo_codes")
 }
