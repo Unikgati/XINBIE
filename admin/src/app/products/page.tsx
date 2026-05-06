@@ -12,15 +12,25 @@ import RichTextEditor from '@/components/RichTextEditor';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 
 const NUTRITION_TAGS = [
-  // Vitamin
-  'Tinggi Vitamin A', 'Tinggi Vitamin B Kompleks', 'Tinggi Vitamin C',
-  'Tinggi Vitamin D', 'Tinggi Vitamin E', 'Tinggi Vitamin K',
+  // Vitamin (Tinggi vs Sumber)
+  'Tinggi Vitamin A', 'Sumber Vitamin A',
+  'Tinggi Vitamin B Kompleks', 'Sumber Vitamin B Kompleks',
+  'Tinggi Vitamin C', 'Sumber Vitamin C',
+  'Tinggi Vitamin D', 'Sumber Vitamin D',
+  'Tinggi Vitamin E', 'Sumber Vitamin E',
+  'Tinggi Vitamin K', 'Sumber Vitamin K',
   // Mineral
-  'Tinggi Kalsium', 'Tinggi Zat Besi', 'Tinggi Kalium', 'Tinggi Magnesium',
+  'Tinggi Kalsium', 'Sumber Kalsium',
+  'Tinggi Zat Besi', 'Sumber Zat Besi',
+  'Tinggi Kalium', 'Sumber Kalium',
+  'Tinggi Magnesium', 'Sumber Magnesium',
   // Makronutrien
-  'Tinggi Serat', 'Tinggi Protein', 'Karbohidrat Kompleks',
+  'Tinggi Serat', 'Sumber Serat',
+  'Tinggi Protein', 'Sumber Protein',
+  'Karbohidrat Kompleks',
   // Klaim Gizi
-  'Rendah Gula', 'Rendah Kalori', 'Kaya Antioksidan',
+  'Rendah Gula', 'Rendah Kalori', 'Kaya Antioksidan', 'Sumber Antioksidan',
+  'Bebas Kolesterol', 'Lemak Sehat (Omega-3)',
   // Gaya Hidup
   'Organik', 'Bebas Gluten', 'Bebas Pengawet', 'Tanpa Pemanis Buatan',
   'Vegan / Plant-based', '100% Alami',
@@ -53,6 +63,7 @@ interface Product {
   unit?: string;
   images?: string[];
   tags?: string[];
+  relatedProductIds?: string[];
   stockQty: number;
   isActive: boolean;
   isFeatured: boolean;
@@ -60,6 +71,12 @@ interface Product {
   categoryId?: string;
   category: { id: string; name: string };
   variants: Variant[];
+  cookingVideos?: { id: string; title: string }[];
+}
+
+interface CookingVideo {
+  id: string;
+  title: string;
 }
 
 interface Category {
@@ -100,6 +117,7 @@ interface FormVariant {
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [cookingVideos, setCookingVideos] = useState<CookingVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -123,6 +141,7 @@ export default function ProductsPage() {
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [formTags, setFormTags] = useState<string[]>([]);
   const [formRelatedProductIds, setFormRelatedProductIds] = useState<string[]>([]);
+  const [formCookingVideoIds, setFormCookingVideoIds] = useState<string[]>([]);
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -130,13 +149,15 @@ export default function ProductsPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [prodRes, catRes] = await Promise.all([
+      const [prodRes, catRes, vidRes] = await Promise.all([
         apiGet<any>(`/products?limit=20&page=${page}`),
         apiGet<Category[]>('/categories'),
+        apiGet<CookingVideo[]>('/cooking-videos'),
       ]);
       setProducts(prodRes?.data ? prodRes.data : Array.isArray(prodRes) ? prodRes : []);
       setTotalPages(prodRes?.meta?.totalPages || 1);
       setCategories(Array.isArray(catRes) ? catRes : []);
+      setCookingVideos(Array.isArray(vidRes) ? vidRes : []);
     } catch (err: any) {
       toast.error(err.message || 'Gagal memuat data');
     } finally {
@@ -214,6 +235,7 @@ export default function ProductsPage() {
     setFormStock(''); setFormUnit(''); setFormDesc(''); setFormVariants([]);
     setDeletedVariants([]);
     setFormImages([]); setExistingImages([]); setFormTags([]); setFormRelatedProductIds([]);
+    setFormCookingVideoIds([]);
     setProductCategory(categories[0]?.id || '');
   };
 
@@ -245,6 +267,7 @@ export default function ProductsPage() {
     setExistingImages(p.images || []);
     setFormTags(p.tags || []);
     setFormRelatedProductIds(p.relatedProductIds || []);
+    setFormCookingVideoIds(p.cookingVideos ? p.cookingVideos.map(v => v.id) : []);
     setFormImages([]);
     setFormVariants(p.variants ? p.variants.map(v => ({
       tempId: v.id,
@@ -271,6 +294,7 @@ export default function ProductsPage() {
       formData.append('description', formDesc);
       formData.append('tags', JSON.stringify(formTags));
       formData.append('relatedProductIds', JSON.stringify(formRelatedProductIds));
+      formData.append('cookingVideoIds', JSON.stringify(formCookingVideoIds));
       formImages.forEach(file => formData.append('images', file));
       
       let prodId = editingId;
@@ -652,6 +676,30 @@ export default function ProductsPage() {
                   onChange={(selected) => setFormRelatedProductIds((selected || []).map((s: any) => s.value))}
                   placeholder="Cari produk pelengkap (misal: Mentega, Keju)"
                   noOptionsMessage={() => 'Produk tidak ditemukan'}
+                  menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                  styles={{
+                    control: (base: any) => ({ ...base, background: 'var(--surface)', borderColor: 'var(--divider)', borderRadius: 'var(--radius-md)', minHeight: 40, fontSize: 14 }),
+                    menu: (base: any) => ({ ...base, background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 'var(--radius-md)' }),
+                    menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
+                    option: (base: any, state: any) => ({ ...base, background: state.isFocused ? 'var(--primary-surface)' : 'transparent', color: 'var(--text-primary)', fontSize: 13 }),
+                    multiValue: (base: any) => ({ ...base, background: 'var(--primary-surface)', borderRadius: 12 }),
+                    multiValueLabel: (base: any) => ({ ...base, color: 'var(--primary-dark)', fontSize: 12, fontWeight: 500, padding: '2px 6px' }),
+                    multiValueRemove: (base: any) => ({ ...base, color: 'var(--primary)', borderRadius: '0 12px 12px 0', ':hover': { background: 'var(--primary-light)', color: '#fff' } }),
+                    input: (base: any) => ({ ...base, color: 'var(--text-primary)' }),
+                    placeholder: (base: any) => ({ ...base, color: 'var(--text-hint)', fontSize: 13 }),
+                  }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Video Inspirasi Memasak</label>
+                <Select
+                  isMulti
+                  options={cookingVideos.map(v => ({ value: v.id, label: v.title }))}
+                  value={cookingVideos.filter(v => formCookingVideoIds.includes(v.id)).map(v => ({ value: v.id, label: v.title }))}
+                  onChange={(selected) => setFormCookingVideoIds((selected || []).map((s: any) => s.value))}
+                  placeholder="Pilih video inspirasi... (cth: Cara Tumis Bayam)"
+                  noOptionsMessage={() => 'Video tidak ditemukan. Tambahkan dulu di menu Inspirasi Masak.'}
                   menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
                   styles={{
                     control: (base: any) => ({ ...base, background: 'var(--surface)', borderColor: 'var(--divider)', borderRadius: 'var(--radius-md)', minHeight: 40, fontSize: 14 }),

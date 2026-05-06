@@ -345,3 +345,19 @@
   color: var(--color-primary-dark);
   margin: 0;
 }
+
+.payBtn {
+  background-color: var(--color-primary);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.2s;
+  display: inline-block;
+}
+
+.payBtn:hover {
+  background-color: var(--color-primary-dark);
+}

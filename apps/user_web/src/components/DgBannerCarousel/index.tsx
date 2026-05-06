@@ -78,7 +78,7 @@ export default function DgBannerCarousel({ banners }: Props) {
           ref={scrollRef}
           onScroll={handleScroll}
         >
-          {safeBanners.map((banner) => (
+          {safeBanners.map((banner, idx) => (
             <div key={banner.id} className={styles.bannerItem}>
               <Image 
                 src={banner.imageUrl} 
@@ -87,6 +87,7 @@ export default function DgBannerCarousel({ banners }: Props) {
                 style={{ objectFit: 'cover' }} 
                 className={styles.bannerImage}
                 unoptimized
+                priority={idx === 0}
               />
             </div>
           ))}

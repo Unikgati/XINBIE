@@ -126,6 +126,15 @@
   font-size: 16px;
 }
 
+/* Skeleton Support */
+.bannerSkeleton {
+  max-height: 400px;
+}
+
+.productImageSkeleton {
+  aspect-ratio: 1/1;
+}
+
 /* Empty State */
 .emptyState {
   display: flex;

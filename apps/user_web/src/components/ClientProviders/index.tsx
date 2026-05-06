@@ -1,11 +1,17 @@
 'use client';
 
-import AuthGuard from '@/components/AuthGuard';
+import { ReactNode } from 'react';
+import AuthGuard from '@/components/AuthGuard/index';
+import HydrationZustand from '@/components/HydrationZustand';
+import DgSnackbar from '@/components/DgSnackbar';
 
-export default function ClientProviders({ children }: { children: React.ReactNode }) {
+export default function ClientProviders({ children }: { children: ReactNode }) {
   return (
-    <AuthGuard>
-      {children}
-    </AuthGuard>
+    <HydrationZustand>
+      <AuthGuard>
+        {children}
+        <DgSnackbar />
+      </AuthGuard>
+    </HydrationZustand>
   );
 }

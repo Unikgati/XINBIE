@@ -7,6 +7,8 @@ import styles from './page.module.css';
 import DgQuantitySelector from '@/components/DgQuantitySelector';
 import { useCartStore } from '@/store/cartStore';
 
+import DgSkeleton from '@/components/DgSkeleton';
+
 export default function CartPage() {
   const [mounted, setMounted] = useState(false);
   const [validating, setValidating] = useState(true);
@@ -34,22 +36,27 @@ export default function CartPage() {
   if (!mounted || validating) {
     return (
       <div className={`app-container ${styles.container}`}>
-        <div className="shimmer shimmer-rounded" style={{ width: '200px', height: '32px', marginBottom: '24px' }}></div>
+        <DgSkeleton width="220px" height="32px" borderRadius="8px" />
+        <div style={{ height: '24px' }} />
         <div className={styles.contentGrid}>
           <div className={styles.leftCol}>
-            <div className="shimmer shimmer-rounded" style={{ width: '100%', height: '40px', marginBottom: '16px' }}></div>
-            {[1, 2].map((i) => (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <DgSkeleton width="150px" height="20px" />
+              <DgSkeleton width="100px" height="20px" />
+            </div>
+            {[1, 2, 3].map((i) => (
               <div key={i} style={{ display: 'flex', gap: '16px', padding: '16px', border: '1px solid var(--color-border)', borderRadius: '16px', marginBottom: '16px' }}>
-                <div className="shimmer shimmer-rounded" style={{ width: '100px', height: '100px', borderRadius: '12px' }}></div>
+                <DgSkeleton width="100px" height="100px" borderRadius="12px" />
                 <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px' }}>
-                  <div className="shimmer shimmer-rounded" style={{ width: '80%', height: '20px' }}></div>
-                  <div className="shimmer shimmer-rounded" style={{ width: '40%', height: '16px' }}></div>
+                  <DgSkeleton width="80%" height="20px" />
+                  <DgSkeleton width="40%" height="16px" />
                 </div>
+                <DgSkeleton width="100px" height="36px" borderRadius="18px" />
               </div>
             ))}
           </div>
           <div className={styles.rightCol}>
-            <div className="shimmer shimmer-rounded" style={{ width: '100%', height: '300px', borderRadius: '16px' }}></div>
+            <DgSkeleton width="100%" height="300px" borderRadius="24px" />
           </div>
         </div>
       </div>

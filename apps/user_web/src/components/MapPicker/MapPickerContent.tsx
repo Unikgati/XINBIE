@@ -1,5 +1,5 @@
-import React, { useMemo, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import React, { useMemo, useRef, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -20,6 +20,14 @@ function MapEvents({ setPos }: { setPos: (pos: L.LatLng) => void }) {
   return null;
 }
 
+function ChangeView({ center }: { center: L.LatLng }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+  return null;
+}
+
 export default function MapPickerContent({
   lat,
   lng,
@@ -30,7 +38,7 @@ export default function MapPickerContent({
   onChange: (lat: number, lng: number) => void;
 }) {
   const markerRef = useRef<any>(null);
-  const position = new L.LatLng(lat, lng);
+  const position = useMemo(() => new L.LatLng(lat, lng), [lat, lng]);
 
   const eventHandlers = useMemo(
     () => ({
@@ -52,6 +60,7 @@ export default function MapPickerContent({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
         />
+        <ChangeView center={position} />
         <MapEvents setPos={(p) => onChange(p.lat, p.lng)} />
         <Marker
           draggable={true}

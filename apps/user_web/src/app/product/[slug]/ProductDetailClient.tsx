@@ -9,12 +9,21 @@ import styles from './ProductDetail.module.css';
 import DgQuantitySelector from '@/components/DgQuantitySelector';
 import DgProductCard from '@/components/DgProductCard';
 import { useCartStore } from '@/store/cartStore';
+import { useSnackbarStore } from '@/store/snackbarStore';
+import ProductImageGallery from './ProductImageGallery';
+import CookingVideoSection from './CookingVideoSection';
 
 interface Variant {
   id: string;
   name: string;
   price?: number;
   discountPrice?: number;
+}
+
+interface CookingVideo {
+  id: string;
+  title: string;
+  youtubeUrl: string;
 }
 
 interface Product {
@@ -32,6 +41,7 @@ interface Product {
   stockQty: number;
   tags?: string[];
   variants: Variant[];
+  cookingVideos?: CookingVideo[];
 }
 
 interface ProductDetailClientProps {
@@ -44,9 +54,8 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
     product.variants?.length > 0 ? product.variants[0] : null
   );
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const router = useRouter();
-  const [showToast, setShowToast] = useState(false);
+  const snackbar = useSnackbarStore();
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isCollapsible, setIsCollapsible] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
@@ -78,7 +87,6 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
   };
 
   const images = product.images?.length ? product.images : [];
-  const mainImage = images.length > 0 ? images[activeImageIndex] : null;
 
   let basePrice = product.price;
   let finalPrice = product.discountPrice && product.discountPrice > 0 ? product.discountPrice : basePrice;
@@ -98,10 +106,8 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
     if (isOutOfStock) return;
 
     if (cartQty > 0) {
-      // Already in cart → update quantity
       updateQuantity(product.id, quantity, selectedVariant?.id);
     } else {
-      // New item
       addItem({
         productId: product.id,
         variantId: selectedVariant?.id || null,
@@ -113,8 +119,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
       }, quantity);
     }
     
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+    snackbar.show('Berhasil ditambahkan ke keranjang', 'success');
   };
 
   const handleBuyNow = () => {
@@ -124,62 +129,13 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
 
   return (
     <div className={styles.container}>
-      {showToast && (
-        <div className={styles.toast}>
-          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>check_circle</span>
-          Berhasil ditambahkan ke keranjang
-        </div>
-      )}
       <div className={styles.breadcrumb}>
         <Link href="/">Beranda</Link> &gt; <Link href={`/category/${product.categoryName}`}>{product.categoryName || 'Produk'}</Link> &gt; <span style={{color: 'var(--color-text-primary)'}}>{product.name}</span>
       </div>
 
       <div className={styles.grid}>
         {/* Left: Images */}
-        <div className={styles.imageSection}>
-          <div className={styles.mainImageWrapper}>
-            {mainImage ? (
-              <Image 
-                src={mainImage} 
-                alt={product.name} 
-                fill 
-                style={{ objectFit: 'cover' }} 
-                unoptimized
-              />
-            ) : (
-              <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f5'}}>
-                <svg viewBox="0 0 24 24" width="64" height="64" stroke="#bdbdbd" strokeWidth="1" fill="none">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                  <polyline points="21 15 16 10 5 21"></polyline>
-                </svg>
-              </div>
-            )}
-          </div>
-          
-          {images.length > 1 && (
-            <div className={styles.thumbnailGrid}>
-              {images.map((img, idx) => (
-                <div 
-                  key={idx} 
-                  className={`${styles.thumbnail} ${idx === activeImageIndex ? styles.thumbnailActive : ''}`}
-                  onClick={() => setActiveImageIndex(idx)}
-                >
-                  <Image src={img} alt={`Thumbnail ${idx}`} fill style={{ objectFit: 'cover' }} unoptimized />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Promo Banner */}
-          <div className={styles.promoBanner}>
-            <div className={styles.promoTextContainer}>
-              <div className={styles.promoTitle}>Belanja Dapur Lebih Aman & Terpercaya</div>
-              <div className={styles.promoSubtitle}>Sayur, buah, dan bahan segar langsung dari sumber terbaik.</div>
-            </div>
-            <img src="/images/mascot_driver.png" alt="Mascot" className={styles.promoMascot} />
-          </div>
-        </div>
+        <ProductImageGallery images={images} name={product.name} />
 
         {/* Right: Info */}
         <div className={styles.infoSection}>
@@ -297,9 +253,11 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
               <p className={styles.descriptionText}>Tidak ada deskripsi.</p>
             )}
           </div>
-
         </div>
       </div>
+
+      {/* Cooking Videos Section */}
+      <CookingVideoSection videos={product.cookingVideos || []} />
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (

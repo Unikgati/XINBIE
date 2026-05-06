@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 
 function getStatusBadge(status: string) {
   switch (status) {
-    case 'PENDING_PAYMENT':
+    case 'WAITING_PAYMENT':
       return { label: 'Menunggu Pembayaran', bg: '#FEF3C7', color: '#D97706' };
     case 'PAID':
       return { label: 'Dibayar', bg: '#D1FAE5', color: '#059669' };
@@ -215,14 +215,23 @@ export default function OrdersPage() {
                         <p className={styles.itemTitle}>{itemsTitle}</p>
                         {itemsSubtitle && <p className={styles.itemSubtitle}>{itemsSubtitle}</p>}
                       </div>
-                      
-                      <div className={styles.orderFooter}>
-                        <div style={{textAlign: 'right'}}>
-                          <p className={styles.totalLabel}>Total Belanja</p>
-                          <p className={styles.totalValue}>
-                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(order.grandTotal)}
-                          </p>
-                        </div>
+                    </div>
+
+                    <div className={styles.orderFooter}>
+                      {order.orderStatus === 'WAITING_PAYMENT' && (
+                        <Link 
+                          href={`/payment/${order.id}`} 
+                          className={styles.payBtn}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Bayar Sekarang
+                        </Link>
+                      )}
+                      <div style={{textAlign: 'right', marginLeft: 'auto'}}>
+                        <p className={styles.totalLabel}>Total Belanja</p>
+                        <p className={styles.totalValue}>
+                          {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(order.grandTotal)}
+                        </p>
                       </div>
                     </div>
                   </Link>

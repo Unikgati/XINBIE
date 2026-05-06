@@ -17,8 +17,8 @@ class CartScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cartItems = ref.watch(cartProvider);
-    final cartSubtotal = ref.watch(cartSubtotalProvider);
+    // Only watch length to decide on Empty State vs List
+    final cartLength = ref.watch(cartProvider.select((cart) => cart.length));
     final cartNotifier = ref.read(cartProvider.notifier);
 
     return Scaffold(
@@ -34,7 +34,7 @@ class CartScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
       ),
-      body: cartItems.isEmpty
+      body: cartLength == 0
           ? const DgEmptyState(
               icon: Icons.shopping_cart_outlined,
               title: 'Keranjang Kosong',
@@ -50,7 +50,7 @@ class CartScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${cartItems.length} Produk',
+                        '$cartLength Produk',
                         style: AppTypography.labelLarge.copyWith(
                           color: AppColors.primaryDark,
                           fontWeight: FontWeight.bold,
@@ -76,17 +76,22 @@ class CartScreen extends ConsumerWidget {
                 Expanded(
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    itemCount: cartItems.length,
+                    itemCount: cartLength,
                     separatorBuilder: (_, __) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
-                      final item = cartItems[index];
-                      return DgCartItemCard(
-                        item: item,
-                        onQuantityChanged: (newQty) {
-                          cartNotifier.updateQuantity(
-                            item.productId,
-                            newQty,
-                            variantId: item.variantId,
+                      return Consumer(
+                        builder: (context, ref, _) {
+                          // Watch only this specific item
+                          final item = ref.watch(cartProvider.select((cart) => cart[index]));
+                          return DgCartItemCard(
+                            item: item,
+                            onQuantityChanged: (newQty) {
+                              cartNotifier.updateQuantity(
+                                item.productId,
+                                newQty,
+                                variantId: item.variantId,
+                              );
+                            },
                           );
                         },
                       );
@@ -97,70 +102,74 @@ class CartScreen extends ConsumerWidget {
             ),
 
       // Bottom checkout bar
-      bottomNavigationBar: cartItems.isEmpty
+      bottomNavigationBar: cartLength == 0
           ? null
-          : Container(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadow.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
-                  )
-                ],
-              ),
-              child: SafeArea(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Grand Total',
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.primaryDark,
-                            ),
-                          ),
-                          Text(
-                            'Rp. ${_formatNumber(cartSubtotal)}',
-                            style: AppTypography.h3.copyWith(
-                              color: AppColors.primaryDark,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        // TODO: Navigate to real checkout
-                        context.push('/checkout');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryAction,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                      ),
-                      child: Text(
-                        'Checkout',
-                        style: AppTypography.labelLarge.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+          : RepaintBoundary(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadow.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -4),
+                    )
                   ],
+                ),
+                child: SafeArea(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Consumer(
+                          builder: (context, ref, _) {
+                            final subtotal = ref.watch(cartSubtotalProvider);
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Grand Total',
+                                  style: AppTypography.caption.copyWith(
+                                    color: AppColors.primaryDark,
+                                  ),
+                                ),
+                                Text(
+                                  'Rp. ${_formatNumber(subtotal)}',
+                                  style: AppTypography.h3.copyWith(
+                                    color: AppColors.primaryDark,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: () => context.push('/checkout'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryAction,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                        ),
+                        child: Text(
+                          'Checkout',
+                          style: AppTypography.labelLarge.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

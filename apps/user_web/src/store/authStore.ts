@@ -51,6 +51,9 @@ interface AuthState {
   /** Logout */
   logout: () => Promise<void>;
   
+  /** Update local user data */
+  setUser: (user: User) => void;
+
   /** Check if authenticated */
   isAuthenticated: () => boolean;
 }
@@ -158,6 +161,8 @@ export const useAuthStore = create<AuthState>()(
         } catch { /* ignore if fails */ }
         set({ accessToken: null, refreshToken: null, user: null });
       },
+
+      setUser: (user) => set({ user }),
 
       isAuthenticated: () => !!get().accessToken,
     }),

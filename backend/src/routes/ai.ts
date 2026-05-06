@@ -10,19 +10,28 @@ router.post('/generate-desc', async (req, res) => {
       return res.status(400).json({ message: 'productName is required' });
     }
 
-    const prompt = `Buatkan deskripsi produk dan rekomendasi bahan masakan pelengkap untuk:
+    const prompt = `Buat deskripsi produk untuk marketplace bahan dapur (DapurGizi).
+
 Nama Produk: ${productName}
 Kategori: ${categoryName || 'Bahan Makanan'}
 
-Fokuskan deskripsi pada karakteristik produk, kualitas, dan MANFAAT KESEHATANNYA.
-Jangan sebutkan nama toko, merek, atau branding apapun. Format deskripsi harus HTML murni (gunakan <p>, <ul>, <li>, <b>). Maksimal 3 paragraf.
+Aturan Penulisan (WAJIB DIIKUTI):
+- Maksimal 2 paragraf, dengan total hanya 2–3 kalimat saja (singkat dan padat).
+- Fokus pada: kandungan nutrisi atau karakteristik fisik produk (harus berdasarkan fakta umum).
+- Gunakan fakta umum secara akurat. Bedakan antara "Tinggi" (jika sangat menonjol, misal: Jeruk Tinggi Vitamin C) dan "Sumber" (jika hanya mengandung secara umum, misal: Apel Sumber Serat).
+- JANGAN berikan klaim medis/obat.
+- Bahasa sederhana, natural, tidak berlebihan, dan tidak puitis.
+- Hindari pengulangan fungsi produk atau kata-kata yang tidak perlu.
+- TIDAK BOLEH menyebutkan nama brand/merek apapun termasuk "DapurGizi".
+- TIDAK BOLEH menggunakan bullet point (<ul> atau <li>).
+- Format deskripsi harus HTML murni (hanya gunakan <p> dan <b>).
 
-Kemudian, pikirkan 3-5 jenis bahan masakan riil lain yang sangat cocok dimasak bersama bahan ini (sebagai barang rekomendasi cross-selling, misal: penyedap rasa, saus, mentega, keju, arang, atau pelengkap lainnya).
+Kemudian, pikirkan 3-5 jenis bahan masakan riil lain yang sangat cocok dimasak bersama bahan ini (sebagai barang rekomendasi cross-selling).
 
 PENTING: KEMBALIKAN OUTPUT HANYA DALAM BENTUK JSON murni (TANPA markdown \`\`\`json) dengan format persis seperti ini:
 {
-  "description": "<p>Deskripsi html di sini...</p>",
-  "relatedKeywords": ["mentega", "keju", "bumbu", "saus"]
+  "description": "<p>Paragraf 1...</p><p>Paragraf 2...</p>",
+  "relatedKeywords": ["keyword1", "keyword2", "keyword3"]
 }`;
 
     const apiKey = process.env.KIMI_API_KEY;

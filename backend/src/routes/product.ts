@@ -8,6 +8,7 @@ router.get('/categories', product.getCategories);
 router.get('/products', product.getProducts);
 router.get('/products/:id', product.getProduct);
 router.get('/banners', product.getBanners);
+router.get('/cooking-videos', product.getCookingVideos);
 router.post('/cart/validate', authenticate, product.validateCart);
 
 export default router;

@@ -30,7 +30,8 @@ class AppConfig {
   }
 
   /// Normalize image URL: relative path → absolute, localhost → 10.0.2.2 on Android emulator.
-  static String fixImageUrl(String url) {
+  static String fixImageUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return '';
     String finalUrl = url.trim();
     // Relative path → prepend base server URL
     if (finalUrl.startsWith('/')) {

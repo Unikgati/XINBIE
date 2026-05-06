@@ -56,29 +56,31 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
 
           return Column(
             children: [
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFEFEF),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: TabBar(
-                  controller: _tabCtrl,
-                  indicator: BoxDecoration(
-                    color: AppColors.primaryAction,
+              RepaintBoundary(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFEFEF),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: AppColors.textSecondary,
-                  dividerColor: Colors.transparent,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelStyle: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold),
-                  unselectedLabelStyle: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w600),
-                  tabs: const [
-                    Tab(text: 'Dalam Proses'),
-                    Tab(text: 'Riwayat'),
-                  ],
+                  child: TabBar(
+                    controller: _tabCtrl,
+                    indicator: BoxDecoration(
+                      color: AppColors.primaryAction,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: AppColors.textSecondary,
+                    dividerColor: Colors.transparent,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    labelStyle: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold),
+                    unselectedLabelStyle: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w600),
+                    tabs: const [
+                      Tab(text: 'Dalam Proses'),
+                      Tab(text: 'Riwayat'),
+                    ],
+                  ),
                 ),
               ),
               Expanded(
@@ -185,112 +187,114 @@ class _OrderList extends StatelessWidget {
         // build items string
         String itemsText = (o.items ?? []).map((e) => e.productSnapshot?['name'] ?? 'Item').join(', ');
         
-        return GestureDetector(
-          onTap: () => context.push('/orders/${o.id}'),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-              boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 4)],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header: Icon + Date + Status
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primarySurface,
-                        shape: BoxShape.circle,
+        return RepaintBoundary(
+          child: GestureDetector(
+            onTap: () => context.push('/orders/${o.id}'),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                boxShadow: [BoxShadow(color: AppColors.shadow.withOpacity(0.05), blurRadius: 4)],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header: Icon + Date + Status
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primarySurface,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.shopping_bag_outlined,
+                          color: AppColors.primaryAction,
+                          size: 20,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.shopping_bag_outlined,
-                        color: AppColors.primaryAction,
-                        size: 20,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Pesanan #${o.code}',
+                              style: AppTypography.labelLarge.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
+                            Text(
+                              DateFormatter.date(o.createdAt),
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      DgStatusBadge(status: o.orderStatus),
+                    ],
+                  ),
+                  
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Divider(height: 1, color: AppColors.divider),
+                  ),
+                  
+                  // Body: Item names and Total
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              itemsText,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${o.items?.length ?? 0} produk',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textHint,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            'Pesanan #${o.code}',
-                            style: AppTypography.labelLarge.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryDark,
-                            ),
-                          ),
-                          Text(
-                            DateFormatter.date(o.createdAt),
+                            'Total',
                             style: AppTypography.caption.copyWith(
                               color: AppColors.textSecondary,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    DgStatusBadge(status: o.orderStatus),
-                  ],
-                ),
-                
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(height: 1, color: AppColors.divider),
-                ),
-                
-                // Body: Item names and Total
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
                           Text(
-                            itemsText,
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${o.items?.length ?? 0} produk',
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.textHint,
+                            CurrencyFormatter.format(o.grandTotal),
+                            style: AppTypography.labelLarge.copyWith(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Total',
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        Text(
-                          CurrencyFormatter.format(o.grandTotal),
-                          style: AppTypography.labelLarge.copyWith(
-                            color: AppColors.primaryDark,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );

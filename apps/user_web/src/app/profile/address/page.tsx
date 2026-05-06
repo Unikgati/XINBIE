@@ -17,6 +17,7 @@ export default function AddressPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
   // Form State
@@ -221,18 +222,53 @@ export default function AddressPage() {
       alert('Browser Anda tidak mendukung deteksi lokasi.');
       return;
     }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setFormData(prev => ({
-          ...prev,
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        }));
-      },
-      (error) => {
-        alert('Gagal mendeteksi lokasi. Pastikan izin lokasi diberikan.');
-      }
-    );
+
+    setIsDetectingLocation(true);
+
+    // Try High Accuracy First
+    const tryHighAccuracy = () => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setFormData(prev => ({
+            ...prev,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }));
+          setIsDetectingLocation(false);
+        },
+        (error) => {
+          console.warn('High accuracy failed, falling back...', error);
+          tryLowAccuracy();
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    };
+
+    // Fallback to Low Accuracy
+    const tryLowAccuracy = () => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setFormData(prev => ({
+            ...prev,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }));
+          setIsDetectingLocation(false);
+        },
+        (error) => {
+          console.error('Final Geolocation error:', error.code, error.message);
+          setIsDetectingLocation(false);
+          if (error.code === error.PERMISSION_DENIED) {
+            alert('Izin lokasi ditolak. Mohon izinkan lokasi di pengaturan browser dan sistem (macOS) Anda.');
+          } else {
+            alert('Gagal mendeteksi lokasi secara otomatis. Mohon gunakan tombol "Pilih Manual di Peta".');
+          }
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+      );
+    };
+
+    tryHighAccuracy();
   };
 
   const handleDelete = async (id: string) => {
@@ -491,17 +527,34 @@ export default function AddressPage() {
                       />
                       <div className={styles.gpsValueRow}>
                         <span className={styles.gpsCoords}>{formData.lat.toFixed(6)}, {formData.lng.toFixed(6)}</span>
-                        <button type="button" onClick={handleGetLocation} className={styles.gpsRetakeBtn}>Deteksi Ulang</button>
+                        <button type="button" onClick={handleGetLocation} className={styles.gpsRetakeBtn} disabled={isDetectingLocation}>
+                          {isDetectingLocation ? 'Mendeteksi...' : 'Deteksi Ulang'}
+                        </button>
                       </div>
                     </div>
                   ) : (
-                    <button type="button" onClick={handleGetLocation} className={styles.gpsBtn}>
-                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" style={{marginRight: '8px'}}>
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                      Gunakan Lokasi Saat Ini
-                    </button>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button type="button" onClick={handleGetLocation} className={styles.gpsBtn} style={{ flex: 1 }} disabled={isDetectingLocation}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" style={{marginRight: '8px'}}>
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        {isDetectingLocation ? 'Mendeteksi Lokasi...' : 'Gunakan Lokasi Saat Ini'}
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setFormData(prev => ({...prev, lat: -6.200000, lng: 106.816666}))} 
+                        className={styles.gpsBtn} 
+                        style={{ flex: 1, background: 'transparent', border: '1px solid var(--color-primary)', color: 'var(--color-primary)' }}
+                        disabled={isDetectingLocation}
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" style={{marginRight: '8px'}}>
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                          <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        Pilih Manual di Peta
+                      </button>
+                    </div>
                   )}
                 </div>
                 

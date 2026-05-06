@@ -16,6 +16,8 @@ import '../screens/home/home_shell.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/category/category_screen.dart';
 import '../screens/product/product_detail_screen.dart';
+import '../screens/product/cooking_video_player_screen.dart';
+import '../screens/product/cooking_video_gallery_screen.dart';
 import '../screens/cart/cart_screen.dart';
 import '../screens/checkout/checkout_screen.dart';
 import '../screens/order/orders_screen.dart';
@@ -212,6 +214,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/search',
         builder: (_, __) => const SearchScreen(),
+      ),
+      GoRoute(
+        path: '/cooking-video',
+        builder: (_, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return CookingVideoPlayerScreen(
+            video: extra['video'] as CookingVideo,
+            relatedProducts: extra['products'] as List<Product>,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/cooking-video-gallery',
+        builder: (_, __) => const CookingVideoGalleryScreen(),
       ),
     ],
   );

@@ -3,6 +3,7 @@ import '../api/api_client.dart';
 import '../api/api_endpoints.dart';
 import '../models/product.dart';
 import '../models/category.dart';
+import '../models/cooking_video.dart';
 import '../auth/auth_repository.dart';
 
 /// Repository for product and category API calls.
@@ -60,6 +61,12 @@ class ProductRepository {
   Future<Product> getProduct(String id) async {
     final response = await _api.get(ApiEndpoints.product(id));
     return Product.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<List<CookingVideo>> getCookingVideos({int limit = 10}) async {
+    final response = await _api.get(ApiEndpoints.cookingVideos, queryParameters: {'limit': limit});
+    final list = response.data as List;
+    return list.map((e) => CookingVideo.fromJson(e as Map<String, dynamic>)).toList();
   }
 }
 

@@ -21,7 +21,6 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cartItems = ref.watch(cartProvider);
     final totalCartItems = ref.watch(cartItemCountProvider);
 
     // Fetch real data from backend
@@ -40,33 +39,33 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
       ),
       body: Column(
         children: [
-          // Category shortcuts (Real Data)
-          SizedBox(
-            height: 52,
-            child: categoriesAsync.when(
-              data: (categories) {
-                return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final cat = categories[index];
-                    final isSelected = cat.id == widget.categoryId;
-                    return _CategoryShortcutChip(
-                      label: cat.name, 
-                      isSelected: isSelected, 
-                      onTap: () {
-                        if (!isSelected) {
-                          // app_router uses queryParameters['name']
-                          context.pushReplacement('/category/${cat.id}?name=${Uri.encodeComponent(cat.name)}');
+          RepaintBoundary(
+            child: SizedBox(
+              height: 52,
+              child: categoriesAsync.when(
+                data: (categories) {
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      final cat = categories[index];
+                      final isSelected = cat.id == widget.categoryId;
+                      return _CategoryShortcutChip(
+                        label: cat.name, 
+                        isSelected: isSelected, 
+                        onTap: () {
+                          if (!isSelected) {
+                            context.pushReplacement('/category/${cat.id}?name=${Uri.encodeComponent(cat.name)}');
+                          }
                         }
-                      }
-                    );
-                  },
-                );
-              },
-              loading: () => DgShimmer.categoryList(),
-              error: (e, st) => const Center(child: Text('Gagal memuat kategori')),
+                      );
+                    },
+                  );
+                },
+                loading: () => DgShimmer.categoryList(),
+                error: (e, st) => const Center(child: Text('Gagal memuat kategori')),
+              ),
             ),
           ),
 
@@ -93,48 +92,41 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
                   itemBuilder: (context, index) {
                     final p = products[index];
                     
-                    // Format image URL safely for the emulator 
-                    String? pImageUrl = p.images.isNotEmpty ? p.images.first : null;
-                    if (pImageUrl != null) {
-                      if (pImageUrl.startsWith('/')) {
-                        final baseUrl = AppConfig.apiBaseUrl.replaceAll('/api', '');
-                        pImageUrl = '$baseUrl$pImageUrl';
-                      }
-                      if (defaultTargetPlatform == TargetPlatform.android && pImageUrl.contains('localhost')) {
-                        pImageUrl = pImageUrl.replaceAll('localhost', '10.0.2.2');
-                      }
-                    }
+                    return Consumer(
+                      builder: (context, ref, _) {
+                        // Watch only quantity for THIS specific product
+                        final quantity = ref.watch(cartProvider.select((cart) {
+                          final item = cart.firstWhere(
+                            (item) => item.productId == p.id,
+                            orElse: () => CartItem(productId: '', productName: '', qty: 0, unitPrice: 0, unit: ''),
+                          );
+                          return item.qty;
+                        }));
 
-                    // Read quantity from cart state
-                    final cartItem = cartItems.firstWhere(
-                      (item) => item.productId == p.id,
-                      orElse: () => CartItem(productId: '', productName: '', qty: 0, unitPrice: 0, unit: ''),
-                    );
-
-                    return DgProductCard(
-                      name: p.name,
-                      price: p.displayPrice,
-                      discountPrice: p.displayDiscountPrice,
-                      discountPercent: p.discountPercent,
-                      unit: p.unit,
-                      quantity: cartItem.qty,
-                      isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
-                      variantCount: p.variants?.length ?? 0,
-                      hasMultiplePrices: p.hasMultiplePrices,
-                      imageUrl: pImageUrl,
-                      tags: p.tags,
-                      onTap: () {
-                        context.push('/product/${p.id}');
-                      },
-                      onAddToCart: () {
-                        if (p.variants != null && p.variants!.isNotEmpty) {
-                          context.push('/product/${p.id}');
-                        } else {
-                          ref.read(cartProvider.notifier).addItem(p);
-                        }
-                      },
-                      onQuantityChanged: (newQty) {
-                        ref.read(cartProvider.notifier).updateQuantity(p.id, newQty);
+                        return DgProductCard(
+                          name: p.name,
+                          price: p.displayPrice,
+                          discountPrice: p.displayDiscountPrice,
+                          discountPercent: p.discountPercent,
+                          unit: p.unit,
+                          quantity: quantity,
+                          isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+                          variantCount: p.variants?.length ?? 0,
+                          hasMultiplePrices: p.hasMultiplePrices,
+                          imageUrl: AppConfig.fixImageUrl(p.images.firstOrNull),
+                          tags: p.tags,
+                          onTap: () => context.push('/product/${p.id}'),
+                          onAddToCart: () {
+                            if (p.variants != null && p.variants!.isNotEmpty) {
+                              context.push('/product/${p.id}');
+                            } else {
+                              ref.read(cartProvider.notifier).addItem(p);
+                            }
+                          },
+                          onQuantityChanged: (newQty) {
+                            ref.read(cartProvider.notifier).updateQuantity(p.id, newQty);
+                          },
+                        );
                       },
                     );
                   },
@@ -147,26 +139,28 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
         ],
       ),
       floatingActionButton: totalCartItems > 0
-          ? FloatingActionButton.extended(
-              onPressed: () => context.push('/cart'),
-              backgroundColor: AppColors.primaryAction,
-              elevation: 0,
-              highlightElevation: 0,
-              hoverElevation: 0,
-              focusElevation: 0,
-              icon: Badge(
-                isLabelVisible: totalCartItems > 0,
-                label: Text(
-                  totalCartItems > 9 ? '9+' : totalCartItems.toString(),
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+          ? RepaintBoundary(
+              child: FloatingActionButton.extended(
+                onPressed: () => context.push('/cart'),
+                backgroundColor: AppColors.primaryAction,
+                elevation: 0,
+                highlightElevation: 0,
+                hoverElevation: 0,
+                focusElevation: 0,
+                icon: Badge(
+                  isLabelVisible: totalCartItems > 0,
+                  label: Text(
+                    totalCartItems > 9 ? '9+' : totalCartItems.toString(),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  backgroundColor: AppColors.cartBadge,
+                  textColor: Colors.white,
+                  child: const Icon(Icons.shopping_cart_outlined, color: AppColors.textOnPrimary),
                 ),
-                backgroundColor: AppColors.cartBadge,
-                textColor: Colors.white,
-                child: const Icon(Icons.shopping_cart_outlined, color: AppColors.textOnPrimary),
-              ),
-              label: Text(
-                'Cart',
-                style: AppTypography.labelLarge.copyWith(color: AppColors.textOnPrimary),
+                label: Text(
+                  'Cart',
+                  style: AppTypography.labelLarge.copyWith(color: AppColors.textOnPrimary),
+                ),
               ),
             )
           : null,

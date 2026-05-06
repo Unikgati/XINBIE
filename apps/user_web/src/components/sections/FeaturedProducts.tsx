@@ -1,0 +1,47 @@
+import React from 'react';
+import styles from '@/app/page.module.css';
+import DgProductCard from "@/components/DgProductCard/index";
+
+async function fetchFeatured() {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products?featured=true&limit=4`, {
+      cache: 'no-store'
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.data || [];
+  } catch (error) {
+    console.error('Error fetching featured products:', error);
+    return [];
+  }
+}
+
+export default async function FeaturedProducts() {
+  const products = await fetchFeatured();
+
+  if (!products || products.length === 0) return null;
+
+  return (
+    <section className={styles.productSection}>
+      <h2 className={styles.sectionTitle}>Pilihan Dapurgizi 🔥</h2>
+      <div className={styles.productGrid}>
+        {products.map((product: any) => (
+          <DgProductCard
+            key={product.id}
+            id={product.id}
+            slug={product.slug}
+            name={product.name}
+            price={product.price}
+            unit={product.unit}
+            imageUrl={product.images && product.images.length > 0 ? product.images[0] : undefined}
+            discountPrice={product.discountPrice}
+            discountPercent={product.discountPercent}
+            isOutOfStock={!product.isUnlimitedStock && product.stockQty <= 0}
+            variantCount={product.variants ? product.variants.length : 0}
+            tags={product.tags}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}

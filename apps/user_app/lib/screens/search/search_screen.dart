@@ -37,53 +37,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     });
   }
 
-  Widget _buildProductCard(Product p, List<CartItem> cart) {
-    String? pImageUrl = p.images.isNotEmpty ? p.images.first : null;
-    if (pImageUrl != null) {
-      if (pImageUrl.startsWith('/')) {
-        final baseUrl = AppConfig.apiBaseUrl.replaceAll('/api', '');
-        pImageUrl = '$baseUrl$pImageUrl';
-      }
-      if (defaultTargetPlatform == TargetPlatform.android && pImageUrl.contains('localhost')) {
-        pImageUrl = pImageUrl.replaceAll('localhost', '10.0.2.2');
-      }
-    }
-    
-    final cartItemIdx = cart.indexWhere((item) => item.productId == p.id);
-    final currentQty = cartItemIdx >= 0 ? cart[cartItemIdx].qty : 0;
-
-    return DgProductCard(
-      name: p.name,
-      price: p.displayPrice,
-      unit: p.unit,
-      discountPrice: p.displayDiscountPrice,
-      discountPercent: p.discountPercent,
-      variantCount: p.variants?.length ?? 0,
-      hasMultiplePrices: p.hasMultiplePrices,
-      quantity: currentQty,
-      isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
-      imageUrl: pImageUrl,
-      tags: p.tags,
-      onTap: () {
-        context.push('/product/${p.id}');
-      },
-      onAddToCart: () {
-        if (p.variants != null && p.variants!.isNotEmpty) {
-          context.push('/product/${p.id}');
-        } else {
-          ref.read(cartProvider.notifier).addItem(p);
-        }
-      },
-      onQuantityChanged: (newQty) {
-        ref.read(cartProvider.notifier).updateQuantity(p.id, newQty);
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final hasQuery = _query.trim().isNotEmpty;
-    final cart = ref.watch(cartProvider);
     final totalCartItems = ref.watch(cartItemCountProvider);
 
     return Scaffold(
@@ -145,7 +102,44 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       ),
                       itemCount: products.length,
                       itemBuilder: (context, index) {
-                        return _buildProductCard(products[index], cart);
+                        final p = products[index];
+                        return Consumer(
+                          builder: (context, ref, _) {
+                            // Watch only quantity for THIS specific product
+                            final quantity = ref.watch(cartProvider.select((cart) {
+                              final item = cart.firstWhere(
+                                (item) => item.productId == p.id,
+                                orElse: () => CartItem(productId: '', productName: '', qty: 0, unitPrice: 0, unit: ''),
+                              );
+                              return item.qty;
+                            }));
+
+                            return DgProductCard(
+                              name: p.name,
+                              price: p.displayPrice,
+                              unit: p.unit,
+                              discountPrice: p.displayDiscountPrice,
+                              discountPercent: p.discountPercent,
+                              variantCount: p.variants?.length ?? 0,
+                              hasMultiplePrices: p.hasMultiplePrices,
+                              quantity: quantity,
+                              isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+                              imageUrl: AppConfig.fixImageUrl(p.images.firstOrNull),
+                              tags: p.tags,
+                              onTap: () => context.push('/product/${p.id}'),
+                              onAddToCart: () {
+                                if (p.variants != null && p.variants!.isNotEmpty) {
+                                  context.push('/product/${p.id}');
+                                } else {
+                                  ref.read(cartProvider.notifier).addItem(p);
+                                }
+                              },
+                              onQuantityChanged: (newQty) {
+                                ref.read(cartProvider.notifier).updateQuantity(p.id, newQty);
+                              },
+                            );
+                          },
+                        );
                       },
                     );
                   },
@@ -153,26 +147,28 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               },
             ),
       floatingActionButton: totalCartItems > 0
-          ? FloatingActionButton.extended(
-              onPressed: () => context.push('/cart'),
-              backgroundColor: AppColors.primaryAction,
-              elevation: 0,
-              highlightElevation: 0,
-              hoverElevation: 0,
-              focusElevation: 0,
-              icon: Badge(
-                isLabelVisible: totalCartItems > 0,
-                label: Text(
-                  totalCartItems > 9 ? '9+' : totalCartItems.toString(),
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+          ? RepaintBoundary(
+              child: FloatingActionButton.extended(
+                onPressed: () => context.push('/cart'),
+                backgroundColor: AppColors.primaryAction,
+                elevation: 0,
+                highlightElevation: 0,
+                hoverElevation: 0,
+                focusElevation: 0,
+                icon: Badge(
+                  isLabelVisible: totalCartItems > 0,
+                  label: Text(
+                    totalCartItems > 9 ? '9+' : totalCartItems.toString(),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  backgroundColor: AppColors.cartBadge,
+                  textColor: Colors.white,
+                  child: const Icon(Icons.shopping_cart_outlined, color: AppColors.textOnPrimary),
                 ),
-                backgroundColor: AppColors.cartBadge,
-                textColor: Colors.white,
-                child: const Icon(Icons.shopping_cart_outlined, color: AppColors.textOnPrimary),
-              ),
-              label: Text(
-                'Cart',
-                style: AppTypography.labelLarge.copyWith(color: AppColors.textOnPrimary),
+                label: Text(
+                  'Cart',
+                  style: AppTypography.labelLarge.copyWith(color: AppColors.textOnPrimary),
+                ),
               ),
             )
           : null,

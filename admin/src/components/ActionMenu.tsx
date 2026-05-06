@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 interface ActionMenuItem {
   icon: string;
   label: string;
-  onClick: () => void;
+  onClick: (e?: any) => void | Promise<void>;
   danger?: boolean;
 }
 
@@ -101,7 +101,7 @@ export default function ActionMenu({ items }: ActionMenuProps) {
             <button
               key={i}
               className={`action-menu-item ${item.danger ? 'danger' : ''}`}
-              onClick={() => { item.onClick(); setOpen(false); }}
+              onClick={(e) => { item.onClick(e); setOpen(false); }}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
               {item.label}

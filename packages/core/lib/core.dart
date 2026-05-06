@@ -21,6 +21,8 @@ export 'models/driver_wallet.dart';
 export 'models/pickup_point.dart';
 export 'models/cart_item.dart';
 export 'models/region.dart';
+export 'models/cooking_video.dart';
+
 
 // API
 export 'api/api_client.dart';

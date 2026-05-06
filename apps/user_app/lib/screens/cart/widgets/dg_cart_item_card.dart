@@ -49,12 +49,10 @@ class DgCartItemCard extends StatelessWidget {
               color: AppColors.background,
               child: item.productImage != null
                   ? CachedNetworkImage(
-                      imageUrl: defaultTargetPlatform == TargetPlatform.android 
-                          ? item.productImage!.replaceAll('localhost', '10.0.2.2')
-                          : item.productImage!,
+                      imageUrl: AppConfig.fixImageUrl(item.productImage),
                       fit: BoxFit.cover,
                       placeholder: (_, __) => const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                       ),
                       errorWidget: (_, __, ___) => const Icon(
                         Icons.image_not_supported,

@@ -1,0 +1,42 @@
+.snackbar {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 12px 24px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  animation: slideDown 0.3s ease-out;
+  max-width: 90%;
+  width: max-content;
+}
+
+.success {
+  background-color: #2e7d32;
+}
+
+.error {
+  background-color: #d32f2f;
+}
+
+.info {
+  background-color: #1976d2;
+}
+
+@keyframes slideDown {
+  from {
+    top: -50px;
+    opacity: 0;
+  }
+  to {
+    top: 24px;
+    opacity: 1;
+  }
+}

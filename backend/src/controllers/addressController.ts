@@ -8,6 +8,12 @@ export async function getAddresses(req: AuthRequest, res: Response, next: NextFu
   try {
     const addresses = await prisma.address.findMany({
       where: { userId: req.userId },
+      include: {
+        province: true,
+        city: true,
+        district: true,
+        village: true,
+      },
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
     });
     res.json(addresses);

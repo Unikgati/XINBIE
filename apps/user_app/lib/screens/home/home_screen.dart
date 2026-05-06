@@ -47,7 +47,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final featuredProductsAsync = ref.watch(featuredProductsProvider);
     final promoProductsAsync = ref.watch(promoProductsProvider);
     final paginatedProductsAsync = ref.watch(paginatedProductsProvider);
-    final cart = ref.watch(cartProvider);
     
     final authState = ref.watch(authStateProvider);
     final isLoggedIn = authState.valueOrNull ?? false;
@@ -122,8 +121,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         slivers: [
           // Top Stack: Banner 1 (Background) + Header + Floating Categories
           SliverToBoxAdapter(
-            child: Stack(
-              children: [
+            child: RepaintBoundary(
+              child: Stack(
+                children: [
                 // Layer 1: Top Banner Background (extends behind status bar)
                 Container(
                   width: double.infinity,
@@ -258,6 +258,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
+        ),
 
           // === COMPLETELY EMPTY STATE ===
           if (isCompletelyEmpty)
@@ -357,9 +358,91 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Text('Pilihan Dapurgizi 🔥', style: AppTypography.h4),
                     ),
                   ),
-                  _buildProductGrid(featuredProducts, cart, ref),
+                  _buildProductGrid(featuredProducts, ref),
                 ]);
               },
+            ),
+
+            // Inspirasi Masak Section
+            SliverToBoxAdapter(
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final videosAsync = ref.watch(cookingVideosProvider);
+                  
+                  return videosAsync.when(
+                    data: (videos) {
+                      if (videos.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Inspirasi Masak Hari Ini 🧑‍🍳', style: AppTypography.h4),
+                                GestureDetector(
+                                  onTap: () => context.push('/cooking-video-gallery'),
+                                  child: Text(
+                                    'Lihat Semua',
+                                    style: AppTypography.labelLarge.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            height: 220,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: videos.length,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemBuilder: (context, index) {
+                                final video = videos[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 16),
+                                  child: DgCookingVideoCard(
+                                    video: video,
+                                    width: 280,
+                                    onTap: () {
+                                      context.push('/cooking-video', extra: {
+                                        'video': video,
+                                        'products': video.products,
+                                      });
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+                          child: Container(width: 200, height: 24, color: Colors.grey.shade200),
+                        ),
+                        SizedBox(
+                          height: 220,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: 2,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemBuilder: (context, index) => Padding(
+                              padding: const EdgeInsets.only(right: 16),
+                              child: DgShimmer.cookingVideo(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    error: (err, _) => const SizedBox.shrink(),
+                  );
+                },
+              ),
             ),
 
             // 2. Spesial Diskon 💸
@@ -380,7 +463,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Text('Spesial Diskon 💸', style: AppTypography.h4),
                     ),
                   ),
-                  _buildProductGrid(promoProducts, cart, ref),
+                  _buildProductGrid(promoProducts, ref),
                 ]);
               },
             ),
@@ -403,7 +486,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Text('Belanja Harianmu 🛒', style: AppTypography.h4),
                     ),
                   ),
-                  _buildProductGrid(allProducts, cart, ref),
+                  _buildProductGrid(allProducts, ref),
 
                   // Loading indicator / End of list indicator
                   if (paginatedProductsAsync.isRefreshing)
@@ -438,54 +521,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // --- HELPER METHODS ---
 
-  Widget _buildProductCard(Product p, List<CartItem> cart, WidgetRef ref, BuildContext context) {
-    // Format image URL safely
-    String? pImageUrl = p.images.isNotEmpty ? p.images.first : null;
-    if (pImageUrl != null) {
-      if (pImageUrl.startsWith('/')) {
-        final baseUrl = AppConfig.apiBaseUrl.replaceAll('/api', '');
-        pImageUrl = '$baseUrl$pImageUrl';
-      }
-      if (defaultTargetPlatform == TargetPlatform.android && pImageUrl.contains('localhost')) {
-        pImageUrl = pImageUrl.replaceAll('localhost', '10.0.2.2');
-      }
-    }
-    
-    // Find quantity from cart state
-    final cartItemIdx = cart.indexWhere((item) => item.productId == p.id);
-    final currentQty = cartItemIdx >= 0 ? cart[cartItemIdx].qty : 0;
+  Widget _buildProductCard(Product p, WidgetRef ref, BuildContext context) {
+    // Find quantity from cart state using granular select for performance
+    return Consumer(
+      builder: (context, ref, child) {
+        final currentQty = ref.watch(cartProvider.select((cart) {
+          final idx = cart.indexWhere((item) => item.productId == p.id);
+          return idx >= 0 ? cart[idx].qty : 0;
+        }));
 
-    return DgProductCard(
-      name: p.name,
-      price: p.displayPrice,
-      unit: p.unit,
-      discountPrice: p.displayDiscountPrice,
-      discountPercent: p.discountPercent,
-      variantCount: p.variants?.length ?? 0,
-      hasMultiplePrices: p.hasMultiplePrices,
-      quantity: currentQty,
-      isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
-      imageUrl: pImageUrl,
-      tags: p.tags,
-      onTap: () {
-        context.push('/product/${p.id}');
-      },
-      onAddToCart: () {
-        if (p.variants != null && p.variants!.isNotEmpty) {
-          context.push('/product/${p.id}');
-        } else {
-          ref.read(cartProvider.notifier).addItem(p);
-        }
-      },
-      onQuantityChanged: (newQty) {
-        ref.read(cartProvider.notifier).updateQuantity(p.id, newQty);
+        return DgProductCard(
+          name: p.name,
+          price: p.displayPrice,
+          unit: p.unit,
+          discountPrice: p.displayDiscountPrice,
+          discountPercent: p.discountPercent,
+          variantCount: p.variants?.length ?? 0,
+          hasMultiplePrices: p.hasMultiplePrices,
+          quantity: currentQty,
+          isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+          imageUrl: AppConfig.fixImageUrl(p.images.firstOrNull),
+          tags: p.tags,
+          onTap: () => context.push('/product/${p.id}'),
+          onAddToCart: () {
+            if (p.variants != null && p.variants!.isNotEmpty) {
+              context.push('/product/${p.id}');
+            } else {
+              ref.read(cartProvider.notifier).addItem(p);
+            }
+          },
+          onQuantityChanged: (newQty) {
+            ref.read(cartProvider.notifier).updateQuantity(p.id, newQty);
+          },
+        );
       },
     );
   }
 
 
 
-  Widget _buildProductGrid(List<Product> products, List<CartItem> cart, WidgetRef ref) {
+  Widget _buildProductGrid(List<Product> products, WidgetRef ref) {
     if (products.isEmpty) {
       return SliverToBoxAdapter(
         child: Padding(
@@ -509,7 +584,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             if (index >= products.length) return null;
-            return _buildProductCard(products[index], cart, ref, context);
+            return _buildProductCard(products[index], ref, context);
           },
           childCount: products.length,
         ),
@@ -687,9 +762,6 @@ class _PromoBannersCarouselState extends State<_PromoBannersCarousel> {
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
                     color: AppColors.background,
-                    child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                    ),
                   ),
                   errorWidget: (context, url, error) => Container(
                     color: AppColors.background,

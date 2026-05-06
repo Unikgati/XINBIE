@@ -440,6 +440,93 @@ class DgShimmer extends StatelessWidget {
     );
   }
 
+  /// Payment screen shimmer
+  factory DgShimmer.payment() {
+    return DgShimmer(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            // Bill Card
+            Container(
+              width: double.infinity,
+              height: 180,
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Instructions Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(width: 150, height: 20, color: AppColors.surface),
+                  const SizedBox(height: 24),
+                  ...List.generate(5, (index) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Row(
+                      children: [
+                        Container(width: 24, height: 24, decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle)),
+                        const SizedBox(width: 12),
+                        Expanded(child: Container(height: 14, color: AppColors.surface)),
+                      ],
+                    ),
+                  )),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Cooking video card shimmer
+  factory DgShimmer.cookingVideo({double width = 280}) {
+    return DgShimmer(
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(width: 200, height: 16, color: AppColors.surface),
+                  const SizedBox(height: 8),
+                  Container(width: 100, height: 12, color: AppColors.surface),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(

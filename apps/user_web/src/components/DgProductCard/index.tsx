@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './DgProductCard.module.css';
-import DgDiscountBadge from '../DgDiscountBadge';
-import DgQuantitySelector from '../DgQuantitySelector';
+import DgDiscountBadge from '../DgDiscountBadge/index';
+import DgQuantitySelector from '../DgQuantitySelector/index';
 import { useCartStore } from '@/store/cartStore';
 
 interface Props {

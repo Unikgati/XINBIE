@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'cooking_video.dart';
 import 'product_variant.dart';
 
 part 'product.freezed.dart';
@@ -12,7 +13,7 @@ abstract class Product with _$Product {
     required String id,
     required String name,
     @Default('') String description,
-    required String categoryId,
+    String? categoryId,
     required int price,
     int? discountPrice,
     int? discountPercent,
@@ -30,6 +31,7 @@ abstract class Product with _$Product {
     // Joined fields
     String? categoryName,
     List<ProductVariant>? variants,
+    @Default([]) List<CookingVideo> cookingVideos,
     @Default([]) List<Product> populatedRelatedProducts,
     @Default([]) List<Product> populatedSimilarProducts,
   }) = _Product;

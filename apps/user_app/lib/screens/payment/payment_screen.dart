@@ -235,8 +235,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: AppBar(
+          centerTitle: true,
+          title: Text('Pembayaran', style: AppTypography.h3.copyWith(color: AppColors.primaryDark)),
+        ),
+        body: DgShimmer.payment(),
       );
     }
 

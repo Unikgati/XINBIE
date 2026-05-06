@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:ui_kit/ui_kit.dart';
 import 'package:core/core.dart';
 import '../../providers/product_provider.dart';
@@ -110,11 +109,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                   ),
                   transform: Matrix4.translationValues(0, -24, 0),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 36, 20, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 36, 20, 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                         // Category badge
                         if (product.categoryName != null)
                           Container(
@@ -300,10 +302,63 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         if (product.description.isNotEmpty) ...[
                           Text('Deskripsi Produk', style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700)),
                           const SizedBox(height: 12),
-                          _CollapsibleHtmlDescription(htmlContent: product.description),
+                          _CollapsibleDescription(content: product.description),
                           const SizedBox(height: 24),
                         ],
-                        
+
+                          ],
+                        ),
+                      ),
+
+                      // Inspirasi Masakan (Full Width Section)
+                      if (product.cookingVideos.isNotEmpty) ...[
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: Divider(),
+                        ),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            'Inspirasi Masakan dari Bahan Ini',
+                            style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: 220,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: product.cookingVideos.length,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemBuilder: (context, index) {
+                              final video = product.cookingVideos[index];
+                              const cardWidth = 280.0;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 16),
+                                child: DgCookingVideoCard(
+                                  video: video,
+                                  width: cardWidth,
+                                  onTap: () {
+                                    context.push('/cooking-video', extra: {
+                                      'video': video,
+                                      'products': video.products,
+                                    });
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                      
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
                         // Mungkin Kamu Suka
                         if (product.populatedRelatedProducts.isNotEmpty) ...[
                           const Divider(),
@@ -417,8 +472,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         ],
 
                         const SizedBox(height: 100),
-                      ],
-                    ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -588,15 +645,15 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _CollapsibleHtmlDescription extends StatefulWidget {
-  const _CollapsibleHtmlDescription({required this.htmlContent});
-  final String htmlContent;
+class _CollapsibleDescription extends StatefulWidget {
+  const _CollapsibleDescription({required this.content});
+  final String content;
 
   @override
-  State<_CollapsibleHtmlDescription> createState() => _CollapsibleHtmlDescriptionState();
+  State<_CollapsibleDescription> createState() => _CollapsibleDescriptionState();
 }
 
-class _CollapsibleHtmlDescriptionState extends State<_CollapsibleHtmlDescription> {
+class _CollapsibleDescriptionState extends State<_CollapsibleDescription> {
   bool _isExpanded = false;
 
   @override
@@ -627,9 +684,12 @@ class _CollapsibleHtmlDescriptionState extends State<_CollapsibleHtmlDescription
             child: ClipRect(
               child: SingleChildScrollView(
                 physics: const NeverScrollableScrollPhysics(),
-                child: HtmlWidget(
-                  widget.htmlContent,
-                  textStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary, height: 1.6),
+                child: Text(
+                  widget.content,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.6,
+                  ),
                 ),
               ),
             ),

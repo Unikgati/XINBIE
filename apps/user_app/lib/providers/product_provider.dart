@@ -78,3 +78,9 @@ class PaginatedProductsNotifier extends AsyncNotifier<List<Product>> {
 final paginatedProductsProvider = AsyncNotifierProvider<PaginatedProductsNotifier, List<Product>>(
   PaginatedProductsNotifier.new,
 );
+
+/// Provider for cooking videos.
+final cookingVideosProvider = FutureProvider<List<CookingVideo>>((ref) async {
+  final repo = ref.watch(productRepositoryProvider);
+  return repo.getCookingVideos();
+});

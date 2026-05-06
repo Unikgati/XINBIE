@@ -32,7 +32,23 @@ const server = createServer(app);
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: (origin, callback) => callback(null, origin || '*'), credentials: true }));
+
+const allowedOrigins = [
+  config.adminUrl,
+  process.env.USER_WEB_URL || 'http://localhost:3000',
+  'http://localhost:3002' // sometimes used for other mobile builds or local test
+];
+
+app.use(cors({ 
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }, 
+  credentials: true 
+}));
 app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));

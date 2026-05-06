@@ -92,6 +92,7 @@ export async function adminGetProducts(req: AuthRequest, res: Response, next: Ne
         include: {
           category: { select: { id: true, name: true } },
           variants: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } },
+          cookingVideos: { select: { id: true, title: true } },
           _count: { select: { orderItems: true } },
         },
       }),
@@ -165,6 +166,22 @@ const parseProductData = (body: any) => {
     }
   }
 
+  // Parse cookingVideoIds
+  if (data.cookingVideoIds !== undefined) {
+    if (typeof data.cookingVideoIds === 'string') {
+      try {
+        data.cookingVideoIds = JSON.parse(data.cookingVideoIds);
+      } catch (e) {
+        data.cookingVideoIds = data.cookingVideoIds.split(',').map((t: string) => t.trim()).filter(Boolean);
+      }
+    }
+    if (Array.isArray(data.cookingVideoIds)) {
+      data.cookingVideoIds = data.cookingVideoIds.filter(Boolean).map(String);
+    } else {
+      data.cookingVideoIds = [];
+    }
+  }
+
   return data;
 };
 
@@ -193,7 +210,16 @@ export async function adminCreateProduct(req: AuthRequest, res: Response, next: 
     data.images = images;
     data.slug = await generateUniqueSlug(data.name);
 
-    const product = await prisma.product.create({ data });
+    const { cookingVideoIds, ...productData } = data;
+
+    const product = await prisma.product.create({ 
+      data: {
+        ...productData,
+        cookingVideos: {
+          connect: cookingVideoIds?.map((id: string) => ({ id })) || [],
+        }
+      } 
+    });
 
     res.status(201).json(product);
   } catch (err) { next(err); }
@@ -212,9 +238,16 @@ export async function adminUpdateProduct(req: AuthRequest, res: Response, next: 
       data.slug = await generateUniqueSlug(data.name, req.params.id);
     }
 
+    const { cookingVideoIds, ...productData } = data;
+
     const product = await prisma.product.update({
       where: { id: req.params.id },
-      data,
+      data: {
+        ...productData,
+        cookingVideos: {
+          set: cookingVideoIds?.map((id: string) => ({ id })) || [],
+        }
+      },
     });
 
     res.json(product);
@@ -1184,5 +1217,61 @@ export async function adminDeleteDeliverySlot(req: AuthRequest, res: Response, n
 
     await prisma.deliverySlot.delete({ where: { id } });
     res.json({ message: 'Slot berhasil dihapus permanen' });
+  } catch (err) { next(err); }
+}
+
+// ═══════════════════════════════════════
+// Admin Cooking Videos CRUD
+// ═══════════════════════════════════════
+
+export async function adminGetCookingVideos(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const videos = await prisma.cookingVideo.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        products: { select: { id: true, name: true } },
+      },
+    });
+    res.json(videos);
+  } catch (err) { next(err); }
+}
+
+export async function adminCreateCookingVideo(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { title, videoUrl, productIds } = req.body;
+    const video = await prisma.cookingVideo.create({
+      data: {
+        title,
+        youtubeUrl: videoUrl,
+        products: {
+          connect: Array.isArray(productIds) ? productIds.map((id: string) => ({ id })) : [],
+        },
+      },
+    });
+    res.status(201).json(video);
+  } catch (err) { next(err); }
+}
+
+export async function adminUpdateCookingVideo(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { title, videoUrl, productIds } = req.body;
+    const video = await prisma.cookingVideo.update({
+      where: { id: req.params.id },
+      data: {
+        title,
+        youtubeUrl: videoUrl,
+        products: {
+          set: Array.isArray(productIds) ? productIds.map((id: string) => ({ id })) : [],
+        },
+      },
+    });
+    res.json(video);
+  } catch (err) { next(err); }
+}
+
+export async function adminDeleteCookingVideo(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    await prisma.cookingVideo.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Video inspirasi dihapus' });
   } catch (err) { next(err); }
 }

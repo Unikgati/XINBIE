@@ -76,4 +76,10 @@ router.delete('/delivery-slots/:id', admin.adminDeleteDeliverySlot);
 // Broadcast
 router.post('/broadcast', admin.adminBroadcast);
 
+// Cooking Videos
+router.get('/cooking-videos', admin.adminGetCookingVideos);
+router.post('/cooking-videos', admin.adminCreateCookingVideo);
+router.put('/cooking-videos/:id', admin.adminUpdateCookingVideo);
+router.delete('/cooking-videos/:id', admin.adminDeleteCookingVideo);
+
 export default router;

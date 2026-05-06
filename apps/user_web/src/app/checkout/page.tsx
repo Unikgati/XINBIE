@@ -7,14 +7,25 @@ import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { useCartStore } from '@/store/cartStore';
 import { api } from '@/lib/api';
+import { useSnackbarStore } from '@/store/snackbarStore';
+import DgSkeleton from '@/components/DgSkeleton';
+
+import CheckoutAddress from './components/CheckoutAddress';
+import CheckoutOrderItems from './components/CheckoutOrderItems';
+import PaymentMethodSelector from './components/PaymentMethodSelector';
+import WhatsAppModal from './components/WhatsAppModal';
+import { useAuthStore } from '@/store/authStore';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [showWaModal, setShowWaModal] = useState(false);
+  
+  const user = useAuthStore((s) => s.user);
   
   // States for Address
   const [address, setAddress] = useState<any>(null);
@@ -28,17 +39,13 @@ export default function CheckoutPage() {
   const deliveryFee = cartItems.length > 0 ? 10000 : 0;
   const grandTotal = subtotal + deliveryFee;
 
-  const paymentGroups = [
-    { title: 'E-Wallet', methods: ['GoPay', 'ShopeePay', 'QRIS'] },
-    { title: 'Transfer Bank (Virtual Account)', methods: ['VA_BCA', 'VA_MANDIRI', 'VA_BNI'] },
-    { title: 'Gerai Ritel', methods: ['Alfamart', 'Indomaret'] }
-  ];
+  const snackbar = useSnackbarStore();
 
   const getMethodDisplayName = (method: string) => {
     switch (method) {
-      case 'VA_BCA': return 'BCA (VA)';
-      case 'VA_MANDIRI': return 'Mandiri (VA)';
-      case 'VA_BNI': return 'BNI (VA)';
+      case 'VA_BCA': return 'BCA Virtual Account';
+      case 'VA_MANDIRI': return 'Mandiri Virtual Account';
+      case 'VA_BNI': return 'BNI Virtual Account';
       case 'COD': return 'Bayar di Tempat (COD)';
       default: return method;
     }
@@ -46,12 +53,13 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     setMounted(true);
-    if (cartItems.length === 0) {
+    // Don't redirect if we are currently processing an order or successfully placed one
+    if (cartItems.length === 0 && !loading && !isSuccess) {
       router.replace('/cart');
-    } else {
+    } else if (cartItems.length > 0 && !isSuccess) {
       fetchAddress();
     }
-  }, [cartItems.length, router]);
+  }, [cartItems.length, router, loading, isSuccess]);
 
   const fetchAddress = async () => {
     try {
@@ -69,8 +77,16 @@ export default function CheckoutPage() {
   };
 
   const handleCheckout = async () => {
-    if (!paymentMethod) return alert('Silakan pilih metode pembayaran');
-    if (!address) return alert('Silakan tambahkan alamat pengiriman');
+    // Get fresh user state from store to avoid closure staleness
+    const currentUser = useAuthStore.getState().user;
+
+    if (!paymentMethod) return snackbar.show('Silakan pilih metode pembayaran', 'error');
+    if (!address) return snackbar.show('Silakan tambahkan alamat pengiriman', 'error');
+
+    if (!currentUser?.phoneWa) {
+      setShowWaModal(true);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -91,21 +107,21 @@ export default function CheckoutPage() {
         items,
       };
 
-      await api.post<any>('/order', orderData);
-      
-      clearCart();
-      
-      if (paymentMethod === 'COD') {
-        alert('Pesanan berhasil dibuat! 🎉');
-        router.push('/');
-      } else {
-        alert(`Pesanan berhasil. Segera lakukan pembayaran via ${getMethodDisplayName(paymentMethod)}`);
-        router.push('/');
-      }
+        const res = await api.post<any>('/orders', orderData);
+        
+        // Mark as success BEFORE clearing cart to prevent redirect loop
+        setIsSuccess(true);
+        clearCart();
+        
+        if (paymentMethod === 'COD') {
+          snackbar.show('Pesanan berhasil dibuat! 🎉', 'success');
+          router.push('/orders');
+        } else {
+          router.push(`/payment/${res.id}`);
+        }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Gagal membuat pesanan');
-    } finally {
+      snackbar.show(err.message || 'Gagal membuat pesanan', 'error');
       setLoading(false);
     }
   };
@@ -114,7 +130,26 @@ export default function CheckoutPage() {
     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return (
+      <div className={`app-container ${styles.container}`}>
+        <DgSkeleton width="250px" height="32px" borderRadius="8px" />
+        <div style={{ height: '32px' }} />
+        <div className={styles.contentGrid}>
+          <div className={styles.leftCol}>
+            <DgSkeleton width="100%" height="150px" borderRadius="16px" />
+            <div style={{ height: '24px' }} />
+            <DgSkeleton width="100%" height="200px" borderRadius="16px" />
+            <div style={{ height: '24px' }} />
+            <DgSkeleton width="100%" height="250px" borderRadius="16px" />
+          </div>
+          <div className={styles.rightCol}>
+            <DgSkeleton width="100%" height="300px" borderRadius="24px" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`app-container ${styles.container}`}>
@@ -124,143 +159,11 @@ export default function CheckoutPage() {
         {/* Left Column: Flow */}
         <div className={styles.leftCol}>
           
-          {/* Address */}
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <span className={styles.sectionTitle}>ALAMAT PENGIRIMAN</span>
-              <Link href="/profile/address" className={styles.addAddressBtn} style={{ padding: '6px 12px', fontSize: '12px', textDecoration: 'none' }}>
-                Ganti Alamat
-              </Link>
-            </div>
-            <div className={styles.addressBox}>
-              {loadingAddress ? (
-                <p className={styles.addressText}>Memuat alamat...</p>
-              ) : address ? (
-                <>
-                  <h3 className={styles.recipient}>{address.recipientName}</h3>
-                  <p className={styles.addressText}>{address.streetAddress}, {address.village}, {address.district}, {address.city}, {address.province} {address.postalCode}</p>
-                  <div className={styles.contactRow}>
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                    <span className={styles.contactText}>{address.recipientPhone}</span>
-                  </div>
-                </>
-              ) : (
-                <div className={styles.noAddress}>
-                  <p className={styles.addressText}>Belum ada alamat pengiriman.</p>
-                  <Link href="/profile/address" className={styles.addAddressBtn} style={{textDecoration: 'none'}}>
-                    Tambah Alamat Baru
-                  </Link>
-                </div>
-              )}
-            </div>
-          </section>
+          <CheckoutAddress address={address} loading={loadingAddress} />
 
-          {/* Items */}
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <span className={styles.sectionTitle}>DETAIL PESANAN ({totalQty} Produk)</span>
-            </div>
-            <div className={styles.orderList}>
-              {cartItems.map((item, idx) => (
-                <div key={`${item.productId}-${idx}`} className={styles.orderItem}>
-                  <div className={styles.orderImage}>
-                    {item.imageUrl ? (
-                      <Image src={item.imageUrl} fill alt={item.name} style={{ objectFit: 'cover'}} unoptimized />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f5' }}>
-                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="#bdbdbd" strokeWidth="1" fill="none">
-                          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                          <line x1="3" y1="6" x2="21" y2="6"></line>
-                          <path d="M16 10a4 4 0 0 1-8 0"></path>
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className={styles.orderDetails}>
-                    <div className={styles.orderName}>{item.name}</div>
-                    <div className={styles.orderPrice}>Rp {formatRp(item.price)}</div>
-                    <div className={styles.orderUnit}>/{item.unit}</div>
-                  </div>
-                  <div className={styles.orderQty}>{item.quantity}x</div>
-                </div>
-              ))}
-            </div>
-          </section>
+          <CheckoutOrderItems items={cartItems} totalQty={totalQty} />
 
-          {/* Payment Methods */}
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <span className={styles.sectionTitle}>METODE PEMBAYARAN</span>
-            </div>
-            <div className={styles.paymentBox}>
-              {paymentGroups.map(group => (
-                <div key={group.title} className={styles.paymentGroup}>
-                  <div 
-                    className={styles.groupHeader} 
-                    onClick={() => setExpandedGroup(expandedGroup === group.title ? null : group.title)}
-                  >
-                    <div className={styles.groupInfo}>
-                      <div className={styles.groupTitle}>{group.title}</div>
-                      <div className={styles.groupSubtitle}>{group.methods.map(m => getMethodDisplayName(m)).join(', ')}</div>
-                    </div>
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
-                      {expandedGroup === group.title ? (
-                        <polyline points="18 15 12 9 6 15"></polyline>
-                      ) : (
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      )}
-                    </svg>
-                  </div>
-                  
-                  {expandedGroup === group.title && (
-                    <div className={styles.methodsList}>
-                      {group.methods.map(method => (
-                        <div 
-                          key={method} 
-                          className={`${styles.methodItem} ${paymentMethod === method ? styles.methodSelected : ''}`}
-                          onClick={() => setPaymentMethod(method)}
-                        >
-                          <div className={styles.methodIcon}>
-                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">
-                              <rect x="2" y="5" width="20" height="14" rx="2"></rect>
-                              <line x1="2" y1="10" x2="22" y2="10"></line>
-                            </svg>
-                          </div>
-                          <span className={styles.methodName}>{getMethodDisplayName(method)}</span>
-                          <div className={styles.radio}>
-                            {paymentMethod === method && <div className={styles.radioInner}></div>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              <div 
-                className={`${styles.groupHeader} ${styles.methodItem} ${paymentMethod === 'COD' ? styles.methodSelected : ''}`}
-                style={{ marginTop: 8 }}
-                onClick={() => setPaymentMethod('COD')}
-              >
-                <div className={styles.groupInfo} style={{ flexDirection: 'row', alignItems: 'center', gap: '12px' }}>
-                  <div className={styles.methodIcon} style={{ margin: 0 }}>
-                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">
-                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                      <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                    </svg>
-                  </div>
-                  <span className={styles.groupTitle}>{getMethodDisplayName('COD')}</span>
-                </div>
-                <div className={styles.radio}>
-                  {paymentMethod === 'COD' && <div className={styles.radioInner}></div>}
-                </div>
-              </div>
-            </div>
-          </section>
+          <PaymentMethodSelector selectedMethod={paymentMethod} onSelect={setPaymentMethod} />
 
         </div>
 
@@ -306,6 +209,16 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+      
+      {showWaModal && (
+        <WhatsAppModal 
+          onSuccess={() => {
+            setShowWaModal(false);
+            handleCheckout();
+          }} 
+          onClose={() => setShowWaModal(false)} 
+        />
+      )}
     </div>
   );
 }

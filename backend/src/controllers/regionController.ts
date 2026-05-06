@@ -4,9 +4,28 @@ import prisma from '../config/database';
 // GET /api/regions/provinces
 export async function getProvinces(req: Request, res: Response, next: NextFunction) {
   try {
-    const provinces = await prisma.province.findMany({
+    let provinces = await prisma.province.findMany({
       orderBy: { name: 'asc' },
     });
+
+    if (provinces.length === 0) {
+      try {
+        const response = await fetch('https://raw.githubusercontent.com/emsifa/api-wilayah-indonesia/master/static/api/provinces.json');
+        if (response.ok) {
+          const apiProvinces = await response.json();
+          if (apiProvinces && apiProvinces.length > 0) {
+            await prisma.province.createMany({
+              data: apiProvinces.map((p: any) => ({ id: p.id, name: p.name })),
+              skipDuplicates: true
+            });
+            provinces = await prisma.province.findMany({ orderBy: { name: 'asc' } });
+          }
+        }
+      } catch (err) {
+        console.error('⚠️ Failed to fetch provinces:', err);
+      }
+    }
+
     res.json(provinces);
   } catch (err) { next(err); }
 }
@@ -19,10 +38,37 @@ export async function getCities(req: Request, res: Response, next: NextFunction)
       res.status(400).json({ message: 'provinceId is required' });
       return;
     }
-    const cities = await prisma.city.findMany({
+
+    let cities = await prisma.city.findMany({
       where: { provinceId: provinceId as string },
       orderBy: { name: 'asc' },
     });
+
+    if (cities.length === 0) {
+      try {
+        const response = await fetch(`https://raw.githubusercontent.com/emsifa/api-wilayah-indonesia/master/static/api/regencies/${provinceId}.json`);
+        if (response.ok) {
+          const apiCities = await response.json();
+          if (apiCities && apiCities.length > 0) {
+            await prisma.city.createMany({
+              data: apiCities.map((c: any) => ({
+                id: c.id,
+                name: c.name,
+                provinceId: provinceId as string
+              })),
+              skipDuplicates: true
+            });
+            cities = await prisma.city.findMany({
+              where: { provinceId: provinceId as string },
+              orderBy: { name: 'asc' },
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`⚠️ Failed to fetch cities for province ${provinceId}:`, err);
+      }
+    }
+
     res.json(cities);
   } catch (err) { next(err); }
 }
@@ -35,10 +81,37 @@ export async function getDistricts(req: Request, res: Response, next: NextFuncti
       res.status(400).json({ message: 'cityId is required' });
       return;
     }
-    const districts = await prisma.district.findMany({
+
+    let districts = await prisma.district.findMany({
       where: { cityId: cityId as string },
       orderBy: { name: 'asc' },
     });
+
+    if (districts.length === 0) {
+      try {
+        const response = await fetch(`https://raw.githubusercontent.com/emsifa/api-wilayah-indonesia/master/static/api/districts/${cityId}.json`);
+        if (response.ok) {
+          const apiDistricts = await response.json();
+          if (apiDistricts && apiDistricts.length > 0) {
+            await prisma.district.createMany({
+              data: apiDistricts.map((d: any) => ({
+                id: d.id,
+                name: d.name,
+                cityId: cityId as string
+              })),
+              skipDuplicates: true
+            });
+            districts = await prisma.district.findMany({
+              where: { cityId: cityId as string },
+              orderBy: { name: 'asc' },
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`⚠️ Failed to fetch districts for city ${cityId}:`, err);
+      }
+    }
+
     res.json(districts);
   } catch (err) { next(err); }
 }

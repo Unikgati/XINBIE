@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:ui_kit/ui_kit.dart';
 import 'package:core/core.dart';
-import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import '../providers/cart_provider.dart';
 
 class DgProductBottomSheet extends ConsumerStatefulWidget {
@@ -263,9 +262,9 @@ class _DgProductBottomSheetState extends ConsumerState<DgProductBottomSheet> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      HtmlWidget(
+                      Text(
                         p.description,
-                        textStyle: AppTypography.bodyMedium.copyWith(
+                        style: AppTypography.bodyMedium.copyWith(
                           color: AppColors.textPrimary,
                         ),
                       ),

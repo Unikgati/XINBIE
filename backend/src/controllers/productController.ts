@@ -97,6 +97,17 @@ export async function getProduct(req: Request, res: Response, next: NextFunction
       include: {
         category: { select: { name: true } },
         variants: { where: { isActive: true } },
+        cookingVideos: {
+          include: {
+            products: {
+              where: { isActive: true },
+              include: {
+                category: { select: { name: true } },
+                variants: { where: { isActive: true } },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -218,5 +229,27 @@ export async function getBanners(req: Request, res: Response, next: NextFunction
     });
 
     res.json(banners);
+  } catch (err) { next(err); }
+}
+
+// GET /api/cooking-videos
+export async function getCookingVideos(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { limit = '10' } = req.query;
+    const videos = await prisma.cookingVideo.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: parseInt(limit as string),
+      include: {
+        products: {
+          where: { isActive: true },
+          include: {
+            category: { select: { name: true } },
+            variants: { where: { isActive: true } },
+          },
+        },
+      },
+    });
+
+    res.json(videos);
   } catch (err) { next(err); }
 }

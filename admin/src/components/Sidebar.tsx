@@ -13,6 +13,7 @@ const navItems = [
   { section: 'Katalog', items: [
     { href: '/categories', icon: 'category', label: 'Kategori' },
     { href: '/products', icon: 'inventory_2', label: 'Produk' },
+    { href: '/cooking-videos', icon: 'movie', label: 'Inspirasi Masak' },
   ]},
   { section: 'Pengguna', items: [
     { href: '/drivers', icon: 'local_shipping', label: 'Driver' },
@@ -163,7 +164,7 @@ export default function Sidebar() {
             <div className="avatar-circle">AD</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 600 }}>Admin</div>
-              <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>admin@dapurgizi.com</div>
+              <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>admin@dapurgizi.store</div>
             </div>
             <span 
               className="material-symbols-outlined" 
