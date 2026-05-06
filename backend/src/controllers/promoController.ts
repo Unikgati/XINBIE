@@ -6,7 +6,10 @@ import { AppError } from '../middleware/errorHandler';
 // POST /api/promos/validate
 export async function validatePromo(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { code, subtotal, paymentMethod, items } = req.body;
+    const { code, subtotal, items } = req.body;
+    let { paymentMethod } = req.body;
+    if (paymentMethod) paymentMethod = paymentMethod.toUpperCase();
+    
     if (!code) throw new AppError('Kode promo harus diisi', 400);
 
     const promo = await prisma.promoCode.findUnique({ 

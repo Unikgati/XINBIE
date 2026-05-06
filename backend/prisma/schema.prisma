@@ -281,6 +281,7 @@ model PromoCode {
   startAt         DateTime? @map("start_at")
   endAt           DateTime? @map("end_at")
   allowCod        Boolean   @default(true) @map("allow_cod")
+  allowedPaymentMethods PaymentMethod[] @default([]) @map("allowed_payment_methods")
   createdAt       DateTime  @default(now()) @map("created_at")
 
   categories      Category[]

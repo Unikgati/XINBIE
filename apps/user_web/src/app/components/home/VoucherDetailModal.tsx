@@ -97,7 +97,14 @@ export default function VoucherDetailModal({ voucher, isOpen, onClose }: Voucher
               {voucher.allowedPaymentMethods && voucher.allowedPaymentMethods.length > 0 ? (
                 <li style={{ color: '#e67e22', fontWeight: 600 }}>
                   <span className="material-symbols-outlined">credit_card</span>
-                  Khusus pembayaran: {voucher.allowedPaymentMethods.join(', ')}
+                  Khusus pembayaran: 
+                  <div style={{ display: 'inline-flex', gap: '6px', marginLeft: '8px', verticalAlign: 'middle' }}>
+                    {voucher.allowedPaymentMethods.map(m => {
+                      const method = m.toLowerCase();
+                      const icon = method.startsWith('va_') ? method.replace('va_', '') : (method === 'va' ? 'bca' : method);
+                      return <img key={m} src={`/images/payments/${icon}.png`} alt={m} style={{ height: '18px' }} />;
+                    })}
+                  </div>
                 </li>
               ) : !voucher.allowCod && (
                 <li style={{ color: '#e67e22', fontWeight: 600 }}>

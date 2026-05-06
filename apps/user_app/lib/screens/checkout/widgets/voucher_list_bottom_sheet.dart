@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_kit/ui_kit.dart';
 import 'package:core/core.dart';
 import 'package:intl/intl.dart';
+import '../../../widgets/dg_promo_voucher_card.dart';
 
 class VoucherListBottomSheet extends ConsumerStatefulWidget {
   final double subtotal;
@@ -37,8 +38,6 @@ class _VoucherListBottomSheetState extends ConsumerState<VoucherListBottomSheet>
 
   @override
   Widget build(BuildContext context) {
-    final fmt = NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0);
-
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.background,
@@ -61,7 +60,7 @@ class _VoucherListBottomSheetState extends ConsumerState<VoucherListBottomSheet>
           ),
           const SizedBox(height: 16),
           if (_loading)
-            const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+            DgShimmer.voucherList()
           else if (_vouchers.isEmpty)
             Center(
               child: Padding(
@@ -83,114 +82,16 @@ class _VoucherListBottomSheetState extends ConsumerState<VoucherListBottomSheet>
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final v = _vouchers[index];
-                  final minOrder = (v['minOrder'] as num).toDouble();
-                  final isEligible = widget.subtotal >= minOrder;
-                  final type = v['type'] as String;
-                  final value = v['value'] as num;
+                  final isEligible = widget.subtotal >= (v['minOrder'] as num);
                   
-                  return GestureDetector(
-                    onTap: isEligible ? () => Navigator.pop(context, v['code']) : null,
-                    child: Opacity(
-                      opacity: isEligible ? 1.0 : 0.6,
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: isEligible ? AppColors.primary.withOpacity(0.3) : AppColors.divider),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.confirmation_num_outlined, color: AppColors.primary),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    v['code'],
-                                    style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold, letterSpacing: 1),
-                                  ),
-                                  Text(
-                                    'Diskon ${type == 'PERCENT' ? '$value%' : fmt.format(value)}',
-                                    style: AppTypography.h4.copyWith(color: AppColors.primaryDark),
-                                  ),
-                                  Text(
-                                    'Min. belanja ${fmt.format(minOrder)}',
-                                    style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
-                                  ),
-                                  if ((v['categories'] as List? ?? []).isNotEmpty || (v['products'] as List? ?? []).isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 2),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.inventory_2_outlined, size: 14, color: Colors.blue),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              (v['categories'] as List).isNotEmpty 
-                                                ? 'Kategori: ${(v['categories'] as List).map((c) => c['name']).join(', ')}' 
-                                                : 'Produk Khusus',
-                                              style: const TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  if ((v['allowedPaymentMethods'] as List? ?? []).isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.payments_outlined, size: 14, color: Colors.orange),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '${(v['allowedPaymentMethods'] as List).join(', ')} ONLY',
-                                            style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold),
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                  else if (v['allowCod'] == false)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.payments_outlined, size: 14, color: Colors.orange),
-                                          const SizedBox(width: 4),
-                                          const Text(
-                                            'NON-COD ONLY',
-                                            style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  if (!isEligible)
-                                    Padding(
-                                      padding: const EdgeInsets.top(4),
-                                      child: Text(
-                                        'Kurang ${fmt.format(minOrder - widget.subtotal)} lagi',
-                                        style: const TextStyle(color: AppColors.error, fontSize: 11, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            if (isEligible)
-                              const Icon(Icons.chevron_right, color: AppColors.primary),
-                          ],
-                        ),
-                      ),
-                    ),
+                  return DgPromoVoucherCard(
+                    promo: {
+                      ...v,
+                      'currentSubtotal': widget.subtotal,
+                    },
+                    width: double.infinity,
+                    isEligible: isEligible,
+                    onTap: () => Navigator.pop(context, v['code']),
                   );
                 },
               ),

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import styles from '../page.module.css';
 import { api } from '@/lib/api';
 import DgSkeleton from '@/components/DgSkeleton';
+import VoucherCard from '@/components/VoucherCard';
 
 interface Voucher {
   id: string;
@@ -64,9 +65,10 @@ export default function VoucherModal({ isOpen, onClose, onSelect, subtotal }: Vo
         
         <div className={styles.modalBody} style={{ padding: '16px' }}>
           {loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <DgSkeleton width="100%" height="100px" borderRadius="12px" />
-              <DgSkeleton width="100%" height="100px" borderRadius="12px" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {[1, 2, 3].map(i => (
+                <DgSkeleton key={i} width="100%" height="110px" borderRadius="16px" />
+              ))}
             </div>
           ) : vouchers.length === 0 ? (
             <div className={styles.emptyState}>
@@ -74,47 +76,17 @@ export default function VoucherModal({ isOpen, onClose, onSelect, subtotal }: Vo
               <p>Belum ada voucher tersedia untukmu</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {vouchers.map(v => {
                 const isEligible = subtotal >= v.minOrder;
                 return (
-                  <div 
+                  <VoucherCard 
                     key={v.id} 
-                    className={`${styles.voucherCard} ${!isEligible ? styles.voucherIneligible : ''}`}
-                    onClick={() => isEligible && onSelect(v.code)}
-                  >
-                    <div className={styles.voucherLeft}>
-                      <span className="material-symbols-outlined">confirmation_number</span>
-                    </div>
-                    <div className={styles.voucherRight}>
-                      <div className={styles.voucherCode}>{v.code}</div>
-                      <div className={styles.voucherName}>
-                        Diskon {v.type === 'PERCENT' ? `${v.value}%` : `Rp ${formatRp(v.value)}`}
-                      </div>
-                      <div className={styles.voucherMin}>Min. Belanja Rp {formatRp(v.minOrder)}</div>
-                      {(v.categories.length > 0 || v.products.length > 0) && (
-                        <div style={{ fontSize: '10px', color: '#3498db', fontWeight: 700, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>inventory_2</span>
-                          {v.categories.length > 0 ? `Kategori: ${v.categories.map(c => c.name).join(', ')}` : 'Produk Khusus'}
-                        </div>
-                      )}
-                      {v.allowedPaymentMethods && v.allowedPaymentMethods.length > 0 ? (
-                        <div style={{ fontSize: '10px', color: '#f39c12', fontWeight: 700, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>payments</span> {v.allowedPaymentMethods.join(', ')} ONLY
-                        </div>
-                      ) : !v.allowCod && (
-                        <div style={{ fontSize: '10px', color: '#f39c12', fontWeight: 700, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>payments</span> NON-COD ONLY
-                        </div>
-                      )}
-                      {!isEligible && (
-                        <div className={styles.voucherError}>Belanja kurang Rp {formatRp(v.minOrder - subtotal)} lagi</div>
-                      )}
-                      {v.endAt && (
-                        <div className={styles.voucherExpiry}>Berakhir {new Date(v.endAt).toLocaleDateString('id-ID')}</div>
-                      )}
-                    </div>
-                  </div>
+                    voucher={v as any} 
+                    isEligible={isEligible}
+                    onTap={() => onSelect(v.code)}
+                    errorMsg={!isEligible ? `Belanja kurang Rp ${formatRp(v.minOrder - subtotal)} lagi` : undefined}
+                  />
                 );
               })}
             </div>

@@ -11,8 +11,10 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
   try {
     const {
       addressId, items, deliveryType, deliverySlotId, scheduledDate,
-      paymentMethod, promoCode, notes,
+      promoCode, notes,
     } = req.body;
+    let { paymentMethod } = req.body;
+    if (paymentMethod) paymentMethod = paymentMethod.toUpperCase();
 
     // Validate address
     const address = await prisma.address.findFirst({

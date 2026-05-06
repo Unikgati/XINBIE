@@ -5,11 +5,15 @@ import 'package:intl/intl.dart';
 class DgPromoVoucherCard extends StatelessWidget {
   final Map<String, dynamic> promo;
   final VoidCallback? onTap;
+  final double? width;
+  final bool isEligible;
 
   const DgPromoVoucherCard({
     super.key,
     required this.promo,
     this.onTap,
+    this.width = 280,
+    this.isEligible = true,
   });
 
   @override
@@ -21,9 +25,11 @@ class DgPromoVoucherCard extends StatelessWidget {
     final endAt = promo['endAt'] != null ? DateTime.parse(promo['endAt']) : null;
 
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 280,
+      onTap: isEligible ? onTap : null,
+      child: Opacity(
+        opacity: isEligible ? 1.0 : 0.6,
+        child: Container(
+          width: width,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -75,7 +81,29 @@ class DgPromoVoucherCard extends StatelessWidget {
                           'Min. belanja ${fmt.format(minOrder)}',
                           style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
                         ),
-                        if (promo['allowCod'] == false)
+                        if (promo['allowedPaymentMethods'] != null && (promo['allowedPaymentMethods'] as List).isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Row(
+                              children: [
+                                const Text('KHUSUS: ', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.orange)),
+                                ...(promo['allowedPaymentMethods'] as List).map((m) {
+                                  final method = m.toString().toLowerCase();
+                                  final iconName = method.startsWith('va_') ? method.replaceFirst('va_', '') : (method == 'va' ? 'bca' : method);
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: Image.asset(
+                                      'assets/images/payments/$iconName.png',
+                                      height: 12,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
+                          )
+                        else if (promo['allowCod'] == false)
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: Row(
@@ -87,6 +115,14 @@ class DgPromoVoucherCard extends StatelessWidget {
                                   style: TextStyle(fontSize: 10, color: Colors.orange[700], fontWeight: FontWeight.bold),
                                 ),
                               ],
+                            ),
+                          ),
+                        if (!isEligible)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Belanja kurang ${fmt.format(minOrder - (promo['currentSubtotal'] ?? 0))} lagi',
+                              style: const TextStyle(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.bold),
                             ),
                           ),
                       ],
@@ -113,7 +149,7 @@ class DgPromoVoucherCard extends StatelessWidget {
                   child: Container(
                     height: 1,
                     width: double.infinity,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       border: Border(top: BorderSide(color: Colors.white, width: 2, style: BorderStyle.none)),
                     ),
                     child: CustomPaint(painter: DashLinePainter()),

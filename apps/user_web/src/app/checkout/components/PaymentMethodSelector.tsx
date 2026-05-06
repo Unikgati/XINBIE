@@ -12,13 +12,18 @@ export default function PaymentMethodSelector({ selectedMethod, onSelect }: Paym
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const paymentGroups = [
-    { title: 'E-Wallet', methods: ['GoPay', 'ShopeePay', 'QRIS'] },
+    { title: 'E-Wallet', methods: ['GOPAY', 'SHOPEEPAY', 'QRIS'] },
     { title: 'Transfer Bank (Virtual Account)', methods: ['VA_BCA', 'VA_MANDIRI', 'VA_BNI'] },
-    { title: 'Gerai Ritel', methods: ['Alfamart', 'Indomaret'] }
+    { title: 'Gerai Ritel', methods: ['ALFAMART', 'INDOMARET'] }
   ];
 
   const getMethodDisplayName = (method: string) => {
     switch (method) {
+      case 'GOPAY': return 'GoPay';
+      case 'SHOPEEPAY': return 'ShopeePay';
+      case 'QRIS': return 'QRIS';
+      case 'ALFAMART': return 'Alfamart';
+      case 'INDOMARET': return 'Indomaret';
       case 'VA_BCA': return 'BCA Virtual Account';
       case 'VA_MANDIRI': return 'Mandiri Virtual Account';
       case 'VA_BNI': return 'BNI Virtual Account';

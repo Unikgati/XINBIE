@@ -5,6 +5,7 @@ import styles from './PromoSection.module.css';
 import { api } from '@/lib/api';
 import DgSkeleton from '@/components/DgSkeleton';
 import VoucherDetailModal from './VoucherDetailModal';
+import VoucherCard from '@/components/VoucherCard';
 
 interface Promo {
   id: string;
@@ -45,8 +46,6 @@ export default function PromoSection() {
     }
   };
 
-  const formatRp = (n: number) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
   if (!loading && promos.length === 0) return null;
 
   return (
@@ -62,45 +61,11 @@ export default function PromoSection() {
           ))
         ) : (
           promos.map((promo) => (
-            <div 
+            <VoucherCard 
               key={promo.id} 
-              className={styles.voucherCard}
-              onClick={() => handleVoucherClick(promo)}
-            >
-              <span className={`material-symbols-outlined ${styles.voucherIcon}`}>confirmation_number</span>
-              <div className={styles.voucherTop}>
-                <span className={styles.voucherBadge}>Promo Belanja</span>
-                <h3 className={styles.voucherTitle}>
-                  {promo.type === 'PERCENT' 
-                    ? `Diskon ${promo.value}% (s.d Rp ${formatRp(promo.maxDiscount || 0)})` 
-                    : `Potongan Langsung Rp ${formatRp(promo.value)}`
-                  }
-                </h3>
-                <p className={styles.voucherSubtitle}>Min. pembelian Rp {formatRp(promo.minOrder)}</p>
-                {(promo.categories.length > 0 || promo.products.length > 0) && (
-                  <div style={{ marginTop: '4px', fontSize: '11px', color: '#3498db', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>inventory_2</span>
-                    {promo.categories.length > 0 ? `Kategori: ${promo.categories[0].name}${promo.categories.length > 1 ? '...' : ''}` : 'Produk Khusus'}
-                  </div>
-                )}
-                {!promo.allowCod && (
-                  <div style={{ marginTop: '4px', fontSize: '11px', color: '#f39c12', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>payments</span> NON-COD
-                  </div>
-                )}
-              </div>
-              
-              <div className={styles.voucherDivider}></div>
-              
-              <div className={styles.voucherBottom}>
-                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>schedule</span>
-                <span>
-                  {promo.endAt 
-                    ? `Berlaku s.d ${new Date(promo.endAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}` 
-                    : 'Berlaku selamanya'}
-                </span>
-              </div>
-            </div>
+              voucher={promo as any} 
+              onTap={() => handleVoucherClick(promo)} 
+            />
           ))
         )}
       </div>

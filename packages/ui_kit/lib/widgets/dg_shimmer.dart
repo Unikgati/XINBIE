@@ -204,6 +204,25 @@ class DgShimmer extends StatelessWidget {
     );
   }
 
+  /// Voucher list shimmer
+  factory DgShimmer.voucherList({int count = 3}) {
+    return DgShimmer(
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: count,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (_, __) => Container(
+          height: 110,
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Notification list shimmer
   factory DgShimmer.notificationList({int count = 5}) {
     return DgShimmer(

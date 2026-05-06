@@ -838,6 +838,9 @@ export async function adminCreatePromo(req: AuthRequest, res: Response, next: Ne
     if (data.totalUsageLimit) data.totalUsageLimit = Number(data.totalUsageLimit);
     if (data.perUserLimit) data.perUserLimit = Number(data.perUserLimit);
     if (data.allowCod !== undefined) data.allowCod = String(data.allowCod) === 'true';
+    if (data.allowedPaymentMethods && Array.isArray(data.allowedPaymentMethods)) {
+      data.allowedPaymentMethods = data.allowedPaymentMethods.map((m: string) => m.toUpperCase());
+    }
 
     const { categoryIds, productIds, ...promoData } = data;
 
@@ -863,6 +866,9 @@ export async function adminUpdatePromo(req: AuthRequest, res: Response, next: Ne
     if (data.totalUsageLimit) data.totalUsageLimit = Number(data.totalUsageLimit);
     if (data.perUserLimit) data.perUserLimit = Number(data.perUserLimit);
     if (data.allowCod !== undefined) data.allowCod = String(data.allowCod) === 'true';
+    if (data.allowedPaymentMethods && Array.isArray(data.allowedPaymentMethods)) {
+      data.allowedPaymentMethods = data.allowedPaymentMethods.map((m: string) => m.toUpperCase());
+    }
 
     const { categoryIds, productIds, ...promoData } = data;
 
