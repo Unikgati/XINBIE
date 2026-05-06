@@ -101,6 +101,7 @@ model Category {
 model Product {
   id               String   @id @default(uuid())
   name             String
+  slug             String   @unique
   description      String   @default("")
   categoryId       String   @map("category_id")
   price            Int
@@ -110,6 +111,8 @@ model Product {
   unit             String   @default("pcs")
   weightGram       Int?     @map("weight_gram")
   images           String[] @default([])
+  tags             String[] @default([])
+  relatedProductIds String[] @default([]) @map("related_product_ids")
   isUnlimitedStock Boolean  @default(true) @map("is_unlimited_stock")
   stockQty         Int      @default(0) @map("stock_qty")
   isActive         Boolean  @default(true) @map("is_active")

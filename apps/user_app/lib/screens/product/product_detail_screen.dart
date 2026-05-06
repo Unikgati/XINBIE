@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:ui_kit/ui_kit.dart';
 import 'package:core/core.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/cart_provider.dart';
 import 'package:intl/intl.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
@@ -17,6 +19,20 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   int _qty = 1;
   ProductVariant? _selectedVariant;
+
+  void _addToCart(Product product) {
+    final hasVariants = product.variants != null && product.variants!.isNotEmpty;
+    if (hasVariants && _selectedVariant == null) {
+      DgSnackbar.showError(context, message: 'Pilih varian terlebih dahulu');
+      return;
+    }
+    ref.read(cartProvider.notifier).addItem(
+      product,
+      quantity: _qty,
+      variant: _selectedVariant,
+    );
+    DgSnackbar.showSuccess(context, message: '$_qty item ditambahkan ke keranjang');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +83,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
                   background: product.images.isNotEmpty 
-                    ? Image.network(product.images.first, fit: BoxFit.cover)
+                    ? Image.network(
+                        AppConfig.fixImageUrl(product.images.first),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: AppColors.background,
+                          child: const Center(
+                            child: Icon(Icons.broken_image_outlined, size: 80, color: AppColors.textHint),
+                          ),
+                        ),
+                      )
                     : Container(
                         color: AppColors.background,
                         child: const Center(
@@ -86,81 +111,311 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   ),
                   transform: Matrix4.translationValues(0, -24, 0),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+                    padding: const EdgeInsets.fromLTRB(20, 36, 20, 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Category badge
                         if (product.categoryName != null)
-                          DgBadge(label: product.categoryName!, color: AppColors.primarySurface, textColor: AppColors.primaryDark),
-                        const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: AppColors.primarySurface,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              product.categoryName!,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.primaryDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 10),
 
                         // Name
-                        Text(product.name, style: AppTypography.h2),
-                        const SizedBox(height: 8),
+                        Text(product.name, style: AppTypography.h2.copyWith(fontSize: 22, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 10),
 
-                        // Price
+                        // Price row: big green price + discount badge + strikethrough
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            if (activeDiscount != null) ...[
-                              Text(formatRp.format(activePrice), style: AppTypography.bodyMedium.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.textHint)),
-                              const SizedBox(width: 8),
-                            ],
-                            Text(formatRp.format(sellPrice), style: AppTypography.priceActive.copyWith(color: AppColors.priceActive, fontSize: 22)),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: AppColors.border),
-                                borderRadius: BorderRadius.circular(6),
+                            Text(
+                              formatRp.format(sellPrice),
+                              style: AppTypography.priceActive.copyWith(
+                                color: AppColors.priceActive,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
                               ),
-                              child: Text('/${product.unit}', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
                             ),
+                            if (activeDiscount != null && product.discountPercent != null) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '${product.discountPercent}% OFF',
+                                  style: AppTypography.caption.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                formatRp.format(activePrice),
+                                style: AppTypography.bodySmall.copyWith(
+                                  decoration: TextDecoration.lineThrough,
+                                  decorationColor: AppColors.textHint.withOpacity(0.5),
+                                  color: AppColors.textHint.withOpacity(0.5),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
-                        
+                        const SizedBox(height: 12),
+
+                        // Tags as outlined pills
+                        if (product.tags.isNotEmpty)
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: product.tags.map((tag) => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                tag,
+                                style: AppTypography.caption.copyWith(
+                                  color: AppColors.primaryDark,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            )).toList(),
+                          ),
+
+                        const SizedBox(height: 20),
+                        const Divider(height: 1),
+                        const SizedBox(height: 16),
+
+                        // Info rows: Satuan & Stok
+                        _InfoRow(label: 'Satuan', value: '${product.stockQty == 0 && !product.isUnlimitedStock ? '' : ''}1 ${product.unit}'),
+                        const SizedBox(height: 10),
+                        _InfoRow(
+                          label: 'Stok',
+                          value: product.isUnlimitedStock
+                            ? 'Tersedia'
+                            : (product.stockQty > 0 ? 'Tersedia' : 'Habis'),
+                          valueColor: product.isUnlimitedStock || product.stockQty > 0
+                            ? AppColors.primaryDark
+                            : AppColors.error,
+                        ),
+
                         // Variants
                         if (hasVariants) ...[
-                          const SizedBox(height: 24),
-                          Text('Pilih Varian', style: AppTypography.h4),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
+                          const Divider(height: 1),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Pilih Varian:',
+                            style: AppTypography.labelLarge.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
                             children: product.variants!.map((v) {
                               final isSelected = _selectedVariant?.id == v.id;
+                              final hasDiscount = v.discountPrice != null && v.discountPrice! < v.price;
                               return GestureDetector(
                                 onTap: () => setState(() => _selectedVariant = v),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? AppColors.primarySurface : AppColors.surface,
-                                    border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(v.name, style: AppTypography.bodyMedium.copyWith(
-                                    color: isSelected ? AppColors.primaryDark : AppColors.textSecondary,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  )),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? AppColors.primarySurface : AppColors.surface,
+                                        border: Border.all(
+                                          color: isSelected ? AppColors.primary : AppColors.border,
+                                          width: isSelected ? 1.5 : 1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        v.name,
+                                        style: AppTypography.bodyMedium.copyWith(
+                                          color: isSelected ? AppColors.primaryDark : AppColors.textPrimary,
+                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    // Red discount corner badge (bottom-right)
+                                    if (hasDiscount)
+                                      Positioned(
+                                        bottom: -2,
+                                        right: -2,
+                                        child: Container(
+                                          width: 22,
+                                          height: 22,
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.error,
+                                            borderRadius: BorderRadius.only(
+                                              topLeft: Radius.circular(6),
+                                              bottomRight: Radius.circular(10),
+                                            ),
+                                          ),
+                                          child: const Center(
+                                            child: Text(
+                                              '%',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               );
                             }).toList(),
-                          )
+                          ),
                         ],
 
                         const SizedBox(height: 24),
 
                         // Description
                         if (product.description.isNotEmpty) ...[
-                          Text('Deskripsi', style: AppTypography.h4),
-                          const SizedBox(height: 8),
-                          Text(
-                            product.description,
-                            style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary, height: 1.6),
+                          Text('Deskripsi Produk', style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 12),
+                          _CollapsibleHtmlDescription(htmlContent: product.description),
+                          const SizedBox(height: 24),
+                        ],
+                        
+                        // Mungkin Kamu Suka
+                        if (product.populatedRelatedProducts.isNotEmpty) ...[
+                          const Divider(),
+                          const SizedBox(height: 16),
+                          Text('Mungkin Kamu Suka', style: AppTypography.h4),
+                          const SizedBox(height: 12),
+                          Consumer(
+                            builder: (context, cartRef, _) {
+                              final cart = cartRef.watch(cartProvider);
+                              return GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                padding: EdgeInsets.zero,
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 0.55,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                ),
+                                itemCount: product.populatedRelatedProducts.length,
+                                itemBuilder: (context, index) {
+                                  final p = product.populatedRelatedProducts[index];
+                                  final cartIdx = cart.indexWhere((item) => item.productId == p.id);
+                                  final currentQty = cartIdx >= 0 ? cart[cartIdx].qty : 0;
+                                  return DgProductCard(
+                                    name: p.name,
+                                    price: p.price,
+                                    unit: p.unit,
+                                    imageUrl: p.images.isNotEmpty ? AppConfig.fixImageUrl(p.images.first) : null,
+                                    discountPrice: p.discountPrice,
+                                    discountPercent: p.discountPercent,
+                                    isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+                                    variantCount: p.variants?.length ?? 0,
+                                    hasMultiplePrices: p.hasMultiplePrices,
+                                    tags: p.tags,
+                                    quantity: currentQty,
+                                    onTap: () => context.push('/product/${p.id}'),
+                                    onAddToCart: () {
+                                      if (p.variants != null && p.variants!.isNotEmpty) {
+                                        context.push('/product/${p.id}');
+                                      } else {
+                                        cartRef.read(cartProvider.notifier).addItem(p);
+                                        DgSnackbar.showSuccess(context, message: '1 item ditambahkan ke keranjang');
+                                      }
+                                    },
+                                    onQuantityChanged: (newQty) {
+                                      cartRef.read(cartProvider.notifier).updateQuantity(p.id, newQty);
+                                    },
+                                  );
+                                },
+                              );
+                            },
                           ),
                           const SizedBox(height: 24),
                         ],
+
+                        // Produk Terkait
+                        if (product.populatedSimilarProducts.isNotEmpty) ...[
+                          const Divider(),
+                          const SizedBox(height: 16),
+                          Text('Produk Terkait', style: AppTypography.h4),
+                          const SizedBox(height: 12),
+                          Consumer(
+                            builder: (context, cartRef, _) {
+                              final cart = cartRef.watch(cartProvider);
+                              return GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                padding: EdgeInsets.zero,
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 0.55,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                ),
+                                itemCount: product.populatedSimilarProducts.length,
+                                itemBuilder: (context, index) {
+                                  final p = product.populatedSimilarProducts[index];
+                                  final cartIdx = cart.indexWhere((item) => item.productId == p.id);
+                                  final currentQty = cartIdx >= 0 ? cart[cartIdx].qty : 0;
+                                  return DgProductCard(
+                                    name: p.name,
+                                    price: p.price,
+                                    unit: p.unit,
+                                    imageUrl: p.images.isNotEmpty ? AppConfig.fixImageUrl(p.images.first) : null,
+                                    discountPrice: p.discountPrice,
+                                    discountPercent: p.discountPercent,
+                                    isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+                                    variantCount: p.variants?.length ?? 0,
+                                    hasMultiplePrices: p.hasMultiplePrices,
+                                    tags: p.tags,
+                                    quantity: currentQty,
+                                    onTap: () => context.push('/product/${p.id}'),
+                                    onAddToCart: () {
+                                      if (p.variants != null && p.variants!.isNotEmpty) {
+                                        context.push('/product/${p.id}');
+                                      } else {
+                                        cartRef.read(cartProvider.notifier).addItem(p);
+                                        DgSnackbar.showSuccess(context, message: '1 item ditambahkan ke keranjang');
+                                      }
+                                    },
+                                    onQuantityChanged: (newQty) {
+                                      cartRef.read(cartProvider.notifier).updateQuantity(p.id, newQty);
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
                         const SizedBox(height: 100),
                       ],
                     ),
@@ -174,39 +429,83 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
       // Bottom bar
       bottomNavigationBar: asyProduct.maybeWhen(
-        data: (product) => Container(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, -2))],
-          ),
-          child: SafeArea(
-            child: Row(
-              children: [
-                // Quantity
-                DgQuantitySelector(
-                  quantity: _qty,
-                  min: 1,
-                  max: product.isUnlimitedStock ? 99 : (product.variants?.isNotEmpty == true ? _selectedVariant!.stockQty : product.stockQty),
-                  onChanged: (v) => setState(() => _qty = v),
-                ),
-                const SizedBox(width: 16),
+        data: (product) {
+          final int basePrice = _selectedVariant?.price ?? product.price;
+          final int discountPrice = _selectedVariant?.discountPrice ?? product.discountPrice ?? basePrice;
+          final int sellPrice = discountPrice < basePrice ? discountPrice : basePrice;
+          final int subtotal = sellPrice * _qty;
+          final formatRp = NumberFormat.currency(locale: 'id', symbol: 'Rp. ', decimalDigits: 0);
 
-                // Add to cart button
-                Expanded(
-                  child: DgButton(
-                    label: 'Tambah ke Keranjang',
-                    icon: Icons.shopping_cart_outlined,
-                    onPressed: () {
-                      DgSnackbar.showSuccess(context, message: '$_qty item ditambahkan ke keranjang');
-                    },
-                  ),
-                ),
-              ],
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 10, offset: const Offset(0, -4))],
             ),
-          ),
-        ),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Sub total:', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          Text(
+                            formatRp.format(subtotal),
+                            style: AppTypography.priceActive.copyWith(
+                              color: AppColors.priceActive,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      DgQuantitySelector(
+                        quantity: _qty,
+                        min: 1,
+                        max: product.isUnlimitedStock
+                          ? 99
+                          : (product.variants?.isNotEmpty == true
+                              ? (_selectedVariant?.stockQty ?? 99)
+                              : product.stockQty),
+                        onChanged: (v) => setState(() => _qty = v),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DgButton(
+                          label: 'Keranjang',
+                          icon: Icons.add,
+                          isOutlined: true,
+                          onPressed: () => _addToCart(product),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DgButton(
+                          label: 'Beli Langsung',
+                          onPressed: () {
+                            _addToCart(product);
+                            context.push('/cart');
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
         orElse: () => const SizedBox.shrink(),
       ),
     );
@@ -256,6 +555,103 @@ class _NutritionChip extends StatelessWidget {
           Text(label, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
         ],
       ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.label, required this.value, this.valueColor});
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+          ),
+        ),
+        Text(
+          value,
+          style: AppTypography.bodyMedium.copyWith(
+            color: valueColor ?? AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CollapsibleHtmlDescription extends StatefulWidget {
+  const _CollapsibleHtmlDescription({required this.htmlContent});
+  final String htmlContent;
+
+  @override
+  State<_CollapsibleHtmlDescription> createState() => _CollapsibleHtmlDescriptionState();
+}
+
+class _CollapsibleHtmlDescriptionState extends State<_CollapsibleHtmlDescription> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          alignment: Alignment.topCenter,
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: _isExpanded ? double.infinity : 150,
+            ),
+            foregroundDecoration: BoxDecoration(
+              gradient: _isExpanded
+                  ? null
+                  : LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: const [0.6, 1.0],
+                      colors: [
+                        AppColors.surface.withOpacity(0.0),
+                        AppColors.surface,
+                      ],
+                    ),
+            ),
+            child: ClipRect(
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: HtmlWidget(
+                  widget.htmlContent,
+                  textStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary, height: 1.6),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: TextButton.icon(
+            onPressed: () => setState(() => _isExpanded = !_isExpanded),
+            icon: Icon(_isExpanded ? Icons.expand_less : Icons.expand_more, color: AppColors.primary, size: 20),
+            label: Text(
+              _isExpanded ? 'Tutup Deskripsi' : 'Baca Selengkapnya',
+              style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

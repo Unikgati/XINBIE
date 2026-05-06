@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import slugify from 'slugify';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
@@ -132,7 +133,53 @@ const parseProductData = (body: any) => {
     data.description = data.description.replace(/&nbsp;/g, ' ');
   }
 
+  // Parse tags
+  if (data.tags !== undefined) {
+    if (typeof data.tags === 'string') {
+      try {
+        data.tags = JSON.parse(data.tags);
+      } catch (e) {
+        data.tags = data.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+      }
+    }
+    if (Array.isArray(data.tags)) {
+      data.tags = data.tags.filter(Boolean).map(String);
+    } else {
+      data.tags = [];
+    }
+  }
+
+  // Parse relatedProductIds
+  if (data.relatedProductIds !== undefined) {
+    if (typeof data.relatedProductIds === 'string') {
+      try {
+        data.relatedProductIds = JSON.parse(data.relatedProductIds);
+      } catch (e) {
+        data.relatedProductIds = data.relatedProductIds.split(',').map((t: string) => t.trim()).filter(Boolean);
+      }
+    }
+    if (Array.isArray(data.relatedProductIds)) {
+      data.relatedProductIds = data.relatedProductIds.filter(Boolean).map(String);
+    } else {
+      data.relatedProductIds = [];
+    }
+  }
+
   return data;
+};
+
+const generateUniqueSlug = async (name: string, excludeId?: string) => {
+  let baseSlug = slugify(name, { lower: true, strict: true });
+  let slug = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    const existing = await prisma.product.findUnique({ where: { slug } });
+    if (!existing || existing.id === excludeId) break;
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+  return slug;
 };
 
 export async function adminCreateProduct(req: AuthRequest, res: Response, next: NextFunction) {
@@ -144,6 +191,7 @@ export async function adminCreateProduct(req: AuthRequest, res: Response, next: 
 
     const data = parseProductData(req.body);
     data.images = images;
+    data.slug = await generateUniqueSlug(data.name);
 
     const product = await prisma.product.create({ data });
 
@@ -160,6 +208,9 @@ export async function adminUpdateProduct(req: AuthRequest, res: Response, next: 
 
     const data = parseProductData(req.body);
     if (images) data.images = images;
+    if (data.name) {
+      data.slug = await generateUniqueSlug(data.name, req.params.id);
+    }
 
     const product = await prisma.product.update({
       where: { id: req.params.id },

@@ -76,7 +76,7 @@ export default function Navbar() {
             <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>shopping_cart</span>
             {mounted && totalQty > 0 && (
               <span className={styles.badge}>
-                {totalQty > 99 ? '99+' : totalQty}
+                {totalQty > 9 ? '9+' : totalQty}
               </span>
             )}
           </Link>

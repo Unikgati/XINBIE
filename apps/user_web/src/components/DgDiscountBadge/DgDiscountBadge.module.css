@@ -10,11 +10,11 @@
 
 .mainBadge {
   padding: 6px 10px;
-  background: linear-gradient(to bottom right, var(--color-primary-action), var(--color-primary-dark));
+  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 40%, #1B5E20 100%);
   color: white;
   font-weight: bold;
   font-size: 12px;
-  border-radius: 12px 12px 12px 0; /* Matches Flutter: TopLeft 12, TopRight 12, BottomRight 12, BottomLeft 0 */
+  border-radius: 12px 12px 12px 0;
   box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.15);
 }
 

@@ -49,7 +49,7 @@ export default function BottomNav() {
               <span className={styles.navLabel}>{item.name}</span>
               {item.badge ? (
                 <span className={styles.badge}>
-                  {item.badge > 99 ? '99+' : item.badge}
+                  {item.badge > 9 ? '9+' : item.badge}
                 </span>
               ) : null}
             </Link>

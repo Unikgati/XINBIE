@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:ui_kit/ui_kit.dart';
 import 'package:core/core.dart';
+import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import '../providers/cart_provider.dart';
 
 class DgProductBottomSheet extends ConsumerStatefulWidget {
@@ -49,6 +51,20 @@ class _DgProductBottomSheetState extends ConsumerState<DgProductBottomSheet> {
         _selectedVariantId = widget.product.variants!.first.id;
       }
     }
+  }
+
+  void _addToCart(Product p, ProductVariant? variant) {
+    final cartNotifier = ref.read(cartProvider.notifier);
+    final existingIdx = ref.read(cartProvider).indexWhere((item) => 
+        item.productId == p.id && item.variantId == _selectedVariantId);
+    
+    if (existingIdx >= 0) {
+      cartNotifier.updateQuantity(p.id, _quantity, variantId: _selectedVariantId);
+    } else {
+      cartNotifier.addItem(p, quantity: _quantity, variant: variant);
+    }
+    
+    DgSnackbar.showSuccess(context, message: 'Berhasil ditambahkan ke keranjang');
   }
 
   @override
@@ -213,8 +229,32 @@ class _DgProductBottomSheetState extends ConsumerState<DgProductBottomSheet> {
 
                     const SizedBox(height: 24),
 
+                    // Nutrition Tags
+                    if (p.tags.isNotEmpty) ...[
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: p.tags.map((tag) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.primaryDark, width: 1.2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            tag,
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                          ),
+                        )).toList(),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
                     // Description
-                    if (p.description != null && p.description!.isNotEmpty) ...[
+                    if (p.description.isNotEmpty) ...[
                       Text(
                         'Deskripsi',
                         style: AppTypography.h4.copyWith(
@@ -223,9 +263,9 @@ class _DgProductBottomSheetState extends ConsumerState<DgProductBottomSheet> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        p.description!,
-                        style: AppTypography.bodyMedium.copyWith(
+                      HtmlWidget(
+                        p.description,
+                        textStyle: AppTypography.bodyMedium.copyWith(
                           color: AppColors.textPrimary,
                         ),
                       ),
@@ -309,9 +349,29 @@ class _DgProductBottomSheetState extends ConsumerState<DgProductBottomSheet> {
               ),
               child: Column(
                 children: [
+                  // Subtotal + Quantity
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Subtotal',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                          Text(
+                            'Rp ${_formatNumber(subtotal)}',
+                            style: AppTypography.h3.copyWith(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                       DgQuantitySelector(
                         quantity: _quantity,
                         compact: false,
@@ -324,43 +384,69 @@ class _DgProductBottomSheetState extends ConsumerState<DgProductBottomSheet> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryAction,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        elevation: 0,
-                      ),
-                      onPressed: () {
-                        // Add to cart logic
-                        // In cart_provider, we add the product. We might need to handle variants if cart provider supports it.
-                        // Currently, the provider's `addItem` doesn't take variantId, but we can update the quantity directly
-                        // using updateQuantity if it's already there, or use addItem.
-                        final cartNotifier = ref.read(cartProvider.notifier);
-                        final existingIdx = ref.read(cartProvider).indexWhere((item) => 
-                            item.productId == p.id && item.variantId == _selectedVariantId);
-                        
-                        if (existingIdx >= 0) {
-                          cartNotifier.updateQuantity(p.id, _quantity, variantId: _selectedVariantId);
-                        } else {
-                          cartNotifier.addItem(p, quantity: _quantity, variant: variant);
-                        }
-                        
-                        Navigator.of(context).pop();
-                      },
-                      child: Text(
-                        'Tambah ke Cart (Rp. ${_formatNumber(subtotal)})',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  // Two buttons row
+                  Row(
+                    children: [
+                      // Tambah ke Keranjang (outlined)
+                      Expanded(
+                        flex: 1,
+                        child: SizedBox(
+                          height: 48,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.primaryAction, width: 1.5),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              foregroundColor: AppColors.primaryAction,
+                            ),
+                            icon: const Icon(Icons.add, size: 20),
+                            label: Text(
+                              'Keranjang',
+                              style: AppTypography.button.copyWith(
+                                color: AppColors.primaryAction,
+                                fontSize: 14,
+                              ),
+                            ),
+                            onPressed: () {
+                              _addToCart(p, variant);
+                              Navigator.of(context).pop();
+                            },
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      // Beli Langsung (filled)
+                      Expanded(
+                        flex: 1,
+                        child: SizedBox(
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryAction,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.shopping_bag_rounded, size: 20),
+                            label: Text(
+                              'Beli Langsung',
+                              style: AppTypography.button.copyWith(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                            onPressed: () {
+                              _addToCart(p, variant);
+                              Navigator.of(context).pop();
+                              context.push('/cart');
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

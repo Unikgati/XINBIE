@@ -38,8 +38,6 @@ export default function LoginPage() {
   return (
     <div className="login-root">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-
         .login-root {
           min-height: 100vh;
           display: flex;
@@ -47,7 +45,6 @@ export default function LoginPage() {
           justify-content: center;
           background: linear-gradient(160deg, #78B34A 0%, #3A7D44 50%, #2D6739 100%);
           padding: 32px;
-          font-family: 'Poppins', sans-serif;
         }
 
         /* ===== Outer container with border ===== */
@@ -150,7 +147,6 @@ export default function LoginPage() {
           border: 1.5px solid transparent;
           border-radius: 12px;
           font-size: 14px;
-          font-family: 'Poppins', sans-serif;
           color: #212121;
           outline: none;
           transition: border-color 0.2s, box-shadow 0.2s;
@@ -191,7 +187,6 @@ export default function LoginPage() {
           border-radius: 24px;
           font-size: 15px;
           font-weight: 600;
-          font-family: 'Poppins', sans-serif;
           cursor: pointer;
           display: flex;
           align-items: center;

@@ -8,7 +8,13 @@ class AppConfig {
   static const String appNameDriver = 'Dapur Gizi Driver';
 
   // API
+  // Override via: flutter run --dart-define=BACKEND_URL=https://api.dapurgizi.com
+  static const String _envBackendUrl = String.fromEnvironment('BACKEND_URL');
+
   static String get apiBaseUrl {
+    // 1. Gunakan env var jika ada (production/staging build)
+    if (_envBackendUrl.isNotEmpty) return '$_envBackendUrl/api';
+    // 2. Fallback dev: Android emulator pakai 10.0.2.2, lainnya localhost
     if (kIsWeb) return 'http://localhost:3001/api';
     if (defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:3001/api';
@@ -16,13 +22,25 @@ class AppConfig {
     return 'http://localhost:3001/api';
   }
 
-  /// Helper to convert localhost URLs to Android emulator accessible URLs
+  static String get _baseServerUrl {
+    if (_envBackendUrl.isNotEmpty) return _envBackendUrl;
+    if (kIsWeb) return 'http://localhost:3001';
+    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:3001';
+    return 'http://localhost:3001';
+  }
+
+  /// Normalize image URL: relative path → absolute, localhost → 10.0.2.2 on Android emulator.
   static String fixImageUrl(String url) {
-    if (kIsWeb) return url;
-    if (defaultTargetPlatform == TargetPlatform.android && url.contains('localhost')) {
-      return url.replaceAll('localhost', '10.0.2.2');
+    String finalUrl = url.trim();
+    // Relative path → prepend base server URL
+    if (finalUrl.startsWith('/')) {
+      finalUrl = '$_baseServerUrl$finalUrl';
     }
-    return url;
+    // On Android emulator, replace localhost → 10.0.2.2
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      finalUrl = finalUrl.replaceAll('localhost', '10.0.2.2');
+    }
+    return finalUrl;
   }
 
   // Pagination

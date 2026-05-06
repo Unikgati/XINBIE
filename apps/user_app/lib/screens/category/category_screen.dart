@@ -85,7 +85,7 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.62,
+                    childAspectRatio: 0.55,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
                   ),
@@ -122,24 +122,13 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
                       variantCount: p.variants?.length ?? 0,
                       hasMultiplePrices: p.hasMultiplePrices,
                       imageUrl: pImageUrl,
+                      tags: p.tags,
                       onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          useRootNavigator: true,
-                          builder: (context) => DgProductBottomSheet(product: p),
-                        );
+                        context.push('/product/${p.id}');
                       },
                       onAddToCart: () {
                         if (p.variants != null && p.variants!.isNotEmpty) {
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            useRootNavigator: true,
-                            builder: (context) => DgProductBottomSheet(product: p),
-                          );
+                          context.push('/product/${p.id}');
                         } else {
                           ref.read(cartProvider.notifier).addItem(p);
                         }

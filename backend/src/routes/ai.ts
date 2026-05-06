@@ -10,14 +10,20 @@ router.post('/generate-desc', async (req, res) => {
       return res.status(400).json({ message: 'productName is required' });
     }
 
-    const prompt = `Buatkan deskripsi produk yang menarik untuk bahan masakan berikut. Fokuskan penjelasan pada karakteristik produk, kualitas, dan terutama MANFAAT KESEHATANNYA bagi tubuh. 
-PENTING: Jangan sebutkan nama toko, merek, atau branding apapun (seperti "DapurGizi" atau "Toko Kami"). Bersikaplah objektif namun persuasif.
-
+    const prompt = `Buatkan deskripsi produk dan rekomendasi bahan masakan pelengkap untuk:
 Nama Produk: ${productName}
 Kategori: ${categoryName || 'Bahan Makanan'}
 
-Format output HARUS DALAM HTML murni (gunakan <p>, <ul>, <li>, <b>, <i>). 
-Tanpa markdown block (\`\`\`html). Langsung berikan string HTML-nya. Jangan terlalu panjang, maksimal 3 paragraf.`;
+Fokuskan deskripsi pada karakteristik produk, kualitas, dan MANFAAT KESEHATANNYA.
+Jangan sebutkan nama toko, merek, atau branding apapun. Format deskripsi harus HTML murni (gunakan <p>, <ul>, <li>, <b>). Maksimal 3 paragraf.
+
+Kemudian, pikirkan 3-5 jenis bahan masakan riil lain yang sangat cocok dimasak bersama bahan ini (sebagai barang rekomendasi cross-selling, misal: penyedap rasa, saus, mentega, keju, arang, atau pelengkap lainnya).
+
+PENTING: KEMBALIKAN OUTPUT HANYA DALAM BENTUK JSON murni (TANPA markdown \`\`\`json) dengan format persis seperti ini:
+{
+  "description": "<p>Deskripsi html di sini...</p>",
+  "relatedKeywords": ["mentega", "keju", "bumbu", "saus"]
+}`;
 
     const apiKey = process.env.KIMI_API_KEY;
     const baseUrl = process.env.AI_BASE_URL || 'https://api.moonshot.cn/v1';
@@ -37,10 +43,11 @@ Tanpa markdown block (\`\`\`html). Langsung berikan string HTML-nya. Jangan terl
       body: JSON.stringify({
         model: aiModel,
         messages: [
-          { role: 'system', content: 'Anda adalah ahli nutrisi dan asisten copywriter e-commerce yang berfokus menulis deskripsi produk bahan makanan secara objektif (tanpa menyebutkan branding toko) dalam format HTML.' },
+          { role: 'system', content: 'Anda adalah AI asisten e-commerce yang merespon secara eksklusif dalam format JSON.' },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.7
+        temperature: 0.7,
+        response_format: { type: "json_object" }
       })
     });
 
@@ -51,16 +58,26 @@ Tanpa markdown block (\`\`\`html). Langsung berikan string HTML-nya. Jangan terl
       return res.status(500).json({ message: data.error?.message || 'Gagal generate AI' });
     }
 
-    let htmlDesc = data.choices[0].message.content;
+    let jsonOutput = data.choices[0].message.content;
     
     // Clean up markdown code blocks if AI still outputs them
-    if (htmlDesc.startsWith('```html')) {
-      htmlDesc = htmlDesc.replace(/^```html\n?/, '').replace(/\n?```$/, '');
-    } else if (htmlDesc.startsWith('```')) {
-      htmlDesc = htmlDesc.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    if (jsonOutput.startsWith('```json')) {
+      jsonOutput = jsonOutput.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+    } else if (jsonOutput.startsWith('```')) {
+      jsonOutput = jsonOutput.replace(/^```\n?/, '').replace(/\n?```$/, '');
     }
 
-  res.json({ description: htmlDesc });
+    try {
+      const parsed = JSON.parse(jsonOutput);
+      res.json({
+        description: parsed.description || '',
+        relatedKeywords: parsed.relatedKeywords || []
+      });
+    } catch (e) {
+      console.error("Failed to parse AI JSON:", e, "Raw output:", jsonOutput);
+      // Fallback in case of parsing error
+      res.json({ description: jsonOutput, relatedKeywords: [] });
+    }
   } catch (err: any) {
     console.error('AI Gen Error:', err);
     res.status(500).json({ message: 'Terjadi kesalahan internal saat memanggil AI.' });

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import DOMPurify from 'isomorphic-dompurify';
 import styles from './ProductDetail.module.css';
 import DgQuantitySelector from '@/components/DgQuantitySelector';
@@ -29,14 +30,23 @@ interface Product {
   images?: string[];
   isUnlimitedStock: boolean;
   stockQty: number;
+  tags?: string[];
   variants: Variant[];
 }
 
-export default function ProductDetailClient({ product, relatedProducts = [] }: { product: Product; relatedProducts?: any[] }) {
+interface ProductDetailClientProps {
+  product: Product;
+  relatedProducts: any[];
+  similarProducts: any[];
+}
+
+export default function ProductDetailClient({ product, relatedProducts, similarProducts }: ProductDetailClientProps) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
     product.variants?.length > 0 ? product.variants[0] : null
   );
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const router = useRouter();
+  const [showToast, setShowToast] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isCollapsible, setIsCollapsible] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
@@ -102,10 +112,24 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
         imageUrl: images[0],
       }, quantity);
     }
+    
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    router.push('/cart');
   };
 
   return (
     <div className={styles.container}>
+      {showToast && (
+        <div className={styles.toast}>
+          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>check_circle</span>
+          Berhasil ditambahkan ke keranjang
+        </div>
+      )}
       <div className={styles.breadcrumb}>
         <Link href="/">Beranda</Link> &gt; <Link href={`/category/${product.categoryName}`}>{product.categoryName || 'Produk'}</Link> &gt; <span style={{color: 'var(--color-text-primary)'}}>{product.name}</span>
       </div>
@@ -172,6 +196,16 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
                 </div>
               )}
             </div>
+
+            {product.tags && product.tags.length > 0 && (
+              <div className={styles.tagsRow}>
+                {product.tags.map(tag => (
+                  <span key={tag} className={styles.tagChip}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className={styles.divider} />
@@ -223,14 +257,16 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
               large
               editable
             />
-            <button className={styles.addToCartBtn} disabled={isOutOfStock} onClick={handleAddToCart}>
-              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
-                <circle cx="9" cy="21" r="1"></circle>
-                <circle cx="20" cy="21" r="1"></circle>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-              </svg>
-              {isOutOfStock ? 'Stok Habis' : `Tambah ke Keranjang — Rp ${formatRp(displayPrice * quantity)}`}
-            </button>
+            <div className={styles.actionButtonsRow}>
+              <button className={styles.addToCartBtn} disabled={isOutOfStock} onClick={handleAddToCart}>
+                {!isOutOfStock && <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>}
+                {isOutOfStock ? 'Stok Habis' : 'Keranjang'}
+              </button>
+              <button className={styles.buyNowBtn} disabled={isOutOfStock} onClick={handleBuyNow}>
+                {!isOutOfStock && <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>shopping_bag</span>}
+                {isOutOfStock ? 'Stok Habis' : 'Beli Langsung'}
+              </button>
+            </div>
           </div>
 
           <div className={styles.descriptionSection}>
@@ -269,12 +305,13 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
       {relatedProducts.length > 0 && (
         <section className={styles.relatedSection}>
           <div className={styles.divider} />
-          <h2 className={styles.relatedTitle}>Produk Terkait</h2>
+          <h2 className={styles.relatedTitle}>Mungkin Kamu Suka</h2>
           <div className={styles.relatedGrid}>
             {relatedProducts.map((p: any) => (
               <DgProductCard
                 key={p.id}
                 id={p.id}
+                slug={p.slug}
                 name={p.name}
                 price={p.price}
                 unit={p.unit}
@@ -283,6 +320,33 @@ export default function ProductDetailClient({ product, relatedProducts = [] }: {
                 discountPercent={p.discountPercent}
                 isOutOfStock={!p.isUnlimitedStock && p.stockQty <= 0}
                 variantCount={p.variants ? p.variants.length : 0}
+                tags={p.tags}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Similar Products */}
+      {similarProducts.length > 0 && (
+        <section className={styles.relatedSection}>
+          <div className={styles.divider} />
+          <h2 className={styles.relatedTitle}>Produk Terkait</h2>
+          <div className={styles.relatedGrid}>
+            {similarProducts.map((p: any) => (
+              <DgProductCard
+                key={`similar-${p.id}`}
+                id={p.id}
+                slug={p.slug}
+                name={p.name}
+                price={p.price}
+                unit={p.unit}
+                imageUrl={p.images && p.images.length > 0 ? p.images[0] : undefined}
+                discountPrice={p.discountPrice}
+                discountPercent={p.discountPercent}
+                isOutOfStock={!p.isUnlimitedStock && p.stockQty <= 0}
+                variantCount={p.variants ? p.variants.length : 0}
+                tags={p.tags}
               />
             ))}
           </div>

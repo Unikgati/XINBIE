@@ -58,6 +58,7 @@ export default async function CategoryPage({ params, searchParams }: { params: {
               <DgProductCard
                 key={product.id}
                 id={product.id}
+                slug={product.slug}
                 name={product.name}
                 price={product.price}
                 unit={product.unit}
@@ -66,6 +67,7 @@ export default async function CategoryPage({ params, searchParams }: { params: {
                 discountPercent={product.discountPercent}
                 isOutOfStock={!product.isUnlimitedStock && product.stockQty <= 0}
                 variantCount={product.variants ? product.variants.length : 0}
+                tags={product.tags}
               />
             ))}
           </div>

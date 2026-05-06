@@ -22,9 +22,9 @@ class DgQuantitySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? 32.0 : 40.0;
-    final iconSize = compact ? 20.0 : 24.0;
-    final fontSize = compact ? 14.0 : 16.0;
+    final size = compact ? 28.0 : 40.0;
+    final iconSize = compact ? 16.0 : 24.0;
+    final fontSize = compact ? 13.0 : 16.0;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -43,11 +43,11 @@ class DgQuantitySelector extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(width: 4),
+        SizedBox(width: compact ? 2 : 4),
 
         // Quantity
         Container(
-          width: compact ? 28 : 40,
+          width: compact ? 24 : 40,
           height: size,
           decoration: BoxDecoration(
             border: Border.all(color: AppColors.primaryAction, width: 1.5),
@@ -64,7 +64,7 @@ class DgQuantitySelector extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(width: 4),
+        SizedBox(width: compact ? 2 : 4),
 
         // Plus
         GestureDetector(

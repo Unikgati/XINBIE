@@ -466,24 +466,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       quantity: currentQty,
       isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
       imageUrl: pImageUrl,
+      tags: p.tags,
       onTap: () {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          useRootNavigator: true,
-          builder: (context) => DgProductBottomSheet(product: p),
-        );
+        context.push('/product/${p.id}');
       },
       onAddToCart: () {
         if (p.variants != null && p.variants!.isNotEmpty) {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            useRootNavigator: true,
-            builder: (context) => DgProductBottomSheet(product: p),
-          );
+          context.push('/product/${p.id}');
         } else {
           ref.read(cartProvider.notifier).addItem(p);
         }
@@ -513,7 +502,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.62,
+          childAspectRatio: 0.55,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
         ),

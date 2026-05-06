@@ -19,6 +19,7 @@ abstract class Product with _$Product {
     required String unit,
     int? weightGram,
     @Default([]) List<String> images,
+    @Default([]) List<String> tags,
     @Default(true) bool isUnlimitedStock,
     @Default(0) int stockQty,
     @Default(true) bool isActive,
@@ -29,6 +30,8 @@ abstract class Product with _$Product {
     // Joined fields
     String? categoryName,
     List<ProductVariant>? variants,
+    @Default([]) List<Product> populatedRelatedProducts,
+    @Default([]) List<Product> populatedSimilarProducts,
   }) = _Product;
 
   factory Product.fromJson(Map<String, dynamic> json) =>

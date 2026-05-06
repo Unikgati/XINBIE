@@ -83,9 +83,17 @@ export async function getProducts(req: Request, res: Response, next: NextFunctio
 
 // GET /api/products/:id
 export async function getProduct(req: Request, res: Response, next: NextFunction) {
+  type PopulatedProduct = Omit<Awaited<ReturnType<typeof prisma.product.findFirst>>, 'category'> & {
+    categoryName: string;
+    category?: undefined;
+  };
+
   try {
+    const param = req.params.id;
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(param);
+
     const product = await prisma.product.findUnique({
-      where: { id: req.params.id },
+      where: isUuid ? { id: param } : { slug: param },
       include: {
         category: { select: { name: true } },
         variants: { where: { isActive: true } },
@@ -96,7 +104,56 @@ export async function getProduct(req: Request, res: Response, next: NextFunction
       return res.status(404).json({ message: 'Produk tidak ditemukan' });
     }
 
-    res.json({ ...product, categoryName: product.category.name, category: undefined });
+    const toPopulated = (r: typeof product) => ({
+      ...r,
+      categoryName: r.category?.name ?? '',
+      category: undefined,
+    });
+
+    const baseSimilarWhere = {
+      id: { not: product.id },
+      isActive: true,
+      ...(product.categoryId ? { categoryId: product.categoryId } : {}),
+    };
+
+    // Run related & similar queries in parallel
+    const [relatedRaw, tagSimilarRaw] = await Promise.all([
+      product.relatedProductIds.length > 0
+        ? prisma.product.findMany({
+            where: { id: { in: product.relatedProductIds }, isActive: true },
+            include: { category: { select: { name: true } }, variants: { where: { isActive: true } } },
+          })
+        : Promise.resolve([]),
+      product.tags.length > 0
+        ? prisma.product.findMany({
+            where: { ...baseSimilarWhere, tags: { hasSome: product.tags } },
+            take: 8,
+            include: { category: { select: { name: true } }, variants: { where: { isActive: true } } },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const populatedRelated: PopulatedProduct[] = relatedRaw.map(toPopulated);
+    let populatedSimilar: PopulatedProduct[] = tagSimilarRaw.map(toPopulated);
+
+    // Fallback: fill up to 8 with same-category products if tag results are insufficient
+    if (populatedSimilar.length < 8) {
+      const excludeIds = [product.id, ...populatedSimilar.map((p) => p.id)];
+      const fallback = await prisma.product.findMany({
+        where: { ...baseSimilarWhere, id: { notIn: excludeIds } },
+        take: 8 - populatedSimilar.length,
+        include: { category: { select: { name: true } }, variants: { where: { isActive: true } } },
+      });
+      populatedSimilar = [...populatedSimilar, ...fallback.map(toPopulated)];
+    }
+
+    res.json({
+      ...product,
+      categoryName: product.category?.name ?? '',
+      category: undefined,
+      populatedRelatedProducts: populatedRelated,
+      populatedSimilarProducts: populatedSimilar,
+    });
   } catch (err) { next(err); }
 }
 

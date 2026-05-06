@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Select from 'react-select';
 import ActionMenu from '@/components/ActionMenu';
 import CustomSelect from '@/components/CustomSelect';
 import { useToast } from '@/components/Toast';
@@ -9,6 +10,27 @@ import { TableSkeleton } from '@/components/Skeleton';
 import { Pagination } from '@/components/Pagination';
 import RichTextEditor from '@/components/RichTextEditor';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
+
+const NUTRITION_TAGS = [
+  // Vitamin
+  'Tinggi Vitamin A', 'Tinggi Vitamin B Kompleks', 'Tinggi Vitamin C',
+  'Tinggi Vitamin D', 'Tinggi Vitamin E', 'Tinggi Vitamin K',
+  // Mineral
+  'Tinggi Kalsium', 'Tinggi Zat Besi', 'Tinggi Kalium', 'Tinggi Magnesium',
+  // Makronutrien
+  'Tinggi Serat', 'Tinggi Protein', 'Karbohidrat Kompleks',
+  // Klaim Gizi
+  'Rendah Gula', 'Rendah Kalori', 'Kaya Antioksidan',
+  // Gaya Hidup
+  'Organik', 'Bebas Gluten', 'Bebas Pengawet', 'Tanpa Pemanis Buatan',
+  'Vegan / Plant-based', '100% Alami',
+  // Karakter Produk
+  'Pedas', 'Penguat Rasa Alami',
+  // Non-makanan
+  'Anti Bakteri', 'Ramah Lingkungan', 'Lembut di Tangan', 'Food Grade',
+];
+
+const TAG_OPTIONS = NUTRITION_TAGS.map(t => ({ value: t, label: t }));
 
 interface Variant {
   id: string;
@@ -30,6 +52,7 @@ interface Product {
   discountPercent?: number;
   unit?: string;
   images?: string[];
+  tags?: string[];
   stockQty: number;
   isActive: boolean;
   isFeatured: boolean;
@@ -98,6 +121,8 @@ export default function ProductsPage() {
   const [generateSuccess, setGenerateSuccess] = useState(false);
   const [formImages, setFormImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [formTags, setFormTags] = useState<string[]>([]);
+  const [formRelatedProductIds, setFormRelatedProductIds] = useState<string[]>([]);
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -157,6 +182,21 @@ export default function ProductsPage() {
       const res = await apiPost<any>('/ai/generate-desc', { productName: formName, categoryName: catName });
       if (res && res.description) {
         setFormDesc(res.description);
+        
+        // Auto match AI suggested keywords to actual products
+        if (res.relatedKeywords && res.relatedKeywords.length > 0) {
+          const matches = products.filter(p => {
+             const lowerName = p.name.toLowerCase();
+             return res.relatedKeywords.some((kw: string) => lowerName.includes(kw.toLowerCase()));
+          });
+          if (matches.length > 0) {
+            const newIds = matches.map(m => m.id);
+            // Append without duplicating
+            setFormRelatedProductIds(prev => Array.from(new Set([...prev, ...newIds])));
+            toast.success(`Berhasil menemukan ${matches.length} produk pelengkap otomatis!`);
+          }
+        }
+        
         toast.success('Deskripsi berhasil di-generate!');
         setGenerateSuccess(true);
         setTimeout(() => setGenerateSuccess(false), 2000);
@@ -173,7 +213,7 @@ export default function ProductsPage() {
     setFormName(''); setFormPrice(''); setFormCostPrice(''); setFormDiscountPrice('');
     setFormStock(''); setFormUnit(''); setFormDesc(''); setFormVariants([]);
     setDeletedVariants([]);
-    setFormImages([]); setExistingImages([]);
+    setFormImages([]); setExistingImages([]); setFormTags([]); setFormRelatedProductIds([]);
     setProductCategory(categories[0]?.id || '');
   };
 
@@ -203,6 +243,8 @@ export default function ProductsPage() {
     setFormUnit(p.unit || 'pcs');
     setFormDesc(p.description || '');
     setExistingImages(p.images || []);
+    setFormTags(p.tags || []);
+    setFormRelatedProductIds(p.relatedProductIds || []);
     setFormImages([]);
     setFormVariants(p.variants ? p.variants.map(v => ({
       tempId: v.id,
@@ -227,6 +269,8 @@ export default function ProductsPage() {
       formData.append('stock', formStock || '0');
       formData.append('unit', formUnit || 'pcs');
       formData.append('description', formDesc);
+      formData.append('tags', JSON.stringify(formTags));
+      formData.append('relatedProductIds', JSON.stringify(formRelatedProductIds));
       formImages.forEach(file => formData.append('images', file));
       
       let prodId = editingId;
@@ -572,6 +616,54 @@ export default function ProductsPage() {
                   onChange={setFormDesc} 
                   placeholder={generatingDesc ? "Sedang di-generate oleh AI..." : "Deskripsi produk..."} 
                   loading={generatingDesc} 
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Tag Nutrisi / Atribut</label>
+                <Select
+                  isMulti
+                  options={TAG_OPTIONS}
+                  value={formTags.map(t => ({ value: t, label: t }))}
+                  onChange={(selected) => setFormTags((selected || []).map((s: any) => s.value))}
+                  placeholder="Cari tag... (misal: Tinggi Vitamin C)"
+                  noOptionsMessage={() => 'Tag tidak ditemukan'}
+                  menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                  styles={{
+                    control: (base: any) => ({ ...base, background: 'var(--surface)', borderColor: 'var(--divider)', borderRadius: 'var(--radius-md)', minHeight: 40, fontSize: 14 }),
+                    menu: (base: any) => ({ ...base, background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 'var(--radius-md)' }),
+                    menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
+                    option: (base: any, state: any) => ({ ...base, background: state.isFocused ? 'var(--primary-surface)' : 'transparent', color: 'var(--text-primary)', fontSize: 13 }),
+                    multiValue: (base: any) => ({ ...base, background: 'var(--primary-surface)', borderRadius: 12 }),
+                    multiValueLabel: (base: any) => ({ ...base, color: 'var(--primary-dark)', fontSize: 12, fontWeight: 500, padding: '2px 6px' }),
+                    multiValueRemove: (base: any) => ({ ...base, color: 'var(--primary)', borderRadius: '0 12px 12px 0', ':hover': { background: 'var(--primary-light)', color: '#fff' } }),
+                    input: (base: any) => ({ ...base, color: 'var(--text-primary)' }),
+                    placeholder: (base: any) => ({ ...base, color: 'var(--text-hint)', fontSize: 13 }),
+                  }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Produk Pelengkap (Cross-Selling)</label>
+                <Select
+                  isMulti
+                  options={products.filter(p => p.id !== editingId).map(p => ({ value: p.id, label: p.name }))}
+                  value={products.filter(p => formRelatedProductIds.includes(p.id)).map(p => ({ value: p.id, label: p.name }))}
+                  onChange={(selected) => setFormRelatedProductIds((selected || []).map((s: any) => s.value))}
+                  placeholder="Cari produk pelengkap (misal: Mentega, Keju)"
+                  noOptionsMessage={() => 'Produk tidak ditemukan'}
+                  menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                  styles={{
+                    control: (base: any) => ({ ...base, background: 'var(--surface)', borderColor: 'var(--divider)', borderRadius: 'var(--radius-md)', minHeight: 40, fontSize: 14 }),
+                    menu: (base: any) => ({ ...base, background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 'var(--radius-md)' }),
+                    menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
+                    option: (base: any, state: any) => ({ ...base, background: state.isFocused ? 'var(--primary-surface)' : 'transparent', color: 'var(--text-primary)', fontSize: 13 }),
+                    multiValue: (base: any) => ({ ...base, background: 'var(--primary-surface)', borderRadius: 12 }),
+                    multiValueLabel: (base: any) => ({ ...base, color: 'var(--primary-dark)', fontSize: 12, fontWeight: 500, padding: '2px 6px' }),
+                    multiValueRemove: (base: any) => ({ ...base, color: 'var(--primary)', borderRadius: '0 12px 12px 0', ':hover': { background: 'var(--primary-light)', color: '#fff' } }),
+                    input: (base: any) => ({ ...base, color: 'var(--text-primary)' }),
+                    placeholder: (base: any) => ({ ...base, color: 'var(--text-hint)', fontSize: 13 }),
+                  }}
                 />
               </div>
 

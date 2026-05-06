@@ -23,6 +23,7 @@ class DgProductCard extends StatelessWidget {
     this.isOutOfStock = false,
     this.variantCount = 0,
     this.hasMultiplePrices = false,
+    this.tags = const [],
     this.onTap,
     this.onAddToCart,
     this.onQuantityChanged,
@@ -38,6 +39,7 @@ class DgProductCard extends StatelessWidget {
   final bool isOutOfStock;
   final int variantCount;
   final bool hasMultiplePrices;
+  final List<String> tags;
   final VoidCallback? onTap;
   final VoidCallback? onAddToCart;
   final ValueChanged<int>? onQuantityChanged;
@@ -112,6 +114,20 @@ class DgProductCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
+
+                        // Tags
+                        if (tags.isNotEmpty) ...[
+                          Text(
+                            tags.take(3).join(' · ') + (tags.length > 3 ? ' +${tags.length - 3}' : ''),
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 10,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                        ],
 
                         // Price
                         Wrap(

@@ -10,6 +10,7 @@ import { useCartStore } from '@/store/cartStore';
 
 interface Props {
   id: string;
+  slug?: string;
   name: string;
   price: number;
   unit: string;
@@ -19,10 +20,12 @@ interface Props {
   isOutOfStock?: boolean;
   variantCount?: number;
   hasMultiplePrices?: boolean;
+  tags?: string[];
 }
 
 export default function DgProductCard({
   id,
+  slug,
   name,
   price,
   unit,
@@ -32,6 +35,7 @@ export default function DgProductCard({
   isOutOfStock = false,
   variantCount = 0,
   hasMultiplePrices = false,
+  tags = [],
 }: Props) {
   const [mounted, setMounted] = useState(false);
   const qty = useCartStore((s) => s.getQuantity(id));
@@ -66,7 +70,7 @@ export default function DgProductCard({
   };
 
   return (
-    <Link href={`/product/${id}`} className={styles.cardLink}>
+    <Link href={`/product/${slug || id}`} className={styles.cardLink}>
       <div className={styles.card}>
         <div className={styles.imageContainer}>
           {imageUrl ? (
@@ -107,6 +111,13 @@ export default function DgProductCard({
 
         <div className={styles.content}>
           <h3 className={styles.name} title={name}>{name}</h3>
+
+          {tags.length > 0 && (
+            <div className={styles.cardTags}>
+              {tags.slice(0, 3).join(' · ')}
+              {tags.length > 3 && ` +${tags.length - 3}`}
+            </div>
+          )}
           
           <div className={styles.priceContainer}>
             <span className={styles.activePrice}>Rp {formatRp(displayPrice)}</span>

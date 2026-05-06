@@ -14,9 +14,9 @@ async function fetchApi(endpoint: string) {
   }
 }
 
-export default async function ProductDetailPage({ params }: { params: { id: string } }) {
-  const { id } = await params;
-  const product = await fetchApi(`/products/${id}`);
+export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
+  const { slug } = await params;
+  const product = await fetchApi(`/products/${slug}`);
 
   if (!product) {
     return (
@@ -30,14 +30,8 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     );
   }
 
-  // Fetch related products from same category, exclude current product
-  let relatedProducts: any[] = [];
-  if (product.categoryId) {
-    const relatedRes = await fetchApi(`/products?categoryId=${product.categoryId}&limit=8`);
-    if (relatedRes?.data) {
-      relatedProducts = relatedRes.data.filter((p: any) => p.id !== product.id);
-    }
-  }
+  let relatedProducts: any[] = product.populatedRelatedProducts || [];
+  let similarProducts: any[] = product.populatedSimilarProducts || [];
 
-  return <ProductDetailClient product={product} relatedProducts={relatedProducts} />;
+  return <ProductDetailClient product={product} relatedProducts={relatedProducts} similarProducts={similarProducts} />;
 }

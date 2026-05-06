@@ -63,24 +63,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       quantity: currentQty,
       isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
       imageUrl: pImageUrl,
+      tags: p.tags,
       onTap: () {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          useRootNavigator: true,
-          builder: (context) => DgProductBottomSheet(product: p),
-        );
+        context.push('/product/${p.id}');
       },
       onAddToCart: () {
         if (p.variants != null && p.variants!.isNotEmpty) {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            useRootNavigator: true,
-            builder: (context) => DgProductBottomSheet(product: p),
-          );
+          context.push('/product/${p.id}');
         } else {
           ref.read(cartProvider.notifier).addItem(p);
         }
@@ -150,7 +139,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       padding: const EdgeInsets.all(16),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: 0.58, // Adjusted to prevent overflow
+                        childAspectRatio: 0.52,
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
                       ),

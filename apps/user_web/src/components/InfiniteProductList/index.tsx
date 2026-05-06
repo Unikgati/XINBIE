@@ -6,6 +6,7 @@ import styles from '@/app/page.module.css';
 
 interface Product {
   id: string;
+  slug?: string;
   name: string;
   price: number;
   unit: string;
@@ -14,6 +15,7 @@ interface Product {
   discountPercent?: number;
   isUnlimitedStock: boolean;
   stockQty: number;
+  tags?: string[];
   variants?: any[];
 }
 
@@ -82,6 +84,7 @@ export default function InfiniteProductList({ initialProducts, initialMeta }: Pr
             <div key={product.id} ref={isLast ? lastProductElementRef : null}>
               <DgProductCard
                 id={product.id}
+                slug={product.slug}
                 name={product.name}
                 price={product.price}
                 unit={product.unit}
@@ -90,6 +93,7 @@ export default function InfiniteProductList({ initialProducts, initialMeta }: Pr
                 discountPercent={product.discountPercent}
                 isOutOfStock={!product.isUnlimitedStock && product.stockQty <= 0}
                 variantCount={product.variants ? product.variants.length : 0}
+                tags={product.tags}
               />
             </div>
           );
