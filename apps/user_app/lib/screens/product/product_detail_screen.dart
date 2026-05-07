@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -212,13 +213,22 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         const SizedBox(height: 10),
                         _InfoRow(
                           label: 'Stok',
-                          value: product.isUnlimitedStock
-                            ? 'Tersedia'
-                            : (product.stockQty > 0 ? 'Tersedia' : 'Habis'),
-                          valueColor: product.isUnlimitedStock || product.stockQty > 0
+                          value: activeStock > 0 ? 'Tersedia' : 'Habis',
+                          valueColor: activeStock > 0
                             ? AppColors.primaryDark
                             : AppColors.error,
                         ),
+                        if (activeStock > 0 && activeStock <= 10)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, left: 80),
+                            child: Text(
+                              'Sisa $activeStock item lagi!',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.error,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
 
                         // Variants
                         if (hasVariants) ...[
@@ -390,11 +400,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                     imageUrl: p.images.isNotEmpty ? AppConfig.fixImageUrl(p.images.first) : null,
                                     discountPrice: p.discountPrice,
                                     discountPercent: p.discountPercent,
-                                    isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+                                    isOutOfStock: p.stockQty <= 0,
                                     variantCount: p.variants?.length ?? 0,
                                     hasMultiplePrices: p.hasMultiplePrices,
                                     tags: p.tags,
                                     quantity: currentQty,
+                                    maxQuantity: p.stockQty,
                                     onTap: () => context.push('/product/${p.id}'),
                                     onAddToCart: () {
                                       if (p.variants != null && p.variants!.isNotEmpty) {
@@ -446,11 +457,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                     imageUrl: p.images.isNotEmpty ? AppConfig.fixImageUrl(p.images.first) : null,
                                     discountPrice: p.discountPrice,
                                     discountPercent: p.discountPercent,
-                                    isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+                                    isOutOfStock: p.stockQty <= 0,
                                     variantCount: p.variants?.length ?? 0,
                                     hasMultiplePrices: p.hasMultiplePrices,
                                     tags: p.tags,
                                     quantity: currentQty,
+                                    maxQuantity: p.stockQty,
                                     onTap: () => context.push('/product/${p.id}'),
                                     onAddToCart: () {
                                       if (p.variants != null && p.variants!.isNotEmpty) {
@@ -491,6 +503,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           final int discountPrice = _selectedVariant?.discountPrice ?? product.discountPrice ?? basePrice;
           final int sellPrice = discountPrice < basePrice ? discountPrice : basePrice;
           final int subtotal = sellPrice * _qty;
+          final int activeStock = _selectedVariant?.stockQty ?? product.stockQty;
           final formatRp = NumberFormat.currency(locale: 'id', symbol: 'Rp. ', decimalDigits: 0);
 
           return Container(
@@ -523,16 +536,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           ),
                         ],
                       ),
-                      DgQuantitySelector(
-                        quantity: _qty,
-                        min: 1,
-                        max: product.isUnlimitedStock
-                          ? 99
-                          : (product.variants?.isNotEmpty == true
-                              ? (_selectedVariant?.stockQty ?? 99)
-                              : product.stockQty),
-                        onChanged: (v) => setState(() => _qty = v),
-                      ),
+                        DgQuantitySelector(
+                          quantity: _qty,
+                          min: activeStock > 0 ? 1 : 0,
+                          max: activeStock,
+                          onChanged: (v) => setState(() => _qty = v),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -540,20 +549,20 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     children: [
                       Expanded(
                         child: DgButton(
-                          label: 'Keranjang',
-                          icon: Icons.add,
+                          label: activeStock > 0 ? 'Keranjang' : 'Stok Habis',
+                          icon: activeStock > 0 ? Icons.add : null,
                           isOutlined: true,
-                          onPressed: () => _addToCart(product),
+                          onPressed: activeStock > 0 ? () => _addToCart(product) : null,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: DgButton(
                           label: 'Beli Langsung',
-                          onPressed: () {
+                          onPressed: activeStock > 0 ? () {
                             _addToCart(product);
                             context.push('/cart');
-                          },
+                          } : null,
                         ),
                       ),
                     ],

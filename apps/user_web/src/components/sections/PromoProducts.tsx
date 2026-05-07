@@ -5,7 +5,7 @@ import DgProductCard from "@/components/DgProductCard/index";
 async function fetchPromo() {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products?promo=true&limit=5`, {
-      cache: 'no-store'
+      next: { revalidate: 60 }
     });
     if (!res.ok) return [];
     const json = await res.json();
@@ -36,7 +36,9 @@ export default async function PromoProducts() {
             imageUrl={product.images && product.images.length > 0 ? product.images[0] : undefined}
             discountPrice={product.discountPrice}
             discountPercent={product.discountPercent}
-            isOutOfStock={!product.isUnlimitedStock && product.stockQty <= 0}
+            isOutOfStock={product.stockQty <= 0}
+            stockQty={product.stockQty}
+            isUnlimitedStock={product.isUnlimitedStock}
             variantCount={product.variants ? product.variants.length : 0}
             tags={product.tags}
           />

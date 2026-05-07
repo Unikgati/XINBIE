@@ -123,10 +123,8 @@ async function request<T>(method: string, path: string, body?: any, retry = true
     if (refreshed) {
       return request<T>(method, path, body, false);
     }
-    // Refresh failed → redirect to login
-    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-      window.location.href = '/login';
-    }
+    // Refresh failed → just return the 401 response to be handled by caller
+    return handleResponse<T>(res);
   }
 
   return handleResponse<T>(res);

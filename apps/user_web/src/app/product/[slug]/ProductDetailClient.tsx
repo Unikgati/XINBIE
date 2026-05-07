@@ -101,7 +101,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
   const displayPrice = finalPrice;
   const calculatedDiscountPercent = hasDiscount ? Math.round(((basePrice - finalPrice) / basePrice) * 100) : 0;
 
-  const isOutOfStock = !product.isUnlimitedStock && product.stockQty <= 0;
+  const isOutOfStock = product.stockQty <= 0;
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
@@ -117,6 +117,8 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
         originalPrice: basePrice,
         unit: product.unit,
         imageUrl: images[0],
+        stockQty: product.stockQty,
+        isUnlimitedStock: product.isUnlimitedStock,
       }, quantity);
     }
     
@@ -179,7 +181,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
             <div className={styles.metaRow}>
               <span className={styles.metaLabel}>Stok</span>
               <span className={styles.metaValue} style={{ color: isOutOfStock ? 'var(--color-error)' : 'var(--color-success)' }}>
-                {isOutOfStock ? 'Habis' : (product.isUnlimitedStock ? 'Tersedia' : `Sisa ${product.stockQty}`)}
+                {isOutOfStock ? 'Habis' : `Sisa ${product.stockQty}`}
               </span>
             </div>
           </div>
@@ -214,7 +216,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
               quantity={quantity} 
               onChanged={setQuantity} 
               min={1} 
-              max={product.isUnlimitedStock ? 99 : product.stockQty}
+              max={product.stockQty}
               large
               editable
             />
@@ -281,7 +283,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
                 imageUrl={p.images && p.images.length > 0 ? p.images[0] : undefined}
                 discountPrice={p.discountPrice}
                 discountPercent={p.discountPercent}
-                isOutOfStock={!p.isUnlimitedStock && p.stockQty <= 0}
+                isOutOfStock={p.stockQty <= 0}
                 variantCount={p.variants ? p.variants.length : 0}
                 tags={p.tags}
               />
@@ -307,7 +309,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
                 imageUrl={p.images && p.images.length > 0 ? p.images[0] : undefined}
                 discountPrice={p.discountPrice}
                 discountPercent={p.discountPercent}
-                isOutOfStock={!p.isUnlimitedStock && p.stockQty <= 0}
+                isOutOfStock={p.stockQty <= 0}
                 variantCount={p.variants ? p.variants.length : 0}
                 tags={p.tags}
               />
@@ -326,7 +328,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
             quantity={quantity} 
             onChanged={setQuantity} 
             min={1} 
-            max={product.isUnlimitedStock ? 99 : product.stockQty}
+            max={product.stockQty}
             large
           />
         </div>

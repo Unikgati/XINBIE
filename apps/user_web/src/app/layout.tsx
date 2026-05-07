@@ -30,6 +30,8 @@ export const metadata: Metadata = {
   robots: "index, follow",
 };
 
+import AIChat from "@/components/AIChat/index";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -49,6 +51,7 @@ export default function RootLayout({
               {children}
               <BottomNav />
             </div>
+            <AIChat />
           </ClientProviders>
         </GlobalErrorBoundary>
       </body>

@@ -21,7 +21,7 @@ abstract class Product with _$Product {
     int? weightGram,
     @Default([]) List<String> images,
     @Default([]) List<String> tags,
-    @Default(true) bool isUnlimitedStock,
+    @Default(false) bool isUnlimitedStock,
     @Default(0) int stockQty,
     @Default(true) bool isActive,
     @Default(false) bool isFeatured,

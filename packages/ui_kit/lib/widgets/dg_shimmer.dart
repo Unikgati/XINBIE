@@ -10,12 +10,14 @@ class DgShimmer extends StatelessWidget {
     this.width,
     this.height,
     this.borderRadius,
+    this.isCircle = false,
     this.child,
   });
 
   final double? width;
   final double? height;
   final double? borderRadius;
+  final bool isCircle;
   final Widget? child;
 
   /// Product card shimmer.
@@ -557,8 +559,10 @@ class DgShimmer extends StatelessWidget {
             height: height,
             decoration: BoxDecoration(
               color: AppColors.background,
-              borderRadius:
-                  BorderRadius.circular(borderRadius ?? AppSpacing.radiusSm),
+              shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+              borderRadius: isCircle
+                  ? null
+                  : BorderRadius.circular(borderRadius ?? AppSpacing.radiusSm),
             ),
           ),
     );

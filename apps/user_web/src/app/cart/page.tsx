@@ -123,6 +123,7 @@ export default function CartPage() {
                         <DgQuantitySelector 
                           quantity={item.quantity} 
                           onChanged={(newQty) => updateQuantity(item.productId, newQty, item.variantId)} 
+                          max={item.stockQty}
                           compact 
                         />
                       </div>

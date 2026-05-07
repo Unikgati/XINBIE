@@ -149,24 +149,10 @@ class CartScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      ElevatedButton(
+                      DgButton(
+                        label: 'Checkout',
+                        isFullWidth: false,
                         onPressed: () => context.push('/checkout'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryAction,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                        ),
-                        child: Text(
-                          'Checkout',
-                          style: AppTypography.labelLarge.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                       ),
                     ],
                   ),

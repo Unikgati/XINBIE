@@ -46,14 +46,15 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
 
     let subtotal = 0;
     const orderItems: any[] = [];
+    const itemsDetail: { productId: string; categoryId: string; price: number; qty: number }[] = [];
 
     for (const item of items) {
       const product = products.find((p) => p.id === item.productId);
       if (!product) throw new AppError(`Produk ${item.productId} tidak tersedia`, 400);
 
-      // Stock check
-      if (!product.isUnlimitedStock && product.stockQty < item.qty) {
-        throw new AppError(`Stok ${product.name} tidak cukup`, 400);
+      // Stock check: Always respect stockQty
+      if (product.stockQty < item.qty) {
+        throw new AppError(`Stok ${product.name} tidak cukup (Tersedia: ${product.stockQty})`, 400);
       }
 
       const variant = item.variantId
@@ -78,6 +79,13 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
         qty: item.qty,
         unitPrice,
         totalPrice,
+      });
+
+      itemsDetail.push({
+        productId: product.id,
+        categoryId: product.categoryId,
+        price: unitPrice,
+        qty: item.qty
       });
     }
 
@@ -265,7 +273,7 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
           // Atomic scope re-check
           const hasScope = promo.categories.length > 0 || promo.products.length > 0;
           if (hasScope) {
-            const isEligible = itemsDetail.some(item => 
+            const isEligible = itemsDetail.some((item: any) => 
               promo.products.some(p => p.id === item.productId) || 
               promo.categories.some(c => c.id === item.categoryId)
             );
@@ -322,10 +330,43 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
           data: { orderId: newOrder.id, status: initialStatus, actorId: req.userId },
         });
 
-        // Decrement stock
+        // Re-validate stock and decrement atomically (Handle Variant vs Main Product)
         for (const item of items) {
-          const product = products.find((p) => p.id === item.productId);
-          if (product && !product.isUnlimitedStock) {
+          if (item.variantId) {
+            // Case: Product has Variant
+            const variant = await tx.productVariant.findUnique({
+              where: { id: item.variantId },
+              include: { product: true }
+            });
+
+            if (!variant || !variant.isActive) {
+              throw new AppError(`Varian produk ${item.name} tidak tersedia`, 400);
+            }
+
+            // Variants currently don't have isUnlimitedStock flag in schema, 
+            // so we treat them as limited by their stockQty.
+            if (variant.stockQty < item.qty) {
+              throw new AppError(`Stok varian ${variant.name} tidak cukup (Tersedia: ${variant.stockQty})`, 400);
+            }
+
+            await tx.productVariant.update({
+              where: { id: variant.id },
+              data: { stockQty: { decrement: item.qty } },
+            });
+          } else {
+            // Case: Main Product (No Variant)
+            const product = await tx.product.findUnique({
+              where: { id: item.productId }
+            });
+
+            if (!product || !product.isActive) {
+              throw new AppError(`Produk ${item.name} tidak tersedia`, 400);
+            }
+
+            if (product.stockQty < item.qty) {
+              throw new AppError(`Stok ${product.name} tidak cukup (Tersedia: ${product.stockQty})`, 400);
+            }
+
             await tx.product.update({
               where: { id: product.id },
               data: { stockQty: { decrement: item.qty } },
@@ -417,7 +458,7 @@ export async function getOrders(req: AuthRequest, res: Response, next: NextFunct
 export async function getOrder(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const order = await prisma.order.findFirst({
-      where: { id: req.params.id, userId: req.userId },
+      where: { id: req.params.id as string, userId: req.userId! },
       include: {
         items: true,
         driver: { select: { name: true, phoneWa: true, avatarUrl: true } },
@@ -435,7 +476,7 @@ export async function getOrder(req: AuthRequest, res: Response, next: NextFuncti
 export async function cancelOrder(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const order = await prisma.order.findFirst({
-      where: { id: req.params.id, userId: req.userId },
+      where: { id: req.params.id as string, userId: req.userId! },
       include: { items: true },
     });
 

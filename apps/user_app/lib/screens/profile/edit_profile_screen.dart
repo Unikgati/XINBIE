@@ -101,7 +101,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Edit Profil', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Edit Profil', style: AppTypography.h3.copyWith(fontWeight: FontWeight.w700)),
         centerTitle: true,
       ),
       body: userAsync.when(
@@ -191,25 +191,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   const SizedBox(height: 48),
                   
                   // Save button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _loading ? null : _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryAction,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                        ),
-                      ),
-                      child: _loading
-                          ? const SizedBox(
-                              width: 24, height: 24,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Text('Simpan Perubahan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    ),
+                  DgButton(
+                    label: 'Simpan Perubahan',
+                    isLoading: _loading,
+                    onPressed: _save,
                   ),
                 ],
               ),

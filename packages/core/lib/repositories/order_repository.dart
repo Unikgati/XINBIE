@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../api/api_endpoints.dart';
 import '../models/order.dart';
+import '../models/promo_code.dart';
 import '../auth/auth_repository.dart';
 
 /// Repository for order-related API calls.
@@ -73,9 +74,15 @@ class OrderRepository {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<List<Map<String, dynamic>>> getAvailablePromos() async {
+  Future<List<PromoCode>> getAvailablePromos() async {
     final response = await _api.get(ApiEndpoints.promosAvailable);
-    return (response.data as List).map((e) => e as Map<String, dynamic>).toList();
+    List list = [];
+    if (response.data is List) {
+      list = response.data;
+    } else if (response.data is Map && response.data['data'] is List) {
+      list = response.data['data'];
+    }
+    return list.map((e) => PromoCode.fromJson(e as Map<String, dynamic>)).toList();
   }
 }
 

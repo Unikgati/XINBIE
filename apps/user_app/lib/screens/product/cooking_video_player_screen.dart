@@ -107,7 +107,14 @@ class _CookingVideoPlayerScreenState extends State<CookingVideoPlayerScreen> {
                                   onTap: () => context.push('/product/${p.id}'),
                                   onAddToCart: () {
                                     if (p.variants != null && p.variants!.isNotEmpty) {
-                                      context.push('/product/${p.id}');
+                                      DgVariantBottomSheet.show(
+                                        context,
+                                        product: p,
+                                        onCompleted: (v, q) {
+                                          ref.read(cartProvider.notifier).addItem(p, variant: v, quantity: q);
+                                          DgSnackbar.showSuccess(context, message: '$q item ditambahkan ke keranjang');
+                                        },
+                                      );
                                     } else {
                                       ref.read(cartProvider.notifier).addItem(p);
                                       DgSnackbar.showSuccess(context, message: '1 item ditambahkan ke keranjang');

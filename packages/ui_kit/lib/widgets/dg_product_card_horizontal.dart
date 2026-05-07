@@ -74,14 +74,43 @@ class DgProductCardHorizontal extends StatelessWidget {
                     width: 120,
                     height: 120,
                     child: imageUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: imageUrl!,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => const DgShimmer(),
-                            errorWidget: (_, __, ___) => Container(
-                              color: AppColors.background,
-                              child: const Icon(Icons.image_not_supported),
-                            ),
+                        ? Stack(
+                            children: [
+                              Positioned.fill(
+                                child: CachedNetworkImage(
+                                  imageUrl: imageUrl!,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => const DgShimmer(),
+                                  errorWidget: (_, __, ___) => Container(
+                                    color: AppColors.background,
+                                    child: const Icon(Icons.image_not_supported),
+                                  ),
+                                ),
+                              ),
+                              if (isOutOfStock)
+                                Positioned.fill(
+                                  child: Container(
+                                    color: Colors.black.withOpacity(0.4),
+                                    child: Center(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.6),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'Habis',
+                                          style: AppTypography.caption.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           )
                         : Container(
                             color: AppColors.background,
@@ -153,7 +182,7 @@ class DgProductCardHorizontal extends StatelessWidget {
                                 'Habis',
                                 style: AppTypography.caption.copyWith(color: AppColors.error),
                               )
-                            else if (quantity > 0)
+                            else if (quantity > 0 && !isOutOfStock)
                               DgQuantitySelector(
                                 quantity: quantity,
                                 onChanged: onQuantityChanged,

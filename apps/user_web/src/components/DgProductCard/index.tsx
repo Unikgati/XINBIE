@@ -18,12 +18,14 @@ interface Props {
   discountPrice?: number;
   discountPercent?: number;
   isOutOfStock?: boolean;
+  stockQty?: number;
+  isUnlimitedStock?: boolean;
   variantCount?: number;
   hasMultiplePrices?: boolean;
   tags?: string[];
 }
 
-export default function DgProductCard({
+const DgProductCard = React.memo(({
   id,
   slug,
   name,
@@ -32,11 +34,13 @@ export default function DgProductCard({
   imageUrl,
   discountPrice,
   discountPercent,
-  isOutOfStock = false,
+  isOutOfStock: isOutOfStockProp = false,
+  stockQty = 0,
+  isUnlimitedStock = true,
   variantCount = 0,
   hasMultiplePrices = false,
   tags = [],
-}: Props) {
+}: Props) => {
   const [mounted, setMounted] = useState(false);
   const qty = useCartStore((s) => s.getQuantity(id));
   const updateQuantity = useCartStore((s) => s.updateQuantity);
@@ -62,7 +66,9 @@ export default function DgProductCard({
       originalPrice: price,
       unit,
       imageUrl,
-    });
+      stockQty,
+      isUnlimitedStock,
+    }, 1);
   };
 
   const formatRp = (n: number) => {
@@ -91,6 +97,12 @@ export default function DgProductCard({
               </svg>
             </div>
           )}
+
+          {isOutOfStockProp && (
+            <div className={styles.outOfStockOverlay}>
+              <div className={styles.outOfStockLabel}>Habis</div>
+            </div>
+          )}
         </div>
 
         {hasDiscount && discountPercent != null && (
@@ -103,11 +115,7 @@ export default function DgProductCard({
           </div>
         )}
 
-        {isOutOfStock && (
-          <div className={styles.outOfStockOverlay}>
-            <div className={styles.outOfStockLabel}>Habis</div>
-          </div>
-        )}
+
 
         <div className={styles.content}>
           <h3 className={styles.name} title={name}>{name}</h3>
@@ -129,13 +137,14 @@ export default function DgProductCard({
           <div className={styles.footer}>
             <div className={styles.unitBadge}>/{unit}</div>
             
-            {!isOutOfStock && (
+            {!isOutOfStockProp && (
               <div className={styles.actionContainer}>
                 {mounted && qty > 0 && variantCount === 0 ? (
                   <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                     <DgQuantitySelector 
                       quantity={qty} 
                       onChanged={handleQtyChange} 
+                      max={stockQty}
                       compact 
                     />
                   </div>
@@ -158,4 +167,7 @@ export default function DgProductCard({
       </div>
     </Link>
   );
-}
+});
+
+DgProductCard.displayName = 'DgProductCard';
+export default DgProductCard;

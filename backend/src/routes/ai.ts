@@ -24,13 +24,13 @@ Aturan Penulisan (WAJIB DIIKUTI):
 - Hindari pengulangan fungsi produk atau kata-kata yang tidak perlu.
 - TIDAK BOLEH menyebutkan nama brand/merek apapun termasuk "DapurGizi".
 - TIDAK BOLEH menggunakan bullet point (<ul> atau <li>).
-- Format deskripsi harus HTML murni (hanya gunakan <p> dan <b>).
+- Format deskripsi harus teks biasa (PLAIN TEXT), dilarang menggunakan tag HTML apapun (seperti <p>, <b>, dsb). Gunakan newline (\n) untuk pemisah paragraf jika diperlukan.
 
 Kemudian, pikirkan 3-5 jenis bahan masakan riil lain yang sangat cocok dimasak bersama bahan ini (sebagai barang rekomendasi cross-selling).
 
 PENTING: KEMBALIKAN OUTPUT HANYA DALAM BENTUK JSON murni (TANPA markdown \`\`\`json) dengan format persis seperti ini:
 {
-  "description": "<p>Paragraf 1...</p><p>Paragraf 2...</p>",
+  "description": "Teks deskripsi produk tanpa tag HTML...",
   "relatedKeywords": ["keyword1", "keyword2", "keyword3"]
 }`;
 

@@ -114,7 +114,7 @@ model Product {
   images           String[] @default([])
   tags             String[] @default([])
   relatedProductIds String[] @default([]) @map("related_product_ids")
-  isUnlimitedStock Boolean  @default(true) @map("is_unlimited_stock")
+  isUnlimitedStock Boolean  @default(false) @map("is_unlimited_stock")
   stockQty         Int      @default(0) @map("stock_qty")
   isActive         Boolean  @default(true) @map("is_active")
   isFeatured       Boolean  @default(false) @map("is_featured")
@@ -129,6 +129,10 @@ model Product {
   cookingVideos CookingVideo[] @relation("ProductCookingVideos")
   promoCodes    PromoCode[]
 
+  @@index([categoryId, isActive])
+  @@index([isFeatured, isActive])
+  @@index([stockQty, isActive])
+  @@index([createdAt, isActive])
   @@map("products")
 }
 
@@ -349,6 +353,9 @@ model Order {
   items        OrderItem[]
   statusLogs   OrderStatusLog[]
 
+  @@index([userId, createdAt])
+  @@index([orderStatus, createdAt])
+  @@index([code])
   @@map("orders")
 }
 

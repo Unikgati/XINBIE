@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:ui_kit/ui_kit.dart';
 import 'package:intl/intl.dart';
+import 'package:core/core.dart';
 
 class DgPromoVoucherCard extends StatelessWidget {
-  final Map<String, dynamic> promo;
+  final PromoCode promo;
   final VoidCallback? onTap;
   final double? width;
   final bool isEligible;
+  final double? currentSubtotal;
 
   const DgPromoVoucherCard({
     super.key,
@@ -14,135 +16,174 @@ class DgPromoVoucherCard extends StatelessWidget {
     this.onTap,
     this.width = 280,
     this.isEligible = true,
+    this.currentSubtotal,
   });
+
+  static Widget shimmer({double width = 280}) {
+    return Container(
+      width: width,
+      height: 170,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider.withOpacity(0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const DgShimmer(width: 80, height: 12),
+                  const SizedBox(height: 12),
+                  const DgShimmer(width: 180, height: 16),
+                  const SizedBox(height: 8),
+                  const DgShimmer(width: 120, height: 12),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, thickness: 1, color: AppColors.divider, indent: 20, endIndent: 20),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Row(
+              children: [
+                DgShimmer(width: 14, height: 14, isCircle: true),
+                SizedBox(width: 6),
+                DgShimmer(width: 100, height: 11),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final fmt = NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0);
-    final type = promo['type'] as String;
-    final value = promo['value'] as num;
-    final minOrder = (promo['minOrder'] as num).toDouble();
-    final endAt = promo['endAt'] != null ? DateTime.parse(promo['endAt']) : null;
+    final type = promo.type;
+    final value = promo.value;
+    final minOrder = promo.minOrder.toDouble();
+    final endAt = promo.endAt;
 
     return GestureDetector(
       onTap: isEligible ? onTap : null,
       child: Opacity(
         opacity: isEligible ? 1.0 : 0.6,
-        child: Container(
-          width: width,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider.withOpacity(0.5)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+        child: IntrinsicHeight(
+          child: Container(
+            width: width,
+            constraints: const BoxConstraints(minHeight: 170),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.divider.withOpacity(0.5)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Icon(Icons.confirmation_num_outlined, 
-                      size: 40, color: AppColors.primary.withOpacity(0.1)),
-                  ),
-                  Padding(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 120),
+                  child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'PROMO BELANJA',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          type == 'PERCENT' 
-                            ? 'Diskon $value% (s.d ${fmt.format(promo['maxDiscount'] ?? 0)})' 
-                            : 'Potongan Langsung ${fmt.format(value)}',
-                          style: AppTypography.h4.copyWith(fontSize: 15, height: 1.3),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Min. belanja ${fmt.format(minOrder)}',
-                          style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
-                        ),
-                        if (promo['allowedPaymentMethods'] != null && (promo['allowedPaymentMethods'] as List).isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Row(
-                              children: [
-                                const Text('KHUSUS: ', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.orange)),
-                                ...(promo['allowedPaymentMethods'] as List).map((m) {
-                                  final method = m.toString().toLowerCase();
-                                  final iconName = method.startsWith('va_') ? method.replaceFirst('va_', '') : (method == 'va' ? 'bca' : method);
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 4),
-                                    child: Image.asset(
-                                      'assets/images/payments/$iconName.png',
-                                      height: 12,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                                    ),
-                                  );
-                                }),
-                              ],
-                            ),
-                          )
-                        else if (promo['allowCod'] == false)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.payments_outlined, size: 14, color: Colors.orange),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'NON-COD',
-                                  style: TextStyle(fontSize: 10, color: Colors.orange[700], fontWeight: FontWeight.bold),
-                                ),
-                              ],
+                          Text(
+                            'PROMO BELANJA',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
                             ),
                           ),
-                        if (!isEligible)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              'Belanja kurang ${fmt.format(minOrder - (promo['currentSubtotal'] ?? 0))} lagi',
-                              style: const TextStyle(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
+                          const SizedBox(height: 8),
+                          Text(
+                            type == PromoType.percent 
+                              ? 'Diskon $value% (s.d ${fmt.format(promo.maxDiscount ?? 0)})' 
+                              : 'Potongan Langsung ${fmt.format(value)}',
+                            style: AppTypography.h4.copyWith(fontSize: 15, height: 1.3),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            'Min. belanja ${fmt.format(minOrder)}',
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                          ),
+                          if (promo.allowedPaymentMethods.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Row(
+                                children: [
+                                  const Text('KHUSUS: ', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.orange)),
+                                  ...promo.allowedPaymentMethods.map((m) {
+                                    final method = m.name.toLowerCase();
+                                    final iconName = method.startsWith('va_') ? method.replaceFirst('va_', '') : (method == 'va' ? 'bca' : method);
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 4),
+                                      child: Image.asset(
+                                        'assets/images/payments/$iconName.png',
+                                        height: 12,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            )
+                          else if (promo.allowCod == false)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.payments_outlined, size: 14, color: Colors.orange),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'NON-COD',
+                                    style: TextStyle(fontSize: 10, color: Colors.orange[700], fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (!isEligible && currentSubtotal != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Belanja kurang ${fmt.format(minOrder - currentSubtotal!)} lagi',
+                                style: const TextStyle(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
             
             // The "Ticket" Notch Divider
             Stack(
               alignment: Alignment.center,
+              clipBehavior: Clip.none,
               children: [
                 const Divider(height: 1, thickness: 1, color: AppColors.divider, indent: 20, endIndent: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildNotch(isLeft: true),
-                    _buildNotch(isLeft: false),
-                  ],
+                Positioned(
+                  left: -8,
+                  child: _buildNotch(),
+                ),
+                Positioned(
+                  right: -8,
+                  child: _buildNotch(),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -173,13 +214,15 @@ class DgPromoVoucherCard extends StatelessWidget {
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildNotch({required bool isLeft}) {
+  Widget _buildNotch() {
     return Container(
       width: 16,
       height: 16,
@@ -188,7 +231,6 @@ class DgPromoVoucherCard extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.divider.withOpacity(0.5)),
       ),
-      margin: EdgeInsets.only(left: isLeft ? -8 : 0, right: isLeft ? 0 : -8),
     );
   }
 }

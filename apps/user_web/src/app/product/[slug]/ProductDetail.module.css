@@ -418,10 +418,10 @@
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   background: transparent;
   color: var(--color-primary-dark);
-  border: 1.5px solid var(--color-primary-dark);
+  border: 1px solid var(--color-primary-dark);
   white-space: nowrap;
 }
 

@@ -27,6 +27,7 @@ class DgProductCard extends StatelessWidget {
     this.onTap,
     this.onAddToCart,
     this.onQuantityChanged,
+    this.maxQuantity = 99,
   });
 
   final String name;
@@ -43,6 +44,7 @@ class DgProductCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onAddToCart;
   final ValueChanged<int>? onQuantityChanged;
+  final int maxQuantity;
 
   int get _displayPrice => discountPrice ?? price;
   bool get _hasDiscount => discountPrice != null && discountPrice! < price;
@@ -76,24 +78,56 @@ class DgProductCard extends StatelessWidget {
                   ),
                   child: AspectRatio(
                     aspectRatio: 1,
-                    child: imageUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: imageUrl!,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => const DgShimmer(),
-                            errorWidget: (_, __, ___) => Container(
-                              color: AppColors.background,
-                              child: const Icon(Icons.image_not_supported),
-                            ),
-                          )
-                        : Container(
-                            color: AppColors.background,
-                            child: const Icon(
-                              Icons.shopping_basket_outlined,
-                              size: 48,
-                              color: AppColors.textHint,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: imageUrl != null
+                              ? CachedNetworkImage(
+                                  imageUrl: imageUrl!,
+                                  fit: BoxFit.cover,
+                                  memCacheWidth: 400,
+                                  memCacheHeight: 400,
+                                  placeholder: (_, __) => const DgShimmer(),
+                                  errorWidget: (_, __, ___) => Container(
+                                    color: AppColors.background,
+                                    child: const Icon(Icons.image_not_supported),
+                                  ),
+                                )
+                              : Container(
+                                  color: AppColors.background,
+                                  child: const Icon(
+                                    Icons.shopping_basket_outlined,
+                                    size: 48,
+                                    color: AppColors.textHint,
+                                  ),
+                                ),
+                        ),
+                        if (isOutOfStock)
+                          Positioned.fill(
+                            child: Container(
+                              color: AppColors.outOfStockOverlay,
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.textSecondary,
+                                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                                  ),
+                                  child: Text(
+                                    'Habis',
+                                    style: AppTypography.labelLarge.copyWith(
+                                      color: AppColors.textOnPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -196,6 +230,7 @@ class DgProductCard extends StatelessWidget {
                               DgQuantitySelector(
                                 quantity: quantity,
                                 onChanged: onQuantityChanged,
+                                max: maxQuantity,
                                 compact: true,
                               )
                             else
@@ -246,36 +281,7 @@ class DgProductCard extends StatelessWidget {
                 ),
               ),
 
-            // Out of stock overlay
-            if (isOutOfStock)
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.outOfStockOverlay,
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.productCardRadius),
-                  ),
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.textSecondary,
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.radiusSm),
-                      ),
-                      child: Text(
-                        'Habis',
-                        style: AppTypography.labelLarge.copyWith(
-                          color: AppColors.textOnPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+
           ],
         ),
       ),

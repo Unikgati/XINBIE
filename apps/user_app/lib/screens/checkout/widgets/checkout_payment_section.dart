@@ -220,7 +220,12 @@ class _SelectableCard extends StatelessWidget {
         child: Row(
           children: [
             if (imageUrl != null)
-              Image.asset(imageUrl!, width: 24, height: 24, errorBuilder: (_, __, ___) => Icon(iconData, size: 24, color: AppColors.primary))
+              Image.asset(
+                imageUrl!,
+                height: 18,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Icon(iconData, size: 20, color: AppColors.primary),
+              )
             else
               Icon(iconData, size: 24, color: AppColors.primary),
             const SizedBox(width: 12),

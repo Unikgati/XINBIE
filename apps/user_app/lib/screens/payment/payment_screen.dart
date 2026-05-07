@@ -266,7 +266,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     // ─── Logo widget ───
     final logoAsset = _getLogoAsset(paymentMethod);
     Widget logoWidget = logoAsset != null
-        ? Image.asset(logoAsset, height: 48, errorBuilder: (_, __, ___) => const SizedBox())
+        ? Image.asset(logoAsset, height: 32, errorBuilder: (_, __, ___) => const SizedBox())
         : const SizedBox();
 
     if (!isPaid && details != null) {

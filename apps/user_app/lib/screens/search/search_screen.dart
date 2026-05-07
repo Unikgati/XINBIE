@@ -123,7 +123,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               variantCount: p.variants?.length ?? 0,
                               hasMultiplePrices: p.hasMultiplePrices,
                               quantity: quantity,
-                              isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+                              isOutOfStock: p.stockQty <= 0,
+                              maxQuantity: p.stockQty,
                               imageUrl: AppConfig.fixImageUrl(p.images.firstOrNull),
                               tags: p.tags,
                               onTap: () => context.push('/product/${p.id}'),
@@ -132,6 +133,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                   context.push('/product/${p.id}');
                                 } else {
                                   ref.read(cartProvider.notifier).addItem(p);
+                                  DgSnackbar.showSuccess(context, message: '${p.name} ditambah ke keranjang');
                                 }
                               },
                               onQuantityChanged: (newQty) {

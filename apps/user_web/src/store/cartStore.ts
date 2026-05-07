@@ -10,6 +10,8 @@ export interface CartItem {
   unit: string;
   imageUrl?: string;
   quantity: number;
+  stockQty: number;
+  isUnlimitedStock: boolean;
 }
 
 interface CartState {
@@ -139,7 +141,7 @@ export const useCartStore = create<CartState>()(
               removedNames.push(item.name);
               continue;
             }
-            if (!product.isUnlimitedStock && product.stockQty <= 0) {
+            if (product.stockQty <= 0) {
               removedNames.push(item.name);
               continue;
             }
@@ -149,6 +151,8 @@ export const useCartStore = create<CartState>()(
               price: product.discountPrice || product.price,
               originalPrice: product.price,
               imageUrl: product.images?.[0] || item.imageUrl,
+              stockQty: product.stockQty,
+              isUnlimitedStock: product.isUnlimitedStock,
             });
           } catch {
             // Network error — keep item, don't remove

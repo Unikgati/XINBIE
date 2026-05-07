@@ -63,9 +63,13 @@ class ProductRepository {
     return Product.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<List<CookingVideo>> getCookingVideos({int limit = 10}) async {
-    final response = await _api.get(ApiEndpoints.cookingVideos, queryParameters: {'limit': limit});
-    final list = response.data as List;
+  Future<List<CookingVideo>> getCookingVideos({int page = 1, int limit = 10}) async {
+    final response = await _api.get(ApiEndpoints.cookingVideos, queryParameters: {
+      'page': page,
+      'limit': limit,
+    });
+    final data = response.data as Map<String, dynamic>;
+    final list = data['data'] as List;
     return list.map((e) => CookingVideo.fromJson(e as Map<String, dynamic>)).toList();
   }
 }

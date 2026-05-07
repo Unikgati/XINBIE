@@ -238,20 +238,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                CheckoutPromoSection(
-                  controller: _promoCtrl,
-                  appliedCode: _appliedPromoCode,
-                  isValidating: _isValidatingPromo,
-                  onApply: _validatePromo,
-                  onRemove: _removePromo,
-                  onBrowse: _openVoucherSheet,
-                ),
-                const SizedBox(height: 16),
                 CheckoutSummarySection(
                   subtotal: subtotal,
                   deliveryFee: deliveryFee,
                   promoDiscount: _promoDiscountAmount,
                   totalItems: cartItems.length,
+                  promoController: _promoCtrl,
+                  appliedPromoCode: _appliedPromoCode,
+                  isValidatingPromo: _isValidatingPromo,
+                  onApplyPromo: _validatePromo,
+                  onRemovePromo: _removePromo,
+                  onBrowseVouchers: _openVoucherSheet,
                 ),
                 const SizedBox(height: 80),
               ],
@@ -278,10 +275,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Grand Total', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            Text('Grand Total', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
                             Text(
                               'Rp ${NumberFormat.currency(locale: "id", symbol: "", decimalDigits: 0).format(grandTotal)}', 
-                              style: AppTypography.h3.copyWith(color: AppColors.primaryDark, fontWeight: FontWeight.bold)
+                              style: AppTypography.h3.copyWith(color: AppColors.primaryDark, fontWeight: FontWeight.w800)
                             ),
                           ],
                         ),

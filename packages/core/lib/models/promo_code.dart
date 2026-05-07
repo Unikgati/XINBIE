@@ -17,6 +17,8 @@ abstract class PromoCode with _$PromoCode {
     @Default(0) int perUserLimit,
     @Default(0) int usedCount,
     @Default(true) bool isActive,
+    @Default(true) bool allowCod,
+    @Default([]) List<PaymentMethod> allowedPaymentMethods,
     DateTime? startAt,
     DateTime? endAt,
   }) = _PromoCode;

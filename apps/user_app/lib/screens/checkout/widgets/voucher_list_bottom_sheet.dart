@@ -15,7 +15,7 @@ class VoucherListBottomSheet extends ConsumerStatefulWidget {
 
 class _VoucherListBottomSheetState extends ConsumerState<VoucherListBottomSheet> {
   bool _loading = false;
-  List<Map<String, dynamic>> _vouchers = [];
+  List<PromoCode> _vouchers = [];
 
   @override
   void initState() {
@@ -39,63 +39,72 @@ class _VoucherListBottomSheetState extends ConsumerState<VoucherListBottomSheet>
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
       decoration: const BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Pilih Voucher', style: AppTypography.h3.copyWith(color: AppColors.primaryDark)),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (_loading)
-            DgShimmer.voucherList()
-          else if (_vouchers.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  children: [
-                    Icon(Icons.sell_outlined, size: 64, color: AppColors.textHint.withOpacity(0.5)),
-                    const SizedBox(height: 16),
-                    Text('Belum ada voucher tersedia', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
-                  ],
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 8, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Pilih Voucher', style: AppTypography.h3.copyWith(color: AppColors.primaryDark)),
+                Material(
+                  color: Colors.transparent,
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: AppColors.textPrimary),
+                    splashRadius: 24,
+                  ),
                 ),
-              ),
-            )
-          else
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: _vouchers.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final v = _vouchers[index];
-                  final isEligible = widget.subtotal >= (v['minOrder'] as num);
-                  
-                  return DgPromoVoucherCard(
-                    promo: {
-                      ...v,
-                      'currentSubtotal': widget.subtotal,
-                    },
-                    width: double.infinity,
-                    isEligible: isEligible,
-                    onTap: () => Navigator.pop(context, v['code']),
-                  );
-                },
-              ),
+              ],
             ),
+          ),
+          const Divider(height: 1),
+          
+          Expanded(
+            child: _loading
+                ? Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: DgShimmer.voucherList(),
+                  )
+                : _vouchers.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.sell_outlined, size: 64, color: AppColors.textHint.withOpacity(0.5)),
+                              const SizedBox(height: 16),
+                              Text('Belum ada voucher tersedia', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: _vouchers.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final v = _vouchers[index];
+                          final isEligible = widget.subtotal >= v.minOrder;
+                          
+                          return DgPromoVoucherCard(
+                            promo: v,
+                            currentSubtotal: widget.subtotal,
+                            width: double.infinity,
+                            isEligible: isEligible,
+                            onTap: () => Navigator.pop(context, v.code),
+                          );
+                        },
+                      ),
+          ),
         ],
       ),
     );

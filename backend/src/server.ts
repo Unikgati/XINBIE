@@ -26,6 +26,7 @@ import adminRoutes from './routes/admin';
 import paymentRoutes from './routes/payment';
 import promoRoutes from './routes/promo';
 import aiRoutes from './routes/ai';
+import chatRoutes from './routes/chat';
 
 const app = express();
 const server = createServer(app);
@@ -77,6 +78,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/promos', promoRoutes);
 app.use('/api/admin/ai', aiRoutes);
+app.use('/api/chat', chatRoutes);
 
 // 404
 app.use((req, res) => {

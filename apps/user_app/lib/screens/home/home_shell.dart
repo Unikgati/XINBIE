@@ -113,7 +113,12 @@ class _FloatingNavItem extends StatelessWidget {
               isLabelVisible: badgeCount > 0,
               label: Text(
                 badgeCount > 9 ? '9+' : badgeCount.toString(),
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                style: AppTypography.labelSmall.copyWith(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
               backgroundColor: AppColors.error,
               textColor: Colors.white,

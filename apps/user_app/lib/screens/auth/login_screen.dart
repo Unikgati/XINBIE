@@ -300,10 +300,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                             label: Text(
                               _googleLoading ? 'Memproses...' : 'Masuk dengan Google', 
-                              style: const TextStyle(color: AppColors.textPrimary)
+                              style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary),
                             ),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: const BorderSide(color: AppColors.border),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
                               ),

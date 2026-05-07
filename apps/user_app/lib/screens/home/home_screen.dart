@@ -356,7 +356,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             child: Text('Promo Spesial Untukmu 🎁', style: AppTypography.h4),
                           ),
                           SizedBox(
-                            height: 170,
+                            height: 180,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
                               itemCount: promos.length,
@@ -368,7 +368,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     promo: promos[index],
                                     onTap: () {
                                       // Copy code or just show details
-                                      DgSnackbar.showSuccess(context, message: 'Gunakan kode ${promos[index]['code']} saat checkout!');
+                                      DgSnackbar.showSuccess(context, message: 'Gunakan kode ${promos[index].code} saat checkout!');
                                     },
                                   ),
                                 );
@@ -378,9 +378,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ],
                       );
                     },
-                    loading: () => Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-                      child: DgShimmer.productGrid(count: 1), // Simple placeholder
+                    loading: () => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
+                          child: DgShimmer(width: 150, height: 20),
+                        ),
+                        SizedBox(
+                          height: 180,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: 2,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemBuilder: (context, index) => Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: DgPromoVoucherCard.shimmer(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     error: (err, _) => const SizedBox.shrink(),
                   );
@@ -589,7 +606,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           variantCount: p.variants?.length ?? 0,
           hasMultiplePrices: p.hasMultiplePrices,
           quantity: currentQty,
-          isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+          isOutOfStock: p.stockQty <= 0,
+          maxQuantity: p.stockQty,
           imageUrl: AppConfig.fixImageUrl(p.images.firstOrNull),
           tags: p.tags,
           onTap: () => context.push('/product/${p.id}'),
@@ -598,6 +616,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               context.push('/product/${p.id}');
             } else {
               ref.read(cartProvider.notifier).addItem(p);
+              DgSnackbar.showSuccess(context, message: '${p.name} ditambah ke keranjang');
             }
           },
           onQuantityChanged: (newQty) {

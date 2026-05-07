@@ -235,21 +235,36 @@ export async function getBanners(req: Request, res: Response, next: NextFunction
 // GET /api/cooking-videos
 export async function getCookingVideos(req: Request, res: Response, next: NextFunction) {
   try {
-    const { limit = '10' } = req.query;
-    const videos = await prisma.cookingVideo.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: parseInt(limit as string),
-      include: {
-        products: {
-          where: { isActive: true },
-          include: {
-            category: { select: { name: true } },
-            variants: { where: { isActive: true } },
+    const { page = '1', limit = '10' } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const take = parseInt(limit as string);
+
+    const [videos, total] = await Promise.all([
+      prisma.cookingVideo.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          products: {
+            where: { isActive: true },
+            include: {
+              category: { select: { name: true } },
+              variants: { where: { isActive: true } },
+            },
           },
         },
+      }),
+      prisma.cookingVideo.count(),
+    ]);
+
+    res.json({
+      data: videos,
+      meta: {
+        total,
+        page: parseInt(page as string),
+        limit: take,
+        totalPages: Math.ceil(total / take),
       },
     });
-
-    res.json(videos);
   } catch (err) { next(err); }
 }

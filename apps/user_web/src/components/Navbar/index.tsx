@@ -18,8 +18,17 @@ export default function Navbar() {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const logout = useAuthStore((s) => s.logout);
+  const [isBumped, setIsBumped] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Badge bump animation
+  useEffect(() => {
+    if (totalQty === 0) return;
+    setIsBumped(true);
+    const timer = setTimeout(() => setIsBumped(false), 300);
+    return () => clearTimeout(timer);
+  }, [totalQty]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -84,7 +93,7 @@ export default function Navbar() {
           <Link href="/cart" className={`${styles.iconButton} ${styles.cartIconButton}`}>
             <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>shopping_cart</span>
             {mounted && totalQty > 0 && (
-              <span className={styles.badge}>
+              <span className={`${styles.badge} ${isBumped ? styles.bump : ''}`}>
                 {totalQty > 9 ? '9+' : totalQty}
               </span>
             )}

@@ -79,8 +79,50 @@ final paginatedProductsProvider = AsyncNotifierProvider<PaginatedProductsNotifie
   PaginatedProductsNotifier.new,
 );
 
-/// Provider for cooking videos.
+/// AsyncNotifier for infinite scrolling of cooking videos.
+class PaginatedCookingVideosNotifier extends AsyncNotifier<List<CookingVideo>> {
+  int _page = 1;
+  bool _hasMore = true;
+  bool get hasMore => _hasMore;
+  
+  @override
+  Future<List<CookingVideo>> build() async {
+    _page = 1;
+    _hasMore = true;
+    return _fetchPage(_page);
+  }
+
+  Future<List<CookingVideo>> _fetchPage(int page) async {
+    final repo = ref.watch(productRepositoryProvider);
+    final newVideos = await repo.getCookingVideos(page: page, limit: 10);
+    if (newVideos.length < 10) {
+      _hasMore = false;
+    }
+    return newVideos;
+  }
+
+  Future<void> loadMore() async {
+    if (!_hasMore || state.isLoading || state.isRefreshing || state.hasError) return;
+    
+    state = const AsyncLoading<List<CookingVideo>>().copyWithPrevious(state);
+    
+    try {
+      _page++;
+      final nextVideos = await _fetchPage(_page);
+      state = AsyncData([...state.value!, ...nextVideos]);
+    } catch (e, st) {
+      _page--;
+      state = AsyncError<List<CookingVideo>>(e, st).copyWithPrevious(state);
+    }
+  }
+}
+
+final paginatedCookingVideosProvider = AsyncNotifierProvider<PaginatedCookingVideosNotifier, List<CookingVideo>>(
+  PaginatedCookingVideosNotifier.new,
+);
+
+/// Provider for cooking videos (limited to 10 for home/simple list).
 final cookingVideosProvider = FutureProvider<List<CookingVideo>>((ref) async {
   final repo = ref.watch(productRepositoryProvider);
-  return repo.getCookingVideos();
+  return repo.getCookingVideos(limit: 10);
 });

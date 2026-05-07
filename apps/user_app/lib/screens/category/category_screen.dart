@@ -110,7 +110,8 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
                           discountPercent: p.discountPercent,
                           unit: p.unit,
                           quantity: quantity,
-                          isOutOfStock: !p.isUnlimitedStock && p.stockQty <= 0,
+                          isOutOfStock: p.stockQty <= 0,
+                          maxQuantity: p.stockQty,
                           variantCount: p.variants?.length ?? 0,
                           hasMultiplePrices: p.hasMultiplePrices,
                           imageUrl: AppConfig.fixImageUrl(p.images.firstOrNull),
@@ -121,6 +122,7 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
                               context.push('/product/${p.id}');
                             } else {
                               ref.read(cartProvider.notifier).addItem(p);
+                              DgSnackbar.showSuccess(context, message: '${p.name} ditambah ke keranjang');
                             }
                           },
                           onQuantityChanged: (newQty) {
