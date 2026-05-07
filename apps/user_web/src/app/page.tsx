@@ -8,6 +8,7 @@ import CategoryList from "@/components/sections/CategoryList";
 import FeaturedProducts from "@/components/sections/FeaturedProducts";
 import PromoProducts from "@/components/sections/PromoProducts";
 import AllProductsList from "@/components/sections/AllProductsList";
+import FlashSaleSection from "@/components/sections/FlashSaleSection";
 import PromoSection from "./components/home/PromoSection";
 
 // Skeletons
@@ -29,6 +30,10 @@ export default function Home() {
         
         <Suspense fallback={<BannerSkeleton />}>
           <HeroBanners />
+        </Suspense>
+
+        <Suspense fallback={null}>
+          <FlashSaleSection />
         </Suspense>
 
         <Suspense fallback={<CategorySkeleton />}>

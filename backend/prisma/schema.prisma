@@ -6,65 +6,44 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─────────────────────────────────────────
-// Users
-// ─────────────────────────────────────────
-
 model User {
-  id              String    @id @default(uuid())
+  id              String         @id @default(uuid())
   name            String
-  email           String    @unique
+  email           String         @unique
   password        String?
-  phoneWa         String?   @map("phone_wa")
-  avatarUrl       String?   @map("avatar_url")
-  googleId        String?   @unique @map("google_id")
-  role            UserRole  @default(USER)
-  isActive        Boolean   @default(true) @map("is_active")
-  emailVerifiedAt DateTime? @map("email_verified_at")
-  fcmToken        String?   @map("fcm_token")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  addresses      Address[]
-  orders         Order[]       @relation("UserOrders")
-  driverOrders   Order[]       @relation("DriverOrders")
-  driverProfile  DriverProfile?
-  driverWallet   DriverWallet?
-  notifications  Notification[]
-  otpCodes       OtpCode[]
-  refreshTokens  RefreshToken[]
+  phoneWa         String?        @map("phone_wa")
+  avatarUrl       String?        @map("avatar_url")
+  googleId        String?        @unique @map("google_id")
+  role            UserRole       @default(USER)
+  isActive        Boolean        @default(true) @map("is_active")
+  emailVerifiedAt DateTime?      @map("email_verified_at")
+  fcmToken        String?        @map("fcm_token")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  addresses       Address[]
+  driverProfile   DriverProfile?
+  driverWallet    DriverWallet?
+  notifications   Notification[]
+  driverOrders    Order[]        @relation("DriverOrders")
+  orders          Order[]        @relation("UserOrders")
+  otpCodes        OtpCode[]
+  refreshTokens   RefreshToken[]
 
   @@map("users")
 }
 
-enum UserRole {
-  USER
-  DRIVER
-  ADMIN
-}
-
-// ─────────────────────────────────────────
-// OTP & Auth
-// ─────────────────────────────────────────
-
 model OtpCode {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
   code      String
   type      OtpType
-  attempts  Int      @default(0)
-  expiresAt DateTime @map("expires_at")
+  attempts  Int       @default(0)
+  expiresAt DateTime  @map("expires_at")
   usedAt    DateTime? @map("used_at")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("otp_codes")
-}
-
-enum OtpType {
-  EMAIL_VERIFICATION
-  PASSWORD_RESET
 }
 
 model RefreshToken {
@@ -73,61 +52,54 @@ model RefreshToken {
   token     String   @unique
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
 }
 
-// ─────────────────────────────────────────
-// Products & Categories
-// ─────────────────────────────────────────
-
 model Category {
-  id        String   @id @default(uuid())
-  slug      String   @unique
-  name      String   @unique
-  iconUrl   String?  @map("icon_url")
-  bgColor   String   @default("#4CAF50") @map("bg_color")
-  sortOrder Int      @default(0) @map("sort_order")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  products Product[]
-  promoCodes PromoCode[]
+  id         String      @id @default(uuid())
+  name       String      @unique
+  iconUrl    String?     @map("icon_url")
+  bgColor    String      @default("#4CAF50") @map("bg_color")
+  sortOrder  Int         @default(0) @map("sort_order")
+  isActive   Boolean     @default(true) @map("is_active")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  slug       String      @unique
+  products   Product[]
+  promoCodes PromoCode[] @relation("CategoryToPromoCode")
 
   @@map("categories")
 }
 
 model Product {
-  id               String   @id @default(uuid())
-  name             String
-  slug             String   @unique
-  description      String   @default("")
-  categoryId       String   @map("category_id")
-  price            Int
-  costPrice        Int      @default(0) @map("cost_price")
-  discountPrice    Int?     @map("discount_price")
-  discountPercent  Int?     @map("discount_percent")
-  unit             String   @default("pcs")
-  weightGram       Int?     @map("weight_gram")
-  images           String[] @default([])
-  tags             String[] @default([])
-  relatedProductIds String[] @default([]) @map("related_product_ids")
-  isUnlimitedStock Boolean  @default(false) @map("is_unlimited_stock")
-  stockQty         Int      @default(0) @map("stock_qty")
-  isActive         Boolean  @default(true) @map("is_active")
-  isFeatured       Boolean  @default(false) @map("is_featured")
-  sortOrder        Int      @default(0) @map("sort_order")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  category   Category         @relation(fields: [categoryId], references: [id])
-  variants   ProductVariant[]
-  orderItems OrderItem[]
-
-  cookingVideos CookingVideo[] @relation("ProductCookingVideos")
-  promoCodes    PromoCode[]
+  id                String           @id @default(uuid())
+  name              String
+  description       String           @default("")
+  categoryId        String           @map("category_id")
+  price             Int
+  costPrice         Int              @default(0) @map("cost_price")
+  discountPrice     Int?             @map("discount_price")
+  discountPercent   Int?             @map("discount_percent")
+  unit              String           @default("pcs")
+  weightGram        Int?             @map("weight_gram")
+  images            String[]         @default([])
+  isUnlimitedStock  Boolean          @default(false) @map("is_unlimited_stock")
+  stockQty          Int              @default(0) @map("stock_qty")
+  isActive          Boolean          @default(true) @map("is_active")
+  isFeatured        Boolean          @default(false) @map("is_featured")
+  sortOrder         Int              @default(0) @map("sort_order")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  relatedProductIds String[]         @default([]) @map("related_product_ids")
+  slug              String           @unique
+  tags              String[]         @default([])
+  flashSaleItems    FlashSaleItem[]
+  orderItems        OrderItem[]
+  variants          ProductVariant[]
+  category          Category         @relation(fields: [categoryId], references: [id])
+  cookingVideos     CookingVideo[]   @relation("ProductCookingVideos")
+  promoCodes        PromoCode[]      @relation("ProductToPromoCode")
 
   @@index([categoryId, isActive])
   @@index([isFeatured, isActive])
@@ -137,122 +109,111 @@ model Product {
 }
 
 model ProductVariant {
-  id            String  @id @default(uuid())
-  productId     String  @map("product_id")
+  id            String      @id @default(uuid())
+  productId     String      @map("product_id")
   name          String
-  sku           String? @unique
-  price         Int     @default(0)
-  costPrice     Int     @default(0) @map("cost_price")
-  discountPrice Int?    @map("discount_price")
-  priceAddition Int     @default(0) @map("price_addition")
-  stockQty      Int     @default(0) @map("stock_qty")
-  imageUrl      String? @map("image_url")
-  sortOrder     Int     @default(0) @map("sort_order")
-  isActive      Boolean @default(true) @map("is_active")
-
-  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
+  sku           String?     @unique
+  price         Int         @default(0)
+  costPrice     Int         @default(0) @map("cost_price")
+  priceAddition Int         @default(0) @map("price_addition")
+  stockQty      Int         @default(0) @map("stock_qty")
+  imageUrl      String?     @map("image_url")
+  sortOrder     Int         @default(0) @map("sort_order")
+  isActive      Boolean     @default(true) @map("is_active")
+  discountPrice Int?        @map("discount_price")
+  orderItems    OrderItem[]
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("product_variants")
 }
 
-// ─────────────────────────────────────────
-// Region (Wilayah Indonesia)
-// ─────────────────────────────────────────
-
 model Province {
-  id     String @id // "11"
-  name   String
-  cities City[]
+  id        String    @id
+  name      String
   addresses Address[]
+  cities    City[]
+
   @@map("provinces")
 }
 
 model City {
-  id         String   @id // "1101"
-  provinceId String   @map("province_id")
+  id         String     @id
+  provinceId String     @map("province_id")
   name       String
-  province   Province @relation(fields: [provinceId], references: [id])
-  districts  District[]
   addresses  Address[]
+  province   Province   @relation(fields: [provinceId], references: [id])
+  districts  District[]
+
   @@map("cities")
 }
 
 model District {
-  id       String   @id // "110101"
-  cityId   String   @map("city_id")
-  name     String
-  city     City     @relation(fields: [cityId], references: [id])
-  villages Village[]
+  id        String    @id
+  cityId    String    @map("city_id")
+  name      String
   addresses Address[]
+  city      City      @relation(fields: [cityId], references: [id])
+  villages  Village[]
+
   @@map("districts")
 }
 
 model Village {
-  id         String   @id // "1101012001"
-  districtId String   @map("district_id")
+  id         String    @id
+  districtId String    @map("district_id")
   name       String
-  district   District @relation(fields: [districtId], references: [id])
   addresses  Address[]
+  district   District  @relation(fields: [districtId], references: [id])
+
   @@map("villages")
 }
 
-// ─────────────────────────────────────────
-// Addresses
-// ─────────────────────────────────────────
-
 model Address {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  recipientName String   @map("recipient_name")
-  phoneWa       String   @map("phone_wa")
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  recipientName String    @map("recipient_name")
+  phoneWa       String    @map("phone_wa")
   lat           Float?
   lng           Float?
-  fullAddress   String   @map("full_address")
+  fullAddress   String    @map("full_address")
   notes         String?
-  provinceId    String?  @map("province_id")
-  cityId        String?  @map("city_id")
-  districtId    String?  @map("district_id")
-  villageId     String?  @map("village_id")
-  isPrimary     Boolean  @default(false) @map("is_primary")
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  province Province? @relation(fields: [provinceId], references: [id])
-  city     City?     @relation(fields: [cityId], references: [id])
-  district District? @relation(fields: [districtId], references: [id])
-  village  Village?  @relation(fields: [villageId], references: [id])
+  isPrimary     Boolean   @default(false) @map("is_primary")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  cityId        String?   @map("city_id")
+  districtId    String?   @map("district_id")
+  provinceId    String?   @map("province_id")
+  villageId     String?   @map("village_id")
+  city          City?     @relation(fields: [cityId], references: [id])
+  district      District? @relation(fields: [districtId], references: [id])
+  province      Province? @relation(fields: [provinceId], references: [id])
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  village       Village?  @relation(fields: [villageId], references: [id])
 
   @@map("addresses")
 }
 
-// ─────────────────────────────────────────
-// Delivery
-// ─────────────────────────────────────────
-
 model DeliverySlot {
   id          String  @id @default(uuid())
-  dayOfWeek   Int     @map("day_of_week") // 0=Sun..6=Sat
+  dayOfWeek   Int     @map("day_of_week")
   label       String
-  startTime   String  @map("start_time") // "08:00"
-  endTime     String  @map("end_time")   // "12:00"
+  startTime   String  @map("start_time")
+  endTime     String  @map("end_time")
   maxOrders   Int     @default(50) @map("max_orders")
   cutoffHours Int     @default(3) @map("cutoff_hours")
   isActive    Boolean @default(true) @map("is_active")
-
-  orders Order[]
+  orders      Order[]
 
   @@map("delivery_slots")
 }
 
 model DeliveryArea {
-  id        String  @id @default(uuid())
-  name      String
-  lat       Float
-  lng       Float
-  radiusKm  Float   @map("radius_km")
-  fee       Int     @default(0)
-  isActive  Boolean @default(true) @map("is_active")
+  id       String  @id @default(uuid())
+  name     String
+  lat      Float
+  lng      Float
+  radiusKm Float   @map("radius_km")
+  fee      Int     @default(0)
+  isActive Boolean @default(true) @map("is_active")
 
   @@map("delivery_areas")
 }
@@ -267,96 +228,285 @@ model DeliveryException {
   @@map("delivery_exceptions")
 }
 
-// ─────────────────────────────────────────
-// Promo
-// ─────────────────────────────────────────
-
 model PromoCode {
-  id              String    @id @default(uuid())
-  code            String    @unique
-  type            PromoType
-  value           Int
-  minOrder        Int       @default(0) @map("min_order")
-  maxDiscount     Int?      @map("max_discount")
-  totalUsageLimit Int       @default(0) @map("total_usage_limit")
-  perUserLimit    Int       @default(1) @map("per_user_limit")
-  usedCount       Int       @default(0) @map("used_count")
-  isActive        Boolean   @default(true) @map("is_active")
-  startAt         DateTime? @map("start_at")
-  endAt           DateTime? @map("end_at")
-  allowCod        Boolean   @default(true) @map("allow_cod")
+  id                    String          @id @default(uuid())
+  code                  String          @unique
+  type                  PromoType
+  value                 Int
+  minOrder              Int             @default(0) @map("min_order")
+  maxDiscount           Int?            @map("max_discount")
+  totalUsageLimit       Int             @default(0) @map("total_usage_limit")
+  perUserLimit          Int             @default(1) @map("per_user_limit")
+  usedCount             Int             @default(0) @map("used_count")
+  isActive              Boolean         @default(true) @map("is_active")
+  startAt               DateTime?       @map("start_at")
+  endAt                 DateTime?       @map("end_at")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  allowCod              Boolean         @default(true) @map("allow_cod")
   allowedPaymentMethods PaymentMethod[] @default([]) @map("allowed_payment_methods")
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  categories      Category[]
-  products        Product[]
-  promoUsages     PromoUsage[]
+  promoUsages           PromoUsage[]
+  categories            Category[]      @relation("CategoryToPromoCode")
+  products              Product[]       @relation("ProductToPromoCode")
 
   @@map("promo_codes")
 }
 
-enum PromoType {
-  PERCENT
-  NOMINAL
-}
-
 model PromoUsage {
-  id          String   @id @default(uuid())
-  promoCodeId String   @map("promo_code_id")
-  userId      String   @map("user_id")
-  orderId     String   @map("order_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  promoCode PromoCode @relation(fields: [promoCodeId], references: [id])
+  id          String    @id @default(uuid())
+  promoCodeId String    @map("promo_code_id")
+  userId      String    @map("user_id")
+  orderId     String    @map("order_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
 
   @@map("promo_usages")
 }
 
-// ─────────────────────────────────────────
-// Orders
-// ─────────────────────────────────────────
-
 model Order {
-  id                    String        @id @default(uuid())
-  code                  String        @unique
-  userId                String        @map("user_id")
-  driverId              String?       @map("driver_id")
-  pickupPointId         String?       @map("pickup_point_id")
-  addressSnapshot       Json          @map("address_snapshot")
-  deliveryType          DeliveryType  @default(REGULAR) @map("delivery_type")
-  deliverySlotId        String?       @map("delivery_slot_id")
-  scheduledDate         DateTime?     @map("scheduled_date") @db.Date
-  paymentMethod         PaymentMethod @map("payment_method")
-  paymentStatus         PaymentStatus @default(PENDING) @map("payment_status")
-  orderStatus           OrderStatus   @default(WAITING_PAYMENT) @map("order_status")
+  id                    String           @id @default(uuid())
+  code                  String           @unique
+  userId                String           @map("user_id")
+  driverId              String?          @map("driver_id")
+  pickupPointId         String?          @map("pickup_point_id")
+  addressSnapshot       Json             @map("address_snapshot")
+  deliveryType          DeliveryType     @default(REGULAR) @map("delivery_type")
+  deliverySlotId        String?          @map("delivery_slot_id")
+  scheduledDate         DateTime?        @map("scheduled_date") @db.Date
+  paymentMethod         PaymentMethod    @map("payment_method")
+  paymentStatus         PaymentStatus    @default(PENDING) @map("payment_status")
+  orderStatus           OrderStatus      @default(WAITING_PAYMENT) @map("order_status")
   subtotal              Int
-  deliveryFee           Int           @default(0) @map("delivery_fee")
-  discountAmount        Int           @default(0) @map("discount_amount")
-  grandTotal            Int           @map("grand_total")
-  midtransTransactionId String?       @map("midtrans_transaction_id")
-  midtransPaymentType   String?       @map("midtrans_payment_type")
-  paymentDetails        Json?         @map("payment_details")
-  proofPhotoUrl         String?       @map("proof_photo_url")
+  deliveryFee           Int              @default(0) @map("delivery_fee")
+  discountAmount        Int              @default(0) @map("discount_amount")
+  grandTotal            Int              @map("grand_total")
+  midtransTransactionId String?          @map("midtrans_transaction_id")
+  midtransPaymentType   String?          @map("midtrans_payment_type")
+  proofPhotoUrl         String?          @map("proof_photo_url")
   notes                 String?
-  problemType           String?       @map("problem_type")
-  problemDescription    String?       @map("problem_description")
-  problemPhotoUrl       String?       @map("problem_photo_url")
-  problemResolvedAt     DateTime?     @map("problem_resolved_at")
-  isReadAdmin           Boolean       @default(false) @map("is_read_admin")
-  createdAt             DateTime      @default(now()) @map("created_at")
-  updatedAt             DateTime      @updatedAt @map("updated_at")
-
-  user         User          @relation("UserOrders", fields: [userId], references: [id])
-  driver       User?         @relation("DriverOrders", fields: [driverId], references: [id])
-  pickupPoint  PickupPoint?  @relation(fields: [pickupPointId], references: [id])
-  deliverySlot DeliverySlot? @relation(fields: [deliverySlotId], references: [id])
-  items        OrderItem[]
-  statusLogs   OrderStatusLog[]
+  problemType           String?          @map("problem_type")
+  problemDescription    String?          @map("problem_description")
+  problemPhotoUrl       String?          @map("problem_photo_url")
+  problemResolvedAt     DateTime?        @map("problem_resolved_at")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+  isReadAdmin           Boolean          @default(false) @map("is_read_admin")
+  paymentDetails        Json?            @map("payment_details")
+  items                 OrderItem[]
+  statusLogs            OrderStatusLog[]
+  deliverySlot          DeliverySlot?    @relation(fields: [deliverySlotId], references: [id])
+  driver                User?            @relation("DriverOrders", fields: [driverId], references: [id])
+  pickupPoint           PickupPoint?     @relation(fields: [pickupPointId], references: [id])
+  user                  User             @relation("UserOrders", fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([orderStatus, createdAt])
   @@index([code])
   @@map("orders")
+}
+
+model OrderItem {
+  id              String          @id @default(uuid())
+  orderId         String          @map("order_id")
+  productId       String?         @map("product_id")
+  variantId       String?         @map("variant_id")
+  productSnapshot Json            @map("product_snapshot")
+  qty             Int
+  unitPrice       Int             @map("unit_price")
+  totalPrice      Int             @map("total_price")
+  isFlashSale     Boolean         @default(false) @map("is_flash_sale")
+  flashSaleItemId String?         @map("flash_sale_item_id")
+  order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product?        @relation(fields: [productId], references: [id])
+  variant         ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@map("order_items")
+}
+
+model OrderStatusLog {
+  id        String      @id @default(uuid())
+  orderId   String      @map("order_id")
+  status    OrderStatus
+  note      String?
+  actorId   String?     @map("actor_id")
+  createdAt DateTime    @default(now()) @map("created_at")
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_status_logs")
+}
+
+model DriverProfile {
+  id                 String             @id @default(uuid())
+  userId             String             @unique @map("user_id")
+  ktpPhotoUrl        String?            @map("ktp_photo_url")
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt         DateTime?          @map("verified_at")
+  verifiedBy         String?            @map("verified_by")
+  rejectionReason    String?            @map("rejection_reason")
+  ratingAvg          Float              @default(0) @map("rating_avg")
+  totalOrdersDone    Int                @default(0) @map("total_orders_done")
+  isOnline           Boolean            @default(false) @map("is_online")
+  lastLat            Float?             @map("last_lat")
+  lastLng            Float?             @map("last_lng")
+  lastLocationAt     DateTime?          @map("last_location_at")
+  bankName           String?            @map("bank_name")
+  accountNumber      String?            @map("account_number")
+  accountHolder      String?            @map("account_holder")
+  vehicleType        String?            @map("vehicle_type")
+  vehiclePlate       String?            @map("vehicle_plate")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("driver_profiles")
+}
+
+model DriverWallet {
+  id           String              @id @default(uuid())
+  userId       String              @unique @map("user_id")
+  balance      Int                 @default(0)
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  transactions DriverTransaction[]
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("driver_wallets")
+}
+
+model DriverTransaction {
+  id        String            @id @default(uuid())
+  walletId  String            @map("wallet_id")
+  orderId   String?           @map("order_id")
+  type      TransactionType
+  amount    Int
+  balance   Int
+  note      String?
+  status    WithdrawalStatus?
+  createdAt DateTime          @default(now()) @map("created_at")
+  wallet    DriverWallet      @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, type], map: "unique_order_transaction_type")
+  @@map("driver_transactions")
+}
+
+model DriverRating {
+  id        String   @id @default(uuid())
+  orderId   String   @unique @map("order_id")
+  driverId  String   @map("driver_id")
+  userId    String   @map("user_id")
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("driver_ratings")
+}
+
+model PickupPoint {
+  id               String   @id @default(uuid())
+  name             String
+  lat              Float
+  lng              Float
+  fullAddress      String   @map("full_address")
+  phoneWa          String?  @map("phone_wa")
+  operationalHours String?  @map("operational_hours")
+  notesForDriver   String?  @map("notes_for_driver")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  orders           Order[]
+
+  @@map("pickup_points")
+}
+
+model Banner {
+  id          String           @id @default(uuid())
+  type        BannerType
+  imageUrl    String           @map("image_url")
+  title       String?
+  actionType  BannerActionType @default(NONE) @map("action_type")
+  actionValue String?          @map("action_value")
+  sortOrder   Int              @default(0) @map("sort_order")
+  isActive    Boolean          @default(true) @map("is_active")
+  startAt     DateTime?        @map("start_at")
+  endAt       DateTime?        @map("end_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  @@map("banners")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String
+  body      String
+  type      String
+  data      Json?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+model CookingVideo {
+  id         String    @id @default(uuid())
+  title      String
+  youtubeUrl String    @map("youtube_url")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  products   Product[] @relation("ProductCookingVideos")
+
+  @@map("cooking_videos")
+}
+
+model FlashSale {
+  id          String          @id @default(uuid())
+  title       String
+  description String?
+  startAt     DateTime        @map("start_at")
+  endAt       DateTime        @map("end_at")
+  isActive    Boolean         @default(true) @map("is_active")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  items       FlashSaleItem[]
+
+  @@index([startAt, endAt, isActive])
+  @@map("flash_sales")
+}
+
+model FlashSaleItem {
+  id           String    @id @default(uuid())
+  flashSaleId  String    @map("flash_sale_id")
+  productId    String    @map("product_id")
+  flashPrice   Int       @map("flash_price")
+  flashStock   Int       @map("flash_stock")
+  soldQty      Int       @default(0) @map("sold_qty")
+  limitPerUser Int       @default(1) @map("limit_per_user")
+  sortOrder    Int       @default(0) @map("sort_order")
+  flashSale    FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Cascade)
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([flashSaleId, productId])
+  @@map("flash_sale_items")
+}
+
+enum UserRole {
+  USER
+  DRIVER
+  ADMIN
+}
+
+enum OtpType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum PromoType {
+  PERCENT
+  NOMINAL
 }
 
 enum DeliveryType {
@@ -367,6 +517,7 @@ enum DeliveryType {
 enum PaymentMethod {
   QRIS
   VA
+  COD
   GOPAY
   SHOPEEPAY
   OVO
@@ -379,7 +530,6 @@ enum PaymentMethod {
   VA_CIMB
   ALFAMART
   INDOMARET
-  COD
 }
 
 enum PaymentStatus {
@@ -401,106 +551,10 @@ enum OrderStatus {
   PROBLEM
 }
 
-model OrderItem {
-  id              String @id @default(uuid())
-  orderId         String @map("order_id")
-  productId       String? @map("product_id")
-  variantId       String? @map("variant_id")
-  productSnapshot Json   @map("product_snapshot")
-  qty             Int
-  unitPrice       Int    @map("unit_price")
-  totalPrice      Int    @map("total_price")
-
-  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
-
-  @@map("order_items")
-}
-
-model OrderStatusLog {
-  id        String      @id @default(uuid())
-  orderId   String      @map("order_id")
-  status    OrderStatus
-  note      String?
-  actorId   String?     @map("actor_id")
-  createdAt DateTime    @default(now()) @map("created_at")
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@map("order_status_logs")
-}
-
-// ─────────────────────────────────────────
-// Driver
-// ─────────────────────────────────────────
-
-model DriverProfile {
-  id                 String             @id @default(uuid())
-  userId             String             @unique @map("user_id")
-  ktpPhotoUrl        String?            @map("ktp_photo_url")
-  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
-  verifiedAt         DateTime?          @map("verified_at")
-  verifiedBy         String?            @map("verified_by")
-  rejectionReason    String?            @map("rejection_reason")
-  ratingAvg          Float              @default(0) @map("rating_avg")
-  totalOrdersDone    Int                @default(0) @map("total_orders_done")
-  isOnline           Boolean            @default(false) @map("is_online")
-  lastLat            Float?             @map("last_lat")
-  lastLng            Float?             @map("last_lng")
-  lastLocationAt     DateTime?          @map("last_location_at")
-  // Bank / E-Wallet info
-  bankName           String?            @map("bank_name")
-  accountNumber      String?            @map("account_number")
-  accountHolder      String?            @map("account_holder")
-  // Vehicle info
-  vehicleType        String?            @map("vehicle_type")
-  vehiclePlate       String?            @map("vehicle_plate")
-  createdAt          DateTime           @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("driver_profiles")
-}
-
 enum VerificationStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-// ─────────────────────────────────────────
-// Driver Wallet & Financial
-// ─────────────────────────────────────────
-
-model DriverWallet {
-  id        String   @id @default(uuid())
-  userId    String   @unique @map("user_id")
-  balance   Int      @default(0)
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions DriverTransaction[]
-
-  @@map("driver_wallets")
-}
-
-model DriverTransaction {
-  id        String            @id @default(uuid())
-  walletId  String            @map("wallet_id")
-  orderId   String?           @map("order_id")
-  type      TransactionType
-  amount    Int               // positive = income, negative = deduction
-  balance   Int               // balance snapshot after this transaction
-  note      String?
-  status    WithdrawalStatus? // only for WITHDRAWAL type
-  createdAt DateTime          @default(now()) @map("created_at")
-
-  wallet DriverWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
-
-  // Prevent double commission per order
-  @@unique([orderId, type], map: "unique_order_transaction_type")
-  @@map("driver_transactions")
 }
 
 enum TransactionType {
@@ -518,59 +572,6 @@ enum WithdrawalStatus {
   COMPLETED
 }
 
-model DriverRating {
-  id        String   @id @default(uuid())
-  orderId   String   @unique @map("order_id")
-  driverId  String   @map("driver_id")
-  userId    String   @map("user_id")
-  rating    Int      // 1-5
-  comment   String?
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@map("driver_ratings")
-}
-
-// ─────────────────────────────────────────
-// Pickup Points (Warehouse)
-// ─────────────────────────────────────────
-
-model PickupPoint {
-  id               String   @id @default(uuid())
-  name             String
-  lat              Float
-  lng              Float
-  fullAddress      String   @map("full_address")
-  phoneWa          String?  @map("phone_wa")
-  operationalHours String?  @map("operational_hours")
-  notesForDriver   String?  @map("notes_for_driver")
-  isActive         Boolean  @default(true) @map("is_active")
-  createdAt        DateTime @default(now()) @map("created_at")
-
-  orders Order[]
-
-  @@map("pickup_points")
-}
-
-// ─────────────────────────────────────────
-// Banners
-// ─────────────────────────────────────────
-
-model Banner {
-  id          String           @id @default(uuid())
-  type        BannerType
-  imageUrl    String           @map("image_url")
-  title       String?
-  actionType  BannerActionType @default(NONE) @map("action_type")
-  actionValue String?          @map("action_value")
-  sortOrder   Int              @default(0) @map("sort_order")
-  isActive    Boolean          @default(true) @map("is_active")
-  startAt     DateTime?        @map("start_at")
-  endAt       DateTime?        @map("end_at")
-  createdAt   DateTime         @default(now()) @map("created_at")
-
-  @@map("banners")
-}
-
 enum BannerType {
   HERO
   PROMO
@@ -581,50 +582,4 @@ enum BannerActionType {
   CATEGORY
   PRODUCT
   URL
-}
-
-// ─────────────────────────────────────────
-// Notifications
-// ─────────────────────────────────────────
-
-model Notification {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  title     String
-  body      String
-  type      String
-  data      Json?
-  isRead    Boolean  @default(false) @map("is_read")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notifications")
-}
-
-// ─────────────────────────────────────────
-// App Settings
-// ─────────────────────────────────────────
-
-model AppSetting {
-  key       String   @id
-  value     String
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("app_settings")
-}
-
-// ─────────────────────────────────────────
-// Cooking Videos
-// ─────────────────────────────────────────
-
-model CookingVideo {
-  id         String   @id @default(uuid())
-  title      String
-  youtubeUrl String   @map("youtube_url")
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  products Product[] @relation("ProductCookingVideos")
-
-  @@map("cooking_videos")
 }

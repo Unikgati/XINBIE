@@ -104,9 +104,19 @@ const DgProductCard = React.memo(({
             </div>
           )}
         </div>
-
-        {hasDiscount && discountPercent != null && (
-          <DgDiscountBadge discountPercent={discountPercent} />
+        
+        {tags.includes('Flash Sale') ? (
+          <div className={styles.flashSaleBadgeContainer}>
+            <div className={styles.flashSaleBadge}>
+              <span className="material-symbols-outlined">bolt</span>
+              Flash Sale
+            </div>
+            <div className={styles.flashSaleFold}></div>
+          </div>
+        ) : (
+          hasDiscount && discountPercent != null && (
+            <DgDiscountBadge discountPercent={discountPercent} />
+          )
         )}
 
         {variantCount > 0 && (

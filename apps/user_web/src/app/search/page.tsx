@@ -4,6 +4,7 @@ import styles from './page.module.css';
 import DgProductCard from '@/components/DgProductCard';
 import DgEmptyState from '@/components/DgEmptyState';
 import { ProductGridSkeleton } from '@/components/sections/Skeletons';
+import FeaturedProducts from '@/components/sections/FeaturedProducts';
 
 async function fetchSearchResults(query: string) {
   try {
@@ -24,13 +25,18 @@ async function SearchResults({ query }: { query: string }) {
 
   if (products.length === 0) {
     return (
-      <DgEmptyState 
-        icon="search_off"
-        title="Produk Tidak Ditemukan"
-        subtitle={`Maaf, kami tidak menemukan produk dengan kata kunci "${query}". Coba gunakan kata kunci lain.`}
-        actionLabel="Kembali ke Beranda"
-        actionHref="/"
-      />
+      <>
+        <DgEmptyState 
+          icon="search_off"
+          title="Produk Tidak Ditemukan"
+          subtitle={`Maaf, kami tidak menemukan produk dengan kata kunci "${query}". Coba gunakan kata kunci lain.`}
+          actionLabel="Kembali ke Beranda"
+          actionHref="/"
+        />
+        <div style={{ marginTop: '40px' }}>
+          <FeaturedProducts />
+        </div>
+      </>
     );
   }
 
@@ -78,9 +84,6 @@ export default async function SearchPage({
             <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>chevron_right</span>
             <span>Pencarian</span>
           </nav>
-          <h1 className={styles.title}>
-            Hasil Pencarian: <span className={styles.queryText}>"{query}"</span>
-          </h1>
         </div>
 
         <Suspense fallback={<ProductGridSkeleton />}>

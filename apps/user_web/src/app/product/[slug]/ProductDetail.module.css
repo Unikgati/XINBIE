@@ -138,6 +138,24 @@
   font-weight: bold;
 }
 
+.flashSaleBadge {
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+  color: white;
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: uppercase;
+  border-radius: 4px;
+  box-shadow: 1px 1px 4px rgba(255, 152, 0, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.flashSaleBadge :global(.material-symbols-outlined) {
+  font-size: 13px;
+}
+
 .divider {
   height: 1px;
   background-color: var(--color-divider);

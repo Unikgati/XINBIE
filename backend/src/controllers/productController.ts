@@ -98,6 +98,18 @@ export async function getProduct(req: Request, res: Response, next: NextFunction
             },
           },
         },
+        flashSaleItems: {
+          where: {
+            flashSale: {
+              startAt: { lte: new Date() },
+              endAt: { gte: new Date() },
+              isActive: true
+            }
+          },
+          include: {
+            flashSale: true
+          }
+        }
       },
     });
 

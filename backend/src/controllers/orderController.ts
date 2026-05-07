@@ -39,10 +39,26 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
 
     // Validate products + calculate price
     const productIds = items.map((i: any) => i.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds }, isActive: true },
-      include: { variants: true },
-    });
+    const now = new Date();
+
+    // Fetch products AND active flash sale items for these products
+    const [products, activeFlashSales] = await Promise.all([
+      prisma.product.findMany({
+        where: { id: { in: productIds }, isActive: true },
+        include: { variants: true },
+      }),
+      prisma.flashSaleItem.findMany({
+        where: {
+          productId: { in: productIds },
+          flashSale: {
+            startAt: { lte: now },
+            endAt: { gte: now },
+            isActive: true
+          }
+        },
+        include: { flashSale: true }
+      })
+    ]);
 
     let subtotal = 0;
     const orderItems: any[] = [];
@@ -52,7 +68,43 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
       const product = products.find((p) => p.id === item.productId);
       if (!product) throw new AppError(`Produk ${item.productId} tidak tersedia`, 400);
 
-      // Stock check: Always respect stockQty
+      // Check for Active Flash Sale for this item
+      const fsItem = activeFlashSales.find(fs => fs.productId === product.id);
+      let unitPrice = (product.discountPrice || product.price);
+      let isFlashSale = false;
+
+      if (fsItem) {
+        // Validation 1: Promo Stock
+        const remainingFsStock = fsItem.flashStock - fsItem.soldQty;
+        if (remainingFsStock < item.qty) {
+          throw new AppError(`Stok Flash Sale untuk ${product.name} tidak cukup (Tersedia: ${remainingFsStock})`, 400);
+        }
+
+        // Validation 2: User Limit
+        if (fsItem.limitPerUser > 0) {
+          const userBoughtQty = await prisma.orderItem.aggregate({
+            where: {
+              productId: product.id,
+              order: {
+                userId: req.userId,
+                createdAt: { gte: fsItem.flashSale.startAt, lte: fsItem.flashSale.endAt },
+                orderStatus: { notIn: ['CANCELLED', 'PROBLEM'] }
+              }
+            },
+            _sum: { qty: true }
+          });
+          
+          const currentBought = userBoughtQty._sum.qty || 0;
+          if (currentBought + item.qty > fsItem.limitPerUser) {
+            throw new AppError(`Anda sudah mencapai batas pembelian Flash Sale untuk ${product.name} (Batas: ${fsItem.limitPerUser})`, 400);
+          }
+        }
+
+        unitPrice = fsItem.flashPrice;
+        isFlashSale = true;
+      }
+
+      // Stock check: Always respect main product stockQty
       if (product.stockQty < item.qty) {
         throw new AppError(`Stok ${product.name} tidak cukup (Tersedia: ${product.stockQty})`, 400);
       }
@@ -61,20 +113,27 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
         ? product.variants.find((v) => v.id === item.variantId)
         : null;
 
-      const unitPrice = (product.discountPrice || product.price) + (variant?.priceAddition || 0);
+      // Variants currently don't combine with Flash Sale in this logic (FS is for main product)
+      if (!isFlashSale) {
+        unitPrice += (variant?.priceAddition || 0);
+      }
+      
       const totalPrice = unitPrice * item.qty;
       subtotal += totalPrice;
 
       orderItems.push({
         productId: product.id,
         variantId: variant?.id || null,
+        isFlashSale,
+        flashSaleItemId: fsItem?.id || null,
         productSnapshot: {
           name: product.name,
           price: product.price,
-          discountPrice: product.discountPrice,
+          discountPrice: isFlashSale ? unitPrice : product.discountPrice,
           unit: product.unit,
           image: product.images[0] || null,
           variantName: variant?.name || null,
+          isFlashSale
         },
         qty: item.qty,
         unitPrice,
@@ -343,8 +402,6 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
               throw new AppError(`Varian produk ${item.name} tidak tersedia`, 400);
             }
 
-            // Variants currently don't have isUnlimitedStock flag in schema, 
-            // so we treat them as limited by their stockQty.
             if (variant.stockQty < item.qty) {
               throw new AppError(`Stok varian ${variant.name} tidak cukup (Tersedia: ${variant.stockQty})`, 400);
             }
@@ -371,6 +428,15 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
               where: { id: product.id },
               data: { stockQty: { decrement: item.qty } },
             });
+
+            // FLASH SALE ATOMIC UPDATE
+            const orderItem = newOrder.items.find((oi: any) => oi.productId === item.productId && oi.isFlashSale);
+            if (orderItem && orderItem.flashSaleItemId) {
+              await tx.flashSaleItem.update({
+                where: { id: orderItem.flashSaleItemId },
+                data: { soldQty: { increment: item.qty } }
+              });
+            }
           }
         }
 

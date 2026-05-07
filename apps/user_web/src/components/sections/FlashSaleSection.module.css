@@ -1,0 +1,121 @@
+.flashSaleSection {
+  margin-bottom: 48px;
+  background: #f8f9fa; /* Latar belakang soft */
+  border: 1px solid #eee;
+  border-radius: 20px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Aksen petir halus di latar belakang */
+.flashSaleSection::after {
+  content: 'bolt';
+  font-family: 'Material Symbols Outlined';
+  position: absolute;
+  right: -20px;
+  bottom: -40px;
+  font-size: 200px;
+  color: rgba(255, 77, 77, 0.03);
+  pointer-events: none;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 16px;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.titleGroup h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: #333;
+  letter-spacing: -0.3px;
+}
+
+.titleGroup :global(.material-symbols-outlined) {
+  color: #FF4D4D;
+}
+
+.badge {
+  background: #FF4D4D;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.timer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timerLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+}
+
+.timeUnits {
+  display: flex;
+  gap: 6px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.timeUnit {
+  background: #333;
+  color: white;
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+/* Grid disamakan dengan homepage: 180px */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .flashSaleSection {
+    padding: 16px;
+    border-radius: 12px;
+    margin: 0 16px 32px;
+  }
+  
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .titleGroup h2 {
+    font-size: 18px;
+  }
+}

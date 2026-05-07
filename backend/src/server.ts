@@ -27,6 +27,7 @@ import paymentRoutes from './routes/payment';
 import promoRoutes from './routes/promo';
 import aiRoutes from './routes/ai';
 import chatRoutes from './routes/chat';
+import flashSaleRoutes from './routes/flashSale';
 
 const app = express();
 const server = createServer(app);
@@ -79,6 +80,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/promos', promoRoutes);
 app.use('/api/admin/ai', aiRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api', flashSaleRoutes);
 
 // 404
 app.use((req, res) => {
@@ -108,5 +110,11 @@ async function start() {
 }
 
 start();
+
+// Raw Debug Route
+app.get('/api/debug/fs', async (req, res) => {
+  const fs = await prisma.flashSale.findMany({ include: { items: true } });
+  res.json({ now: new Date().toISOString(), data: fs });
+});
 
 export default app;

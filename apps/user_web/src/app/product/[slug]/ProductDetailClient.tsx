@@ -43,6 +43,7 @@ interface Product {
   tags?: string[];
   variants: Variant[];
   cookingVideos?: CookingVideo[];
+  flashSaleItems?: any[];
 }
 
 interface ProductDetailClientProps {
@@ -92,7 +93,15 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
   let basePrice = product.price;
   let finalPrice = product.discountPrice && product.discountPrice > 0 ? product.discountPrice : basePrice;
 
-  if (selectedVariant && selectedVariant.price && selectedVariant.price > 0) {
+  // Flash Sale Price Override
+  const activeFlashSale = product.flashSaleItems && product.flashSaleItems.length > 0 ? product.flashSaleItems[0] : null;
+  const isFlashSaleActive = !!activeFlashSale;
+  
+  if (isFlashSaleActive) {
+    finalPrice = activeFlashSale.flashPrice;
+  }
+
+  if (selectedVariant && selectedVariant.price && selectedVariant.price > 0 && !isFlashSaleActive) {
     basePrice = selectedVariant.price;
     finalPrice = selectedVariant.discountPrice && selectedVariant.discountPrice > 0 ? selectedVariant.discountPrice : basePrice;
   }
@@ -152,10 +161,31 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
             
             <div className={styles.priceContainer}>
               <span className={styles.activePrice}>Rp {formatRp(displayPrice)}</span>
-              {hasDiscount && (
-                <div className={styles.discountBox}>
-                  <span className={styles.discountBadge}>{calculatedDiscountPercent}% OFF</span>
-                  <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
+              
+              <div className={styles.discountBox}>
+                {isFlashSaleActive ? (
+                  <>
+                    <div className={styles.flashSaleBadge}>
+                      <span className="material-symbols-outlined">bolt</span>
+                      Flash Sale
+                    </div>
+                    {hasDiscount && (
+                      <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
+                    )}
+                  </>
+                ) : (
+                  hasDiscount && (
+                    <>
+                      <span className={styles.discountBadge}>{calculatedDiscountPercent}% OFF</span>
+                      <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
+                    </>
+                  )
+                )}
+              </div>
+
+              {isFlashSaleActive && activeFlashSale.limitPerUser > 0 && (
+                <div style={{ color: '#E65100', fontSize: '12px', fontWeight: 'bold', width: '100%', marginTop: '4px' }}>
+                  * Terbatas {activeFlashSale.limitPerUser} per pelanggan
                 </div>
               )}
             </div>

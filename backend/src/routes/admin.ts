@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { upload } from '../middleware/upload';
 import * as admin from '../controllers/adminController';
+import * as flashSale from '../controllers/flashSaleController';
 
 const router = Router();
 
@@ -63,6 +64,13 @@ router.get('/promos', admin.adminGetPromos);
 router.post('/promos', admin.adminCreatePromo);
 router.put('/promos/:id', admin.adminUpdatePromo);
 router.delete('/promos/:id', admin.adminDeletePromo);
+
+// Flash Sales
+router.get('/flash-sales', flashSale.getFlashSales);
+router.get('/flash-sales/:id', flashSale.getFlashSaleDetail);
+router.post('/flash-sales', flashSale.createFlashSale);
+router.put('/flash-sales/:id', flashSale.updateFlashSale);
+router.delete('/flash-sales/:id', flashSale.deleteFlashSale);
 
 // Settings
 router.get('/settings', admin.adminGetSettings);

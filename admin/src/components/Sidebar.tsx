@@ -23,6 +23,7 @@ const navItems = [
   { section: 'Marketing', items: [
     { href: '/banners', icon: 'photo_library', label: 'Banner' },
     { href: '/promos', icon: 'sell', label: 'Promo' },
+    { href: '/flash-sales', icon: 'bolt', label: 'Flash Sale' },
   ]},
   { section: 'Sistem', items: [
     { href: '/delivery-slots', icon: 'event', label: 'Jadwal Pengiriman' },
