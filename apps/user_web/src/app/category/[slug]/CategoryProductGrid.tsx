@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from './page.module.css';
 import DgProductCard from '@/components/DgProductCard';
+import DgEmptyState from '@/components/DgEmptyState';
 
 async function fetchProductsByCategory(categoryId: string) {
   try {
@@ -35,14 +36,13 @@ export default async function CategoryProductGrid({ slug }: { slug: string }) {
   
   if (!categoryId) {
     return (
-      <div className={styles.emptyState}>
-        <div className={styles.emptyStateIcon}>
-          <span className="material-symbols-outlined" style={{ fontSize: '64px', color: 'var(--color-primary)' }}>
-            inventory_2
-          </span>
-        </div>
-        <h2>Kategori Tidak Ditemukan</h2>
-      </div>
+      <DgEmptyState 
+        icon="search_off"
+        title="Kategori Tidak Ditemukan"
+        subtitle="Maaf, kategori yang Anda cari tidak tersedia atau sudah dihapus."
+        actionLabel="Kembali ke Beranda"
+        actionHref="/"
+      />
     );
   }
 
@@ -50,15 +50,13 @@ export default async function CategoryProductGrid({ slug }: { slug: string }) {
 
   if (products.length === 0) {
     return (
-      <div className={styles.emptyState}>
-        <div className={styles.emptyStateIcon}>
-          <span className="material-symbols-outlined" style={{ fontSize: '64px', color: 'var(--color-primary)' }}>
-            inventory_2
-          </span>
-        </div>
-        <h2>Kategori Kosong</h2>
-        <p>Belum ada produk di kategori ini.</p>
-      </div>
+      <DgEmptyState 
+        icon="inventory_2"
+        title="Kategori Kosong"
+        subtitle="Belum ada produk di kategori ini. Cek kembali nanti ya!"
+        actionLabel="Cari Produk Lain"
+        actionHref="/"
+      />
     );
   }
 

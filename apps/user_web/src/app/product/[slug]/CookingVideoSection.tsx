@@ -24,17 +24,15 @@ export default function CookingVideoSection({ videos }: CookingVideoSectionProps
   };
 
   return (
-    <section className={styles.descriptionSection} style={{ marginTop: '32px' }}>
-      <div className={styles.divider} style={{ marginBottom: '32px' }} />
-      <h3 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span className="material-symbols-outlined" style={{ color: 'var(--color-primary)' }}>play_circle</span>
+    <section className={styles.descriptionSection} style={{ marginTop: '48px' }}>
+      <div className={styles.divider} />
+      <h2 className={styles.relatedTitle}>
         Inspirasi Masak
-      </h3>
+      </h2>
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-        gap: '16px',
-        marginTop: '16px' 
+        gap: '16px' 
       }}>
         {videos.map((video) => {
           const ytId = getYoutubeId(video.youtubeUrl);

@@ -573,4 +573,14 @@
     font-size: 16px;
     font-weight: 700;
   }
+
+  .relatedGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .relatedTitle {
+    font-size: 20px;
+    margin: 24px 0 16px 0;
+  }
 }

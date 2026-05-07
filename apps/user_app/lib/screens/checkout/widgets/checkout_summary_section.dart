@@ -60,24 +60,24 @@ class CheckoutSummarySection extends StatelessWidget {
                   children: [
                     Text(
                       'Makin Hemat Pakai Promo',
-                      style: AppTypography.labelLarge.copyWith(
+                      style: AppTypography.bodyMedium.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.primaryDark,
                       ),
                     ),
-                    TextButton(
-                      onPressed: onBrowseVouchers,
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor: AppColors.primary,
+                    GestureDetector(
+                      onTap: onBrowseVouchers,
+                      child: Text(
+                        'Pilih Voucher',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      child: const Text('Pilih Voucher', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 if (appliedPromoCode != null)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -107,53 +107,57 @@ class CheckoutSummarySection extends StatelessWidget {
                     ),
                   )
                 else
-                  Container(
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.divider),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.divider.withOpacity(0.8)),
+                          ),
                           child: TextField(
                             controller: promoController,
-                            style: const TextStyle(fontSize: 13),
-                            decoration: const InputDecoration(
+                            style: AppTypography.bodyMedium,
+                            decoration: InputDecoration(
                               hintText: 'Masukkan kode promo...',
+                              hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textHint),
                               border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              contentPadding: EdgeInsets.only(left: 12),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                             ),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: SizedBox(
-                            height: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: isValidatingPromo ? null : onApplyPromo,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primaryDark,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                              ),
-                              child: isValidatingPromo
-                                  ? const SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                    )
-                                  : const Text('Pakai', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            ),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: isValidatingPromo ? null : onApplyPromo,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1A1A1A), // Dark Black
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
                           ),
+                          child: isValidatingPromo
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                )
+                              : Text(
+                                  'Pakai',
+                                  style: AppTypography.button.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
               ],
             ),

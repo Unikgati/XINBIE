@@ -4,18 +4,38 @@ import 'package:core/core.dart';
 
 /// Auth state notifier — manages login/logout/register flow.
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier(this._repo) : super(const AuthState.initial()) {
+  AuthNotifier(this._repo, this._ref) : super(const AuthState.initial()) {
     _unauthorizedSubscription = _repo.onUnauthorized.listen((_) {
       state = const AuthState.unauthenticated();
     });
   }
 
   final AuthRepository _repo;
+  final Ref _ref;
   late final StreamSubscription _unauthorizedSubscription;
+  StreamSubscription? _fcmSubscription;
+
+  void _initFcm() {
+    _fcmSubscription?.cancel();
+    final service = _ref.read(notificationServiceProvider);
+    
+    // Initial sync
+    if (service.fcmToken != null) {
+      _repo.updateFcmToken(service.fcmToken!);
+    }
+
+    // On refresh sync
+    _fcmSubscription = service.onTokenRefresh.listen((token) {
+      if (state is Authenticated) {
+        _repo.updateFcmToken(token);
+      }
+    });
+  }
 
   @override
   void dispose() {
     _unauthorizedSubscription.cancel();
+    _fcmSubscription?.cancel();
     super.dispose();
   }
 
@@ -26,6 +46,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (loggedIn) {
         final user = await _repo.getMe();
         state = AuthState.authenticated(user: user);
+        _initFcm();
       } else {
         state = const AuthState.unauthenticated();
       }
@@ -38,6 +59,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState.loading();
     try {
       state = await _repo.login(email: email, password: password);
+      if (state is Authenticated) {
+        _initFcm();
+      }
     } catch (e) {
       state = AuthState.error(message: e.toString());
     }
@@ -59,6 +83,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         avatarUrl: avatarUrl,
         googleId: googleId,
       );
+      if (state is Authenticated) {
+        _initFcm();
+      }
     } catch (e) {
       state = AuthState.error(message: e.toString());
     }
@@ -82,6 +109,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState.loading();
     try {
       state = await _repo.verifyEmail(email: email, otp: otp);
+      if (state is Authenticated) {
+        _initFcm();
+      }
     } catch (e) {
       state = AuthState.error(message: e.toString());
     }
@@ -97,5 +127,5 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.watch(authRepositoryProvider));
+  return AuthNotifier(ref.watch(authRepositoryProvider), ref);
 });

@@ -165,8 +165,8 @@ export async function getAvailablePromos(req: AuthRequest, res: Response, next: 
       // Check total limit
       if (p.totalUsageLimit > 0 && p.usedCount >= p.totalUsageLimit) continue;
       
-      // Check per user limit
-      if (p.perUserLimit > 0) {
+      // Check per user limit - only if user is logged in
+      if (p.perUserLimit > 0 && req.userId) {
         const usage = await prisma.promoUsage.count({
           where: { promoCodeId: p.id, userId: req.userId }
         });

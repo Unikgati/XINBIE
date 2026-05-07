@@ -6,11 +6,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import styles from './Navbar.module.css';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
+import { useNotificationStore } from '@/store/notificationStore';
 
 export default function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const totalQty = useCartStore((s) => s.totalQuantity());
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
   const pathname = usePathname();
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -19,6 +21,7 @@ export default function Navbar() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const logout = useAuthStore((s) => s.logout);
   const [isBumped, setIsBumped] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -52,6 +55,12 @@ export default function Navbar() {
     router.push('/login');
   };
 
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) return;
+    router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+  };
+
   // Routes where we want to hide header on mobile to be more "app-like"
   const isAppFlow = 
     pathname.startsWith('/cart') || 
@@ -71,22 +80,29 @@ export default function Navbar() {
         </Link>
 
         {/* Search Bar */}
-        <div className={styles.searchContainer}>
+        <form className={styles.searchContainer} onSubmit={handleSearch}>
           <input
             type="text"
             placeholder="Cari sayur, daging, buah..."
             className={styles.searchInput}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <button className={styles.searchButton}>
+          <button type="submit" className={styles.searchButton}>
             <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>search</span>
           </button>
-        </div>
+        </form>
 
         {/* Actions */}
         <div className={styles.actionsContainer}>
           {authed && (
             <Link href="/notifications" className={styles.iconButton}>
               <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>notifications</span>
+              {mounted && unreadCount > 0 && (
+                <span className={styles.badge}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </Link>
           )}
 
@@ -106,7 +122,7 @@ export default function Navbar() {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
               >
                 {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className={styles.avatar} />
+                  <img src={user.avatarUrl} alt={user.name} className={styles.avatar} referrerPolicy="no-referrer" />
                 ) : (
                   <div className={styles.avatarFallback}>
                     {user.name.charAt(0).toUpperCase()}

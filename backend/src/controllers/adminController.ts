@@ -1,10 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
+import { idParamSchema, paginationQuerySchema } from '../utils/schema';
 import slugify from 'slugify';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { processAndUploadImage, processAndUploadImages } from '../middleware/upload';
-import { emitToAdmins, notifyOrderStatus, broadcastOrderOffer } from '../websocket';
+import { emitToAdmins, broadcastOrderOffer } from '../websocket';
+import { NotificationService } from '../utils/notification';
 import { sendPushToMultiple, sendPushNotification } from '../utils/firebase';
 
 // ═══════════════════════════════════════
@@ -235,13 +239,13 @@ export async function adminUpdateProduct(req: AuthRequest, res: Response, next: 
     const data = parseProductData(req.body);
     if (images) data.images = images;
     if (data.name) {
-      data.slug = await generateUniqueSlug(data.name, req.params.id);
+      data.slug = await generateUniqueSlug(data.name, req.params.id as string);
     }
 
     const { cookingVideoIds, ...productData } = data;
 
     const product = await prisma.product.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         ...productData,
         cookingVideos: {
@@ -256,10 +260,45 @@ export async function adminUpdateProduct(req: AuthRequest, res: Response, next: 
 
 export async function adminDeleteProduct(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     await prisma.product.delete({
-      where: { id: req.params.id },
+      where: { id },
     });
     res.json({ message: 'Produk dihapus' });
+  } catch (err) { next(err); }
+}
+
+export async function getCookingVideos(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { page, limit } = paginationQuerySchema.parse(req.query);
+
+    const [videos, total] = await Promise.all([
+      prisma.cookingVideo.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          products: {
+            where: { isActive: true },
+            include: {
+              category: { select: { name: true } },
+              variants: { where: { isActive: true } },
+            },
+          },
+        },
+      }),
+      prisma.cookingVideo.count(),
+    ]);
+
+    res.json({
+      data: videos,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (err) { next(err); }
 }
 
@@ -269,8 +308,9 @@ export async function adminDeleteProduct(req: AuthRequest, res: Response, next: 
 
 export async function adminGetVariants(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { productId } = z.object({ productId: z.string().min(1) }).parse(req.params);
     const variants = await prisma.productVariant.findMany({
-      where: { productId: req.params.productId },
+      where: { productId },
       orderBy: { sortOrder: 'asc' },
     });
     res.json(variants);
@@ -279,12 +319,13 @@ export async function adminGetVariants(req: AuthRequest, res: Response, next: Ne
 
 export async function adminCreateVariant(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { productId } = z.object({ productId: z.string().min(1) }).parse(req.params);
     let imageUrl: string | undefined;
     if (req.file) imageUrl = await processAndUploadImage(req.file, 'variants');
 
     const variant = await prisma.productVariant.create({
       data: {
-        productId: req.params.productId,
+        productId,
         name: req.body.name,
         sku: req.body.sku || null,
         price: parseInt(req.body.price) || 0,
@@ -302,6 +343,7 @@ export async function adminCreateVariant(req: AuthRequest, res: Response, next: 
 
 export async function adminUpdateVariant(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     const data: any = { ...req.body };
     if (req.file) data.imageUrl = await processAndUploadImage(req.file, 'variants');
     if (data.price) data.price = parseInt(data.price);
@@ -312,7 +354,7 @@ export async function adminUpdateVariant(req: AuthRequest, res: Response, next: 
     if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 0;
 
     const variant = await prisma.productVariant.update({
-      where: { id: req.params.id },
+      where: { id },
       data,
     });
     res.json(variant);
@@ -321,8 +363,9 @@ export async function adminUpdateVariant(req: AuthRequest, res: Response, next: 
 
 export async function adminDeleteVariant(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     await prisma.productVariant.delete({
-      where: { id: req.params.id },
+      where: { id },
     });
     res.json({ message: 'Varian dihapus' });
   } catch (err) { next(err); }
@@ -362,6 +405,7 @@ export async function adminCreateCategory(req: AuthRequest, res: Response, next:
 
 export async function adminUpdateCategory(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     let iconUrl: string | undefined;
     if (req.file) iconUrl = await processAndUploadImage(req.file, 'categories');
 
@@ -371,7 +415,7 @@ export async function adminUpdateCategory(req: AuthRequest, res: Response, next:
       data.slug = generateSlug(data.name);
     }
 
-    const category = await prisma.category.update({ where: { id: req.params.id }, data });
+    const category = await prisma.category.update({ where: { id }, data });
     res.json(category);
   } catch (err) { next(err); }
 }
@@ -399,24 +443,28 @@ export async function adminReorderCategories(req: AuthRequest, res: Response, ne
 
 export async function adminGetOrders(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { status, page = '1', limit = '20', search } = req.query;
-    const where: any = {};
+    const { status, page = 1, limit = 20, search } = paginationQuerySchema.merge(z.object({
+      status: z.string().optional(),
+      search: z.string().optional(),
+    })).parse(req.query);
+
+    const where: Prisma.OrderWhereInput = {};
     if (status) {
-      const statuses = (status as string).split(',');
-      where.orderStatus = statuses.length > 1 ? { in: statuses } : statuses[0];
+      const statuses = status.split(',');
+      where.orderStatus = statuses.length > 1 ? { in: statuses as any } : statuses[0] as any;
     }
     if (search) {
       where.OR = [
-        { code: { contains: search as string, mode: 'insensitive' } },
-        { user: { name: { contains: search as string, mode: 'insensitive' } } },
+        { code: { contains: search, mode: 'insensitive' } },
+        { user: { name: { contains: search, mode: 'insensitive' } } },
       ];
     }
 
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const skip = (page - 1) * limit;
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
-        where, skip, take: parseInt(limit as string),
+        where, skip, take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { name: true, phoneWa: true } },
@@ -427,15 +475,15 @@ export async function adminGetOrders(req: AuthRequest, res: Response, next: Next
       prisma.order.count({ where }),
     ]);
 
-    const lim = parseInt(limit as string);
-    res.json({ data: orders, meta: { total, page: parseInt(page as string), totalPages: Math.ceil(total / lim) } });
+    res.json({ data: orders, meta: { total, page, totalPages: Math.ceil(total / limit) } });
   } catch (err) { next(err); }
 }
 
 export async function adminGetOrderDetail(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     const order = await prisma.order.findUnique({
-      where: { id: req.params.id },
+      where: { id },
       include: {
         user: { select: { id: true, name: true, email: true, phoneWa: true, avatarUrl: true } },
         driver: { select: { id: true, name: true, phoneWa: true, avatarUrl: true, driverProfile: { select: { id: true } } } },
@@ -460,6 +508,7 @@ export async function adminGetOrderDetail(req: AuthRequest, res: Response, next:
 
 export async function adminUpdateOrderStatus(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     const { status, note, driverId, pickupPointId } = req.body;
     const data: any = { orderStatus: status };
     if (driverId) data.driverId = driverId;
@@ -467,18 +516,18 @@ export async function adminUpdateOrderStatus(req: AuthRequest, res: Response, ne
 
     const [updatedOrder] = await prisma.$transaction([
       prisma.order.update({
-        where: { id: req.params.id },
+        where: { id },
         data,
         select: { id: true, userId: true, orderStatus: true, code: true },
       }),
       prisma.orderStatusLog.create({
-        data: { orderId: req.params.id, status, actorId: req.userId, note: note || 'Admin update' },
+        data: { orderId: id, status, actorId: req.userId, note: note || 'Admin update' },
       }),
     ]);
 
     // Broadcast to admins + notify user
-    emitToAdmins('order:statusUpdate', { orderId: req.params.id, status });
-    notifyOrderStatus(updatedOrder.userId, req.params.id, status);
+    emitToAdmins('order:statusUpdate', { orderId: id, status });
+    NotificationService.notifyOrderStatus(updatedOrder.userId, updatedOrder.id, updatedOrder.code, status);
 
     // Push notification to online drivers when WAITING_DRIVER
     if (status === 'WAITING_DRIVER') {
@@ -494,16 +543,16 @@ export async function adminUpdateOrderStatus(req: AuthRequest, res: Response, ne
         await sendPushToMultiple(tokens, {
           title: '🔔 Pesanan Baru!',
           body: `Pesanan ${updatedOrder.code} menunggu driver`,
-          data: { type: 'new_order', orderId: req.params.id },
+          data: { type: 'new_order', orderId: id },
         });
       }
 
       // 🔴 Send websocket event for Interruptive UI (IncomingOrderOverlay)
       const fullOrder = await prisma.order.findUnique({
-        where: { id: req.params.id },
+        where: { id },
       });
       if (fullOrder) {
-        broadcastOrderOffer(req.params.id, {
+        broadcastOrderOffer(id, {
           orderId: fullOrder.id,
           code: fullOrder.code,
           grandTotal: fullOrder.grandTotal,
@@ -529,7 +578,7 @@ export async function adminGetUnreadCount(req: AuthRequest, res: Response, next:
 
 export async function adminMarkOrderAsRead(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
+    const { id } = idParamSchema.parse(req.params);
     await prisma.order.update({
       where: { id },
       data: { isReadAdmin: true },
@@ -544,9 +593,9 @@ export async function adminMarkOrderAsRead(req: AuthRequest, res: Response, next
 
 export async function adminGetDrivers(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { status } = req.query;
-    const where: any = {};
-    if (status) where.verificationStatus = status;
+    const { status } = z.object({ status: z.string().optional() }).parse(req.query);
+    const where: Prisma.DriverProfileWhereInput = {};
+    if (status) where.verificationStatus = status as any;
 
     const drivers = await prisma.driverProfile.findMany({
       where,
@@ -565,7 +614,7 @@ export async function adminGetDrivers(req: AuthRequest, res: Response, next: Nex
 
 export async function adminGetDriverDetail(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const driverId = req.params.id;
+    const { id: driverId } = idParamSchema.parse(req.params);
     const driver = await prisma.driverProfile.findUnique({
       where: { id: driverId },
       include: {
@@ -598,11 +647,11 @@ export async function adminGetDriverDetail(req: AuthRequest, res: Response, next
 
     res.json({
       ...driver,
-      userName: driver.user.name,
-      userEmail: driver.user.email,
-      userPhoneWa: driver.user.phoneWa,
-      userAvatarUrl: driver.user.avatarUrl,
-      userIsActive: driver.user.isActive,
+      userName: (driver as any).user.name,
+      userEmail: (driver as any).user.email,
+      userPhoneWa: (driver as any).user.phoneWa,
+      userAvatarUrl: (driver as any).user.avatarUrl,
+      userIsActive: (driver as any).user.isActive,
       user: undefined,
       stats: {
         totalOrders,
@@ -616,8 +665,8 @@ export async function adminGetDriverDetail(req: AuthRequest, res: Response, next
         grandTotal: o.grandTotal,
         createdAt: o.createdAt,
         isReadAdmin: o.isReadAdmin,
-        itemCount: o._count.items,
-        customerName: o.user.name,
+        itemCount: (o as any)._count.items,
+        customerName: (o as any).user.name,
       })),
     });
   } catch (err) { next(err); }
@@ -625,10 +674,11 @@ export async function adminGetDriverDetail(req: AuthRequest, res: Response, next
 
 export async function adminVerifyDriver(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     const { status, rejectionReason } = req.body;
 
     await prisma.driverProfile.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         verificationStatus: status,
         verifiedAt: status === 'APPROVED' ? new Date() : null,
@@ -647,7 +697,9 @@ export async function adminVerifyDriver(req: AuthRequest, res: Response, next: N
 
 export async function adminGetUsers(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { page = '1', limit = '20', search } = req.query;
+    const page = (req.query.page as string) || '1';
+    const limit = (req.query.limit as string) || '20';
+    const search = req.query.search as string;
     const where: any = { role: 'USER' };
     if (search) where.OR = [
       { name: { contains: search as string, mode: 'insensitive' } },
@@ -669,11 +721,11 @@ export async function adminGetUsers(req: AuthRequest, res: Response, next: NextF
 
 export async function adminToggleUser(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    const user = await prisma.user.findUnique({ where: { id: req.params.id as string } });
     if (!user) throw new AppError('User tidak ditemukan', 404);
 
     await prisma.user.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { isActive: !user.isActive },
     });
 
@@ -683,10 +735,10 @@ export async function adminToggleUser(req: AuthRequest, res: Response, next: Nex
 
 export async function adminGetUserDetail(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const userId = req.params.id;
+    const userId = req.params.id as string;
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId as string },
       select: {
         id: true, name: true, email: true, phoneWa: true,
         avatarUrl: true, isActive: true, createdAt: true, updatedAt: true,
@@ -696,13 +748,13 @@ export async function adminGetUserDetail(req: AuthRequest, res: Response, next: 
 
     // Stats
     const [totalOrders, spending, lastOrder] = await Promise.all([
-      prisma.order.count({ where: { userId } }),
+      prisma.order.count({ where: { userId: userId as string } }),
       prisma.order.aggregate({
-        where: { userId, orderStatus: { notIn: ['CANCELLED'] } },
+        where: { userId: userId as string, orderStatus: { notIn: ['CANCELLED'] } },
         _sum: { grandTotal: true },
       }),
       prisma.order.findFirst({
-        where: { userId },
+        where: { userId: userId as string },
         orderBy: { createdAt: 'desc' },
         select: { createdAt: true },
       }),
@@ -755,7 +807,7 @@ export async function adminGetUserDetail(req: AuthRequest, res: Response, next: 
       user,
       stats: {
         totalOrders,
-        totalSpent: spending._sum.grandTotal || 0,
+        totalSpent: spending._sum?.grandTotal || 0,
         lastOrderAt: lastOrder?.createdAt || null,
       },
       addresses: addressesWithRegion,
@@ -767,7 +819,7 @@ export async function adminGetUserDetail(req: AuthRequest, res: Response, next: 
         grandTotal: o.grandTotal,
         createdAt: o.createdAt,
         isReadAdmin: o.isReadAdmin,
-        itemCount: o._count.items,
+        itemCount: (o as any)._count.items,
       })),
     });
   } catch (err) { next(err); }
@@ -801,14 +853,31 @@ export async function adminUpdateBanner(req: AuthRequest, res: Response, next: N
     const data: any = { ...req.body };
     if (req.file) data.imageUrl = await processAndUploadImage(req.file, 'banners', 1200, 90);
 
-    const banner = await prisma.banner.update({ where: { id: req.params.id }, data });
+    const banner = await prisma.banner.update({ where: { id: req.params.id as string }, data });
     res.json(banner);
+  } catch (err) { next(err); }
+}
+
+export async function adminReorderBanners(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      throw new AppError('orderedIds wajib berupa array', 400);
+    }
+
+    await prisma.$transaction(
+      orderedIds.map((id: string, index: number) =>
+        prisma.banner.update({ where: { id }, data: { sortOrder: index + 1 } })
+      )
+    );
+
+    res.json({ message: 'Urutan banner diperbarui' });
   } catch (err) { next(err); }
 }
 
 export async function adminDeleteBanner(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await prisma.banner.delete({ where: { id: req.params.id } });
+    await prisma.banner.delete({ where: { id: req.params.id as string } });
     res.json({ message: 'Banner dihapus' });
   } catch (err) { next(err); }
 }
@@ -873,7 +942,7 @@ export async function adminUpdatePromo(req: AuthRequest, res: Response, next: Ne
     const { categoryIds, productIds, ...promoData } = data;
 
     const promo = await prisma.promoCode.update({ 
-      where: { id: req.params.id }, 
+      where: { id: req.params.id as string }, 
       data: {
         ...promoData,
         categories: categoryIds ? { set: categoryIds.map((id: string) => ({ id })) } : undefined,
@@ -881,6 +950,19 @@ export async function adminUpdatePromo(req: AuthRequest, res: Response, next: Ne
       }
     });
     res.json(promo);
+  } catch (err) { next(err); }
+}
+
+export async function adminDeletePromo(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const usageCount = await prisma.promoUsage.count({ where: { promoCodeId: id as string } });
+    if (usageCount > 0) {
+      throw new AppError('Voucher tidak bisa dihapus karena sudah memiliki riwayat penggunaan. Silakan nonaktifkan saja.', 400);
+    }
+    
+    await prisma.promoCode.delete({ where: { id: id as string } });
+    res.json({ message: 'Voucher berhasil dihapus' });
   } catch (err) { next(err); }
 }
 
@@ -985,7 +1067,7 @@ export async function adminGetWithdrawals(req: AuthRequest, res: Response, next:
         driver: {
           id: t.wallet.user.id,
           name: t.wallet.user.name,
-          phone: t.wallet.user.phone,
+          phone: t.wallet.user.phoneWa,
           bankName: t.wallet.user.driverProfile?.bankName,
           accountNumber: t.wallet.user.driverProfile?.accountNumber,
           accountHolder: t.wallet.user.driverProfile?.accountHolder,
@@ -1003,7 +1085,7 @@ export async function adminProcessWithdrawal(req: AuthRequest, res: Response, ne
     const { action, note } = req.body; // action: 'approve' | 'reject' | 'complete'
 
     const transaction = await prisma.driverTransaction.findUnique({
-      where: { id },
+      where: { id: id as string },
       include: { wallet: true },
     });
     if (!transaction) throw new AppError('Transaksi tidak ditemukan', 404);
@@ -1036,7 +1118,7 @@ export async function adminProcessWithdrawal(req: AuthRequest, res: Response, ne
     }
 
     await prisma.driverTransaction.update({
-      where: { id },
+      where: { id: id as string },
       data: {
         status: newStatus as any,
         note: note ? `${transaction.note} | Admin: ${note}` : transaction.note,
@@ -1050,7 +1132,7 @@ export async function adminProcessWithdrawal(req: AuthRequest, res: Response, ne
 // GET /api/admin/drivers/:id/financial
 export async function adminGetDriverFinancial(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
+    const { id } = idParamSchema.parse(req.params);
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -1076,16 +1158,16 @@ export async function adminGetDriverFinancial(req: AuthRequest, res: Response, n
     // Aggregate stats
     const wallet = user.driverWallet;
     const transactions = wallet?.transactions || [];
-    const totalCommission = transactions.filter(t => t.type === 'COMMISSION').reduce((s, t) => s + t.amount, 0);
-    const totalWithdrawn = transactions.filter(t => t.type === 'WITHDRAWAL' && t.status === 'COMPLETED').reduce((s, t) => s + Math.abs(t.amount), 0);
-    const pendingWithdrawals = transactions.filter(t => t.type === 'WITHDRAWAL' && t.status === 'PENDING').reduce((s, t) => s + Math.abs(t.amount), 0);
+    const totalCommission = transactions.filter((t: any) => t.type === 'COMMISSION').reduce((s: number, t: any) => s + t.amount, 0);
+    const totalWithdrawn = transactions.filter((t: any) => t.type === 'WITHDRAWAL' && t.status === 'COMPLETED').reduce((s: number, t: any) => s + Math.abs(t.amount), 0);
+    const pendingWithdrawals = transactions.filter((t: any) => t.type === 'WITHDRAWAL' && t.status === 'PENDING').reduce((s: number, t: any) => s + Math.abs(t.amount), 0);
 
     res.json({
       driver: {
         id: user.id,
         name: user.name,
-        phone: user.phone,
-        ...user.driverProfile,
+        phone: user.phoneWa,
+        ...(user.driverProfile || {}),
       },
       financial: {
         balance: wallet?.balance || 0,
@@ -1111,8 +1193,8 @@ export async function adminDriverAdjustment(req: AuthRequest, res: Response, nex
 
     const result = await prisma.$transaction(async (tx) => {
       const wallet = await tx.driverWallet.upsert({
-        where: { userId: id },
-        create: { userId: id, balance: adjustedAmount },
+        where: { userId: id as string },
+        create: { userId: id as string, balance: adjustedAmount },
         update: { balance: { increment: adjustedAmount } },
       });
 
@@ -1174,7 +1256,7 @@ export async function adminCreateDeliverySlot(req: AuthRequest, res: Response, n
 
 export async function adminUpdateDeliverySlotsByDay(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const dayOfWeek = parseInt(req.params.day);
+    const dayOfWeek = parseInt(req.params.day as string);
     const { slots, maxOrders, cutoffHours } = req.body;
 
     // slots is an array of: { label, startTime, endTime, isActive }
@@ -1232,7 +1314,7 @@ export async function adminUpdateDeliverySlot(req: AuthRequest, res: Response, n
     const { dayOfWeek, label, startTime, endTime, maxOrders, cutoffHours, isActive } = req.body;
 
     const slot = await prisma.deliverySlot.update({
-      where: { id },
+      where: { id: id as string },
       data: {
         ...(dayOfWeek !== undefined && { dayOfWeek: parseInt(dayOfWeek) }),
         ...(label && { label }),
@@ -1251,17 +1333,17 @@ export async function adminDeleteDeliverySlot(req: AuthRequest, res: Response, n
   try {
     const { id } = req.params;
 
-    const count = await prisma.order.count({ where: { deliverySlotId: id } });
+    const count = await prisma.order.count({ where: { deliverySlotId: id as string } });
     if (count > 0) {
       // Soft delete
       const slot = await prisma.deliverySlot.update({
-        where: { id },
+        where: { id: id as string },
         data: { isActive: false },
       });
       return res.json({ message: 'Slot disembunyikan (Soft Delete) karena masih memiliki pesanan aktif', slot, softDeleted: true });
     }
 
-    await prisma.deliverySlot.delete({ where: { id } });
+    await prisma.deliverySlot.delete({ where: { id: id as string } });
     res.json({ message: 'Slot berhasil dihapus permanen' });
   } catch (err) { next(err); }
 }
@@ -1302,7 +1384,7 @@ export async function adminUpdateCookingVideo(req: AuthRequest, res: Response, n
   try {
     const { title, videoUrl, productIds } = req.body;
     const video = await prisma.cookingVideo.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         title,
         youtubeUrl: videoUrl,
@@ -1317,7 +1399,7 @@ export async function adminUpdateCookingVideo(req: AuthRequest, res: Response, n
 
 export async function adminDeleteCookingVideo(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await prisma.cookingVideo.delete({ where: { id: req.params.id } });
+    await prisma.cookingVideo.delete({ where: { id: req.params.id as string } });
     res.json({ message: 'Video inspirasi dihapus' });
   } catch (err) { next(err); }
 }

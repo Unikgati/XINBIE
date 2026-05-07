@@ -14,22 +14,23 @@ import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 const NUTRITION_TAGS = [
   // Vitamin (Tinggi vs Sumber)
   'Tinggi Vitamin A', 'Sumber Vitamin A',
-  'Tinggi Vitamin B Kompleks', 'Sumber Vitamin B Kompleks',
+  'Tinggi Vitamin B Kompleks', 'Sumber Vitamin B Kompleks', 'Sumber Vitamin B6', 'Mengandung Folat',
   'Tinggi Vitamin C', 'Sumber Vitamin C',
   'Tinggi Vitamin D', 'Sumber Vitamin D',
   'Tinggi Vitamin E', 'Sumber Vitamin E',
   'Tinggi Vitamin K', 'Sumber Vitamin K',
+  'Sumber Beta Karoten',
   // Mineral
   'Tinggi Kalsium', 'Sumber Kalsium',
   'Tinggi Zat Besi', 'Sumber Zat Besi',
-  'Tinggi Kalium', 'Sumber Kalium',
+  'Tinggi Kalium', 'Sumber Kalium', 'Mengandung Kalium',
   'Tinggi Magnesium', 'Sumber Magnesium',
   // Makronutrien
   'Tinggi Serat', 'Sumber Serat',
   'Tinggi Protein', 'Sumber Protein',
   'Karbohidrat Kompleks',
   // Klaim Gizi
-  'Rendah Gula', 'Rendah Kalori', 'Kaya Antioksidan', 'Sumber Antioksidan',
+  'Rendah Gula', 'Rendah Kalori', 'Kaya Antioksidan', 'Sumber Antioksidan', 'Mengandung Likopen',
   'Bebas Kolesterol', 'Lemak Sehat (Omega-3)',
   // Gaya Hidup
   'Organik', 'Bebas Gluten', 'Bebas Pengawet', 'Tanpa Pemanis Buatan',
@@ -571,6 +572,66 @@ export default function ProductsPage() {
               <button className="btn btn-outline btn-icon" onClick={handleCloseModal}><span className="material-symbols-outlined">close</span></button>
             </div>
             <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">
+                  Foto Produk
+                </label>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
+                  {/* Existing images from server */}
+                  {existingImages.map((url, idx) => (
+                    <div key={`existing-${idx}`} style={{ 
+                      width: 80, height: 80, borderRadius: 'var(--radius-md)', 
+                      background: 'var(--divider)', position: 'relative', overflow: 'hidden',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}>
+                      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button type="button" 
+                        onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Newly uploaded images */}
+                  {formImages.map((file, idx) => (
+                    <div key={`new-${idx}`} style={{ 
+                      width: 80, height: 80, borderRadius: 'var(--radius-md)', 
+                      background: 'var(--divider)', position: 'relative', overflow: 'hidden',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}>
+                      <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button type="button" 
+                        onClick={() => setFormImages(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Upload button - always visible so user can add more */}
+                  <label className="upload-tile hover-scale" style={{ 
+                    width: 80, height: 80, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                    cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
+                    background: 'var(--primary-surface)'
+                  }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 24, marginBottom: 4, color: 'var(--primary-light)' }}>add_photo_alternate</span>
+                    <span style={{ fontSize: 10, fontWeight: 500 }}>{existingImages.length > 0 || formImages.length > 0 ? 'Ganti' : 'Upload'}</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      style={{ display: 'none' }} 
+                      onChange={e => {
+                        if (e.target.files?.length) {
+                          setFormImages([e.target.files[0]]);
+                          setExistingImages([]);
+                        }
+                      }} 
+                    />
+                  </label>
+                </div>
+              </div>
               <div className="form-group"><label className="form-label">Nama Produk</label><input className="form-input" placeholder="Masukkan nama produk" value={formName} onChange={e => setFormName(e.target.value)} /></div>
               <div className="form-group"><label className="form-label">Kategori</label>
                 <CustomSelect
@@ -715,66 +776,7 @@ export default function ProductsPage() {
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">
-                  Foto Produk
-                </label>
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
-                  {/* Existing images from server */}
-                  {existingImages.map((url, idx) => (
-                    <div key={`existing-${idx}`} style={{ 
-                      width: 80, height: 80, borderRadius: 'var(--radius-md)', 
-                      background: 'var(--divider)', position: 'relative', overflow: 'hidden',
-                      boxShadow: 'var(--shadow-sm)'
-                    }}>
-                      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <button type="button" 
-                        onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== idx))}
-                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
-                      </button>
-                    </div>
-                  ))}
 
-                  {/* Newly uploaded images */}
-                  {formImages.map((file, idx) => (
-                    <div key={`new-${idx}`} style={{ 
-                      width: 80, height: 80, borderRadius: 'var(--radius-md)', 
-                      background: 'var(--divider)', position: 'relative', overflow: 'hidden',
-                      boxShadow: 'var(--shadow-sm)'
-                    }}>
-                      <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <button type="button" 
-                        onClick={() => setFormImages(prev => prev.filter((_, i) => i !== idx))}
-                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
-                      </button>
-                    </div>
-                  ))}
-
-                  {/* Upload button - always visible so user can add more */}
-                  <label className="upload-tile hover-scale" style={{ 
-                    width: 80, height: 80, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                    cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
-                    background: 'var(--primary-surface)'
-                  }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 24, marginBottom: 4, color: 'var(--primary-light)' }}>add_photo_alternate</span>
-                    <span style={{ fontSize: 10, fontWeight: 500 }}>{existingImages.length > 0 || formImages.length > 0 ? 'Ganti' : 'Upload'}</span>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      style={{ display: 'none' }} 
-                      onChange={e => {
-                        if (e.target.files?.length) {
-                          setFormImages([e.target.files[0]]);
-                          setExistingImages([]);
-                        }
-                      }} 
-                    />
-                  </label>
-                </div>
-              </div>
 
               {/* Variant Section */}
               <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 16, marginTop: 8 }}>

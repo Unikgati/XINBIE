@@ -79,7 +79,7 @@ export default function ProfilePage() {
         <div className={styles.sidebar}>
           <div className={styles.userInfo}>
             {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.name} className={styles.avatar} style={{borderRadius: '50%'}} />
+              <img src={user.avatarUrl} alt={user.name} className={styles.avatar} style={{borderRadius: '50%'}} referrerPolicy="no-referrer" />
             ) : (
               <div className={styles.avatar}>
                 {user.name.charAt(0).toUpperCase()}

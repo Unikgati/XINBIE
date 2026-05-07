@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
+import { paginationQuerySchema } from '../utils/schema';
 
 // GET /api/categories
 export async function getCategories(req: Request, res: Response, next: NextFunction) {
@@ -22,41 +23,33 @@ export async function getCategories(req: Request, res: Response, next: NextFunct
 // GET /api/products
 export async function getProducts(req: Request, res: Response, next: NextFunction) {
   try {
-    const {
-      categoryId,
-      search,
-      featured,
-      promo,
-      sort = 'newest',
-      page = '1',
-      limit = '20',
-    } = req.query;
+    const { categoryId, search, featured, promo, sort, page, limit } = paginationQuerySchema.parse(req.query);
 
     const where: any = { isActive: true };
     if (categoryId) where.categoryId = categoryId;
-    if (featured === 'true') where.isFeatured = true;
-    if (promo === 'true') {
+    if (featured) where.isFeatured = true;
+    if (promo) {
       where.discountPrice = { gt: 0 };
     }
-    if (search) where.name = { contains: search as string, mode: 'insensitive' };
+    if (search) where.name = { contains: search, mode: 'insensitive' };
 
     const orderBy: any = {};
     switch (sort) {
       case 'price_asc': orderBy.price = 'asc'; break;
       case 'price_desc': orderBy.price = 'desc'; break;
       case 'name': orderBy.name = 'asc'; break;
-      default: orderBy.createdAt = 'desc';
+      case 'newest':
+      default:
+        orderBy.createdAt = 'desc';
+        break;
     }
-
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-    const take = parseInt(limit as string);
 
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
         orderBy,
-        skip,
-        take,
+        skip: (page - 1) * limit,
+        take: limit,
         include: {
           category: { select: { name: true } },
           variants: { where: { isActive: true } },
@@ -68,14 +61,14 @@ export async function getProducts(req: Request, res: Response, next: NextFunctio
     res.json({
       data: products.map((p) => ({
         ...p,
-        categoryName: p.category.name,
+        categoryName: p.category?.name || '',
         category: undefined,
       })),
       meta: {
         total,
-        page: parseInt(page as string),
-        limit: take,
-        totalPages: Math.ceil(total / take),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (err) { next(err); }
@@ -83,17 +76,14 @@ export async function getProducts(req: Request, res: Response, next: NextFunctio
 
 // GET /api/products/:id
 export async function getProduct(req: Request, res: Response, next: NextFunction) {
-  type PopulatedProduct = Omit<Awaited<ReturnType<typeof prisma.product.findFirst>>, 'category'> & {
-    categoryName: string;
-    category?: undefined;
-  };
+  type PopulatedProduct = any;
 
   try {
-    const param = req.params.id;
+    const param = req.params.id as string;
     const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(param);
 
     const product = await prisma.product.findUnique({
-      where: isUuid ? { id: param } : { slug: param },
+      where: isUuid ? { id: param as string } : { slug: param as string },
       include: {
         category: { select: { name: true } },
         variants: { where: { isActive: true } },
@@ -115,7 +105,7 @@ export async function getProduct(req: Request, res: Response, next: NextFunction
       return res.status(404).json({ message: 'Produk tidak ditemukan' });
     }
 
-    const toPopulated = (r: typeof product) => ({
+    const toPopulated = (r: any) => ({
       ...r,
       categoryName: r.category?.name ?? '',
       category: undefined,
@@ -232,18 +222,15 @@ export async function getBanners(req: Request, res: Response, next: NextFunction
   } catch (err) { next(err); }
 }
 
-// GET /api/cooking-videos
 export async function getCookingVideos(req: Request, res: Response, next: NextFunction) {
   try {
-    const { page = '1', limit = '10' } = req.query;
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-    const take = parseInt(limit as string);
+    const { page, limit } = paginationQuerySchema.parse(req.query);
 
     const [videos, total] = await Promise.all([
       prisma.cookingVideo.findMany({
         orderBy: { createdAt: 'desc' },
-        skip,
-        take,
+        skip: (page - 1) * limit,
+        take: limit,
         include: {
           products: {
             where: { isActive: true },
@@ -261,9 +248,9 @@ export async function getCookingVideos(req: Request, res: Response, next: NextFu
       data: videos,
       meta: {
         total,
-        page: parseInt(page as string),
-        limit: take,
-        totalPages: Math.ceil(total / take),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (err) { next(err); }

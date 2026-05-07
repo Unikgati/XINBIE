@@ -7,7 +7,7 @@ import CustomSelect from '@/components/CustomSelect';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { TableSkeleton } from '@/components/Skeleton';
-import { apiGet, apiPost, apiPut } from '@/lib/api';
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 
 interface Promo {
   id: string;
@@ -163,6 +163,23 @@ export default function PromosPage() {
     }
   };
 
+  const handleDelete = async (p: Promo) => {
+    const ok = await confirm({ 
+      title: 'Hapus Voucher', 
+      message: `Hapus voucher "${p.code}"? Tindakan ini tidak dapat dibatalkan.`, 
+      confirmLabel: 'Hapus', 
+      danger: true 
+    });
+    if (!ok) return;
+    try {
+      await apiDelete(`/promos/${p.id}`);
+      toast.success(`Voucher "${p.code}" berhasil dihapus`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menghapus voucher');
+    }
+  };
+
   return (
     <>
       <div className="page-header">
@@ -201,6 +218,7 @@ export default function PromosPage() {
                       <ActionMenu items={[
                         { icon: 'edit', label: 'Ubah Promo', onClick: () => openEdit(p) },
                         { icon: p.isActive ? 'visibility_off' : 'visibility', label: p.isActive ? 'Nonaktifkan' : 'Aktifkan', onClick: () => handleToggle(p) },
+                        { icon: 'delete', label: 'Hapus', onClick: () => handleDelete(p), danger: true },
                       ]} />
                     </td>
                   </tr>
@@ -235,7 +253,7 @@ export default function PromosPage() {
                 <div className="form-group"><label className="form-label">Maks. Potongan (Rp)</label><input className="form-input" type="number" placeholder="Opsional" value={formMaxDiscount} onChange={e => setFormMaxDiscount(e.target.value)} /></div>
               </div>
 
-              <div style={{ borderTop: '1px solid #eee', pt: 16, mt: 8 }}>
+              <div style={{ pt: 16, mt: 8 }}>
                 <h4 style={{ marginBottom: '12px', fontSize: '14px', color: '#666' }}>Batas & Validitas</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div className="form-group"><label className="form-label">Total Kuota (0=∞)</label><input className="form-input" type="number" placeholder="0" value={formLimit} onChange={e => setFormLimit(e.target.value)} /></div>

@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { idParamSchema, paginationQuerySchema } from '../utils/schema';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
@@ -160,8 +161,7 @@ export async function getActiveOrders(req: AuthRequest, res: Response, next: Nex
 // GET /api/driver/orders/history
 export async function getOrderHistory(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { page = '1', limit = '20' } = req.query;
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const { page, limit } = paginationQuerySchema.parse(req.query);
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
@@ -170,8 +170,8 @@ export async function getOrderHistory(req: AuthRequest, res: Response, next: Nex
           orderStatus: { in: ['DELIVERED', 'COMPLETED', 'PROBLEM'] },
         },
         orderBy: { createdAt: 'desc' },
-        skip,
-        take: parseInt(limit as string),
+        skip: (page - 1) * limit,
+        take: limit,
         include: { items: true },
       }),
       prisma.order.count({
@@ -179,14 +179,15 @@ export async function getOrderHistory(req: AuthRequest, res: Response, next: Nex
       }),
     ]);
 
-    res.json({ data: orders, meta: { total, page: parseInt(page as string) } });
+    res.json({ data: orders, meta: { total, page, limit } });
   } catch (err) { next(err); }
 }
 
 // PUT /api/driver/orders/:id/accept
 export async function acceptOrder(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+    const { id } = idParamSchema.parse(req.params);
+    const order = await prisma.order.findUnique({ where: { id } });
     if (!order) throw new AppError('Pesanan tidak ditemukan', 404);
     if (order.orderStatus !== 'WAITING_DRIVER') throw new AppError('Pesanan sudah diambil', 400);
 
@@ -217,9 +218,10 @@ export async function acceptOrder(req: AuthRequest, res: Response, next: NextFun
 // PUT /api/driver/orders/:id/status
 export async function updateOrderStatus(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     const { status, note } = req.body;
     const order = await prisma.order.findFirst({
-      where: { id: req.params.id, driverId: req.userId },
+      where: { id, driverId: req.userId },
     });
     if (!order) throw new AppError('Pesanan tidak ditemukan', 404);
 
@@ -256,12 +258,13 @@ export async function updateOrderStatus(req: AuthRequest, res: Response, next: N
 // POST /api/driver/orders/:id/proof
 export async function uploadProof(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     if (!req.file) throw new AppError('Foto bukti wajib diupload', 400);
 
     const url = await processAndUploadImage(req.file, 'proofs');
 
     await prisma.order.update({
-      where: { id: req.params.id },
+      where: { id },
       data: { proofPhotoUrl: url },
     });
 
@@ -269,9 +272,9 @@ export async function uploadProof(req: AuthRequest, res: Response, next: NextFun
   } catch (err) { next(err); }
 }
 
-// POST /api/driver/orders/:id/problem
 export async function reportProblem(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     const { type, description } = req.body;
     let photoUrl: string | undefined;
 
@@ -281,7 +284,7 @@ export async function reportProblem(req: AuthRequest, res: Response, next: NextF
 
     await prisma.$transaction([
       prisma.order.update({
-        where: { id: req.params.id },
+        where: { id },
         data: {
           orderStatus: 'PROBLEM',
           problemType: type,
@@ -291,7 +294,7 @@ export async function reportProblem(req: AuthRequest, res: Response, next: NextF
       }),
       prisma.orderStatusLog.create({
         data: {
-          orderId: req.params.id,
+          orderId: id,
           status: 'PROBLEM',
           actorId: req.userId,
           note: `${type}: ${description}`,
@@ -303,11 +306,11 @@ export async function reportProblem(req: AuthRequest, res: Response, next: NextF
   } catch (err) { next(err); }
 }
 
-// POST /api/driver/orders/:id/cod-confirm
 export async function confirmCod(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     await prisma.order.update({
-      where: { id: req.params.id },
+      where: { id },
       data: { paymentStatus: 'PAID' },
     });
     res.json({ message: 'Pembayaran COD dikonfirmasi' });
@@ -363,6 +366,8 @@ export async function getEarnings(req: AuthRequest, res: Response, next: NextFun
 // GET /api/driver/wallet
 export async function getWallet(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { page, limit } = paginationQuerySchema.parse(req.query);
+
     const wallet = await prisma.driverWallet.findUnique({
       where: { userId: req.userId! },
     });
@@ -371,15 +376,12 @@ export async function getWallet(req: AuthRequest, res: Response, next: NextFunct
       return res.json({ balance: 0, transactions: [] });
     }
 
-    const { page = '1', limit = '20' } = req.query;
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-
     const [transactions, total] = await Promise.all([
       prisma.driverTransaction.findMany({
         where: { walletId: wallet.id },
         orderBy: { createdAt: 'desc' },
-        skip,
-        take: parseInt(limit as string),
+        skip: (page - 1) * limit,
+        take: limit,
       }),
       prisma.driverTransaction.count({ where: { walletId: wallet.id } }),
     ]);
@@ -387,7 +389,7 @@ export async function getWallet(req: AuthRequest, res: Response, next: NextFunct
     res.json({
       balance: wallet.balance,
       transactions,
-      meta: { total, page: parseInt(page as string) },
+      meta: { total, page, limit },
     });
   } catch (err) { next(err); }
 }

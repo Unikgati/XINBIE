@@ -40,42 +40,6 @@
   gap: 20px;
 }
 
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 80px 24px;
-  background: var(--color-surface);
-  border-radius: var(--radius-2xl);
-  margin-top: 20px;
-}
-
-.emptyStateIcon {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: var(--color-primary-surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
-}
-
-.emptyState h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin: 0 0 12px 0;
-}
-
-.emptyState p {
-  color: var(--color-text-secondary);
-  margin: 0;
-  font-size: 1rem;
-}
-
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .container {

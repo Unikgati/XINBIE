@@ -54,6 +54,7 @@ router.put('/users/:id/toggle', admin.adminToggleUser);
 // Banners
 router.get('/banners', admin.adminGetBanners);
 router.post('/banners', upload.single('image'), admin.adminCreateBanner);
+router.put('/banners/reorder', admin.adminReorderBanners);
 router.put('/banners/:id', upload.single('image'), admin.adminUpdateBanner);
 router.delete('/banners/:id', admin.adminDeleteBanner);
 
@@ -61,6 +62,7 @@ router.delete('/banners/:id', admin.adminDeleteBanner);
 router.get('/promos', admin.adminGetPromos);
 router.post('/promos', admin.adminCreatePromo);
 router.put('/promos/:id', admin.adminUpdatePromo);
+router.delete('/promos/:id', admin.adminDeletePromo);
 
 // Settings
 router.get('/settings', admin.adminGetSettings);

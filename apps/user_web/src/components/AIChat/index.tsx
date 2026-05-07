@@ -36,6 +36,8 @@ export default function AIChat() {
   const [isOnline, setIsOnline] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const isHome = pathname === '/';
+  const isProductDetail = pathname.startsWith('/product/');
 
   // Storage keys scoped to user
   const STORAGE_KEY_MESSAGES = `dapurgizi_ai_messages_${userId}`;
@@ -85,28 +87,39 @@ export default function AIChat() {
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
+    if (input.length > 500) {
+      alert('Pesan terlalu panjang (maksimal 500 karakter)');
+      return;
+    }
 
-    const userMsg: Message = { id: Date.now().toString(), sender: 'user', text: input };
-    setMessages(prev => [...prev, userMsg]);
+    const userMsg: Message = { id: Date.now().toString(), sender: 'user', text: input.trim() };
+    const newMessages = [...messages, userMsg];
+    
+    // Keep only last 50 messages for performance and storage limits
+    const cappedMessages = newMessages.slice(-50);
+    
+    setMessages(cappedMessages);
     setInput('');
     setLoading(true);
 
     try {
-      const history = messages.slice(-5).map(m => ({
+      // Send last 10 messages for context (more than 5 for better conversation)
+      const history = cappedMessages.slice(-10).map(m => ({
         role: m.sender === 'ai' ? 'assistant' : 'user',
         content: m.text
       }));
 
-      const res = await api.post<any>('/chat/message', { message: input, history });
+      const res = await api.post<any>('/chat/message', { message: userMsg.text, history });
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'ai',
         text: res.replyText,
         recommendations: res.recommendations
       };
-      setMessages(prev => [...prev, aiMsg]);
+      
+      setMessages(prev => [...prev, aiMsg].slice(-50));
     } catch (err: any) {
-      setMessages(prev => [...prev, {
+      const errMsg: Message = {
         id: `err-${Date.now()}-${Math.random()}`,
         sender: 'ai',
         text: err.message || 'Maaf, terjadi gangguan pada sistem AI. Silakan coba lagi nanti.',
@@ -115,7 +128,8 @@ export default function AIChat() {
           promos: [],
           showWhatsApp: true
         }
-      }]);
+      };
+      setMessages(prev => [...prev, errMsg].slice(-50));
     } finally {
       setLoading(false);
     }
@@ -123,16 +137,36 @@ export default function AIChat() {
 
   const formatRp = (n: number) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
+  // Dynamic bottom positions for mobile/desktop
+  const getBubbleBottom = () => {
+    if (isHome) return '110px';
+    if (isProductDetail) return '200px';
+    return '85px';
+  };
+
+  const getWindowBottom = () => {
+    if (isHome) return '170px';
+    if (isProductDetail) return '260px';
+    return '145px';
+  };
+
   return (
     <>
-      <div className={styles.bubble} onClick={() => setIsOpen(!isOpen)}>
+      <div 
+        className={styles.bubble} 
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ '--mobile-bottom': getBubbleBottom() } as any}
+      >
         <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
-          {isOpen ? 'close' : 'smart_toy'}
+          {isOpen ? 'close' : 'support_agent'}
         </span>
       </div>
 
       {isOpen && (
-        <div className={styles.chatWindow}>
+        <div 
+          className={styles.chatWindow}
+          style={{ '--mobile-bottom-window': getWindowBottom() } as any}
+        >
           <div className={styles.chatHeader}>
             <div className={styles.headerInfo}>
               <h3>Bro Cool</h3>
@@ -164,10 +198,11 @@ export default function AIChat() {
                         <img src={p.images[0]} alt={p.name} className={styles.cardImg} />
                         <div className={styles.cardContent}>
                           <p className={styles.cardName}>{p.name}</p>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <p className={styles.cardCategory}>{p.category?.name || 'Produk'}</p>
+                          <div className={styles.cardInfo}>
                             <span className={styles.cardPrice}>Rp {formatRp(p.discountPrice || p.price)}</span>
-                            <Link href={`/product/${p.slug}`}>
-                              <button className={styles.buyBtn}>Beli</button>
+                            <Link href={`/product/${p.slug}`} style={{ textDecoration: 'none' }}>
+                              <button className={styles.viewBtn}>Lihat</button>
                             </Link>
                           </div>
                         </div>
@@ -239,6 +274,7 @@ export default function AIChat() {
                 type="text" 
                 placeholder="Tanya stok atau harga produk..." 
                 value={input}
+                maxLength={500}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               />

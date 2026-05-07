@@ -263,9 +263,6 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
         </div>
       </div>
 
-      {/* Cooking Videos Section */}
-      <CookingVideoSection videos={product.cookingVideos || []} />
-
       {/* Related Products */}
       {relatedProducts.length > 0 && (
         <section className={styles.relatedSection}>
@@ -317,6 +314,10 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
           </div>
         </section>
       )}
+
+      {/* Cooking Videos Section */}
+      <CookingVideoSection videos={product.cookingVideos || []} />
+
       {/* Mobile Sticky Footer */}
       <div className={styles.mobileStickyFooter}>
         <div className={styles.stickyTopRow}>

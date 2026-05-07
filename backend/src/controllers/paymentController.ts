@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { coreApi } from '../config/midtrans';
 import prisma from '../config/database';
-import { notifyPayment, notifyOrderStatus, emitToAdmins } from '../websocket';
+import { notifyPayment, emitToAdmins } from '../websocket';
+import { NotificationService } from '../utils/notification';
 
 // POST /api/payments/webhook/midtrans
 export async function midtransWebhook(req: Request, res: Response) {
@@ -76,7 +77,7 @@ export async function midtransWebhook(req: Request, res: Response) {
 
       // Emit real-time events to update clients automatically
       notifyPayment(currentOrder.userId, currentOrder.id, newPaymentStatus);
-      notifyOrderStatus(currentOrder.userId, currentOrder.id, newOrderStatus);
+      NotificationService.notifyOrderStatus(currentOrder.userId, currentOrder.id, currentOrder.code, newOrderStatus);
       emitToAdmins('order:statusUpdate', { 
         orderId: currentOrder.id,
         code: currentOrder.code,

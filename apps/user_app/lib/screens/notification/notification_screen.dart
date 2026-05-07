@@ -65,7 +65,7 @@ class NotificationScreen extends ConsumerWidget {
                         ),
                         GestureDetector(
                           onTap: () {
-                            // TODO: implement mark all as read API call
+                            ref.read(notificationsProvider.notifier).markAllAsRead();
                           },
                           child: Text(
                             'Baca Semua',
@@ -101,15 +101,27 @@ class NotificationScreen extends ConsumerWidget {
                         }
                         
                         return Container(
-                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: n.isRead ? AppColors.surface : AppColors.primarySurface.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                             boxShadow: [BoxShadow(color: AppColors.shadow.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
                           ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                          child: InkWell(
+                            onTap: () {
+                              if (!n.isRead) {
+                                ref.read(notificationsProvider.notifier).markAsRead(n.id);
+                              }
+                              // Handle navigation based on type/data
+                              if (n.type.toUpperCase() == 'ORDER_STATUS' && n.data?['orderId'] != null) {
+                                context.push('/orders/${n.data?['orderId']}');
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                               Container(
                                 width: 40, height: 40,
                                 decoration: BoxDecoration(
@@ -131,8 +143,10 @@ class NotificationScreen extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                              if (!n.isRead) Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
-                            ],
+                                  if (!n.isRead) Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                                ],
+                              ),
+                            ),
                           ),
                         );
                       },

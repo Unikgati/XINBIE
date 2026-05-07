@@ -65,11 +65,19 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           int activeStock = product.stockQty;
 
           if (hasVariants) {
-            // If variants exist, but none selected yet, pick the first
             _selectedVariant ??= product.variants!.first;
             activePrice = _selectedVariant!.price;
             activeDiscount = _selectedVariant!.discountPrice;
             activeStock = _selectedVariant!.stockQty;
+          }
+
+          // Sync _qty with activeStock
+          if (activeStock <= 0 && _qty != 0) {
+            Future.microtask(() => setState(() => _qty = 0));
+          } else if (activeStock > 0 && _qty == 0) {
+            Future.microtask(() => setState(() => _qty = 1));
+          } else if (_qty > activeStock && activeStock > 0) {
+            Future.microtask(() => setState(() => _qty = activeStock));
           }
 
           final sellPrice = activeDiscount ?? activePrice;
@@ -320,55 +328,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         ),
                       ),
 
-                      // Inspirasi Masakan (Full Width Section)
-                      if (product.cookingVideos.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20),
-                          child: Divider(),
-                        ),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Text(
-                            'Inspirasi Masakan dari Bahan Ini',
-                            style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          height: 220,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: product.cookingVideos.length,
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            itemBuilder: (context, index) {
-                              final video = product.cookingVideos[index];
-                              const cardWidth = 280.0;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 16),
-                                child: DgCookingVideoCard(
-                                  video: video,
-                                  width: cardWidth,
-                                  onTap: () {
-                                    context.push('/cooking-video', extra: {
-                                      'video': video,
-                                      'products': video.products,
-                                    });
-                                  },
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                      
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-
                         // Mungkin Kamu Suka
                         if (product.populatedRelatedProducts.isNotEmpty) ...[
                           const Divider(),
@@ -483,6 +442,44 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           const SizedBox(height: 24),
                         ],
 
+                        // Inspirasi Masakan (Full Width Section)
+                        if (product.cookingVideos.isNotEmpty) ...[
+                          const Divider(),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Inspirasi Masakan dari Bahan Ini',
+                            style: AppTypography.h4,
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 220,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: product.cookingVideos.length,
+                              padding: EdgeInsets.zero,
+                              itemBuilder: (context, index) {
+                                final video = product.cookingVideos[index];
+                                const cardWidth = 280.0;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 16),
+                                  child: DgCookingVideoCard(
+                                    video: video,
+                                    width: cardWidth,
+                                    onTap: () {
+                                      context.push('/cooking-video', extra: {
+                                        'video': video,
+                                        'products': video.products,
+                                      });
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+
                         const SizedBox(height: 100),
                           ],
                         ),
@@ -540,6 +537,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           quantity: _qty,
                           min: activeStock > 0 ? 1 : 0,
                           max: activeStock,
+                          enabled: activeStock > 0,
                           onChanged: (v) => setState(() => _qty = v),
                         ),
                     ],

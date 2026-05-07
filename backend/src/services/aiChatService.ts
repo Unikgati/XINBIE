@@ -26,108 +26,119 @@ export class AiChatService {
   }
 
   private static async getRelevantContext(query: string) {
-    // If query is broad/general, fetch featured or recent products
-    const isBroadQuery = query.length < 3 || 
-                         /semua|apa saja|daftar|produk|barang|jual|ada apa|yang ada|rekomendasi|lihat/i.test(query);
+    const lowerQuery = query.toLowerCase();
+    
+    // Synonym mapping for better Indonesian search coverage
+    const synonyms: Record<string, string[]> = {
+      'bawang merah': ['brambang', 'merah'],
+      'cabai': ['cabe', 'lombok', 'pedas'],
+      'telur': ['telor'],
+      'ayam': ['daging ayam', 'boiler', 'kampung'],
+      'ikan': ['seafood', 'laut'],
+      'sayur': ['sayuran', 'hijau'],
+      'buah': ['buahan', 'manis'],
+      'minyak': ['goreng', 'kelapa', 'sawit'],
+      'beras': ['nasi', 'pulen'],
+      'mie': ['indomie', 'instan', 'noodle'],
+    };
 
-    // Extract keywords (filter out small words and strip punctuation)
-    const keywords = query
-      .toLowerCase()
-      .replace(/[^\w\s]/gi, '') // Remove punctuation
+    // 1. Extract and Clean Keywords
+    const stopWords = /kalau|apa|ada|saya|kamu|disini|yang|tanya|cari|ingin|beli|dong|kah|adakah|buat|untuk|mohon|info|dong|bang|sis|gan/gi;
+    let keywords = lowerQuery
+      .replace(/[^\w\s]/gi, ' ') // Remove punctuation
+      .replace(stopWords, ' ')
+      .trim()
       .split(/\s+/)
-      .filter(w => w.length > 2 && !/kalau|apa|ada|saya|kamu|disini|yang|tanya|cari|ingin|beli|dong|kah/i.test(w));
+      .filter(w => w.length >= 2);
 
-    const allProducts = await prisma.product.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        discountPrice: true,
-        discountPercent: true,
-        unit: true,
-        weightGram: true,
-        stockQty: true,
-        isUnlimitedStock: true,
-        description: true,
-        tags: true,
-        category: {
-          select: { name: true }
-        }
+    // Expand keywords using synonyms
+    const expandedKeywords = [...keywords];
+    for (const [key, values] of Object.entries(synonyms)) {
+      if (keywords.some(kw => key.includes(kw) || values.includes(kw))) {
+        expandedKeywords.push(key, ...values);
       }
-    });
+    }
+    
+    const uniqueKeywords = [...new Set(expandedKeywords)];
 
+    // 2. Fetch Data
+    const [allProducts, promos, categories] = await Promise.all([
+      prisma.product.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          discountPrice: true,
+          discountPercent: true,
+          unit: true,
+          weightGram: true,
+          stockQty: true,
+          isUnlimitedStock: true,
+          description: true,
+          tags: true,
+          isFeatured: true,
+          category: { select: { name: true } }
+        }
+      }),
+      prisma.promoCode.findMany({
+        where: { isActive: true },
+        take: 5,
+        select: {
+          code: true, type: true, value: true, minOrder: true, maxDiscount: true,
+          allowedPaymentMethods: true, allowCod: true,
+          categories: { select: { name: true } },
+          products: { select: { name: true } }
+        }
+      }),
+      prisma.category.findMany({ select: { name: true } })
+    ]);
+
+    // 3. Smart Filtering & Scoring
     let products = allProducts;
+    
+    const isGeneralQuery = lowerQuery.length < 3 || 
+                          /semua|apa saja|daftar|produk|barang|jual|ada apa|yang ada|rekomendasi|lihat/i.test(lowerQuery);
 
-    if (!isBroadQuery) {
-      const lowerQuery = query.toLowerCase();
-      products = allProducts.filter(p => {
+    if (!isGeneralQuery) {
+      products = allProducts.map(p => {
+        let score = 0;
         const nameLower = p.name.toLowerCase();
         const descLower = (p.description || '').toLowerCase();
+        const catLower = p.category?.name.toLowerCase() || '';
         
-        // Exact or partial match in Name, Description, or Tags
-        const nameMatch = nameLower.includes(lowerQuery);
-        const descMatch = descLower.includes(lowerQuery);
-        const tagMatch = p.tags.some(t => t.toLowerCase().includes(lowerQuery));
-
-        // Match individual keywords
-        const kwMatch = keywords.some(kw => {
-          const lkw = kw.toLowerCase();
-          return nameLower.includes(lkw) || descLower.includes(lkw) || p.tags.some(t => t.toLowerCase().includes(lkw));
+        // Exact full query match (Highest priority)
+        if (nameLower.includes(lowerQuery)) score += 100;
+        
+        // Keyword matches
+        uniqueKeywords.forEach(kw => {
+          if (nameLower.includes(kw)) score += 20;
+          if (p.tags.some(t => t.toLowerCase().includes(kw))) score += 15;
+          if (catLower.includes(kw)) score += 10;
+          if (descLower.includes(kw)) score += 5;
         });
 
-        return nameMatch || descMatch || tagMatch || kwMatch;
-      }).sort((a, b) => {
-        // Priority: Exact name match > Partial name match > Tag match > Description match
-        const aNameMatch = a.name.toLowerCase().includes(lowerQuery);
-        const bNameMatch = b.name.toLowerCase().includes(lowerQuery);
-        if (aNameMatch && !bNameMatch) return -1;
-        if (!aNameMatch && bNameMatch) return 1;
-
-        const aTagMatch = a.tags.some(t => t.toLowerCase().includes(lowerQuery));
-        const bTagMatch = b.tags.some(t => t.toLowerCase().includes(lowerQuery));
-        if (aTagMatch && !bTagMatch) return -1;
-        if (!aTagMatch && bTagMatch) return 1;
-
-        return 0;
-      });
+        return { ...p, _score: score };
+      })
+      .filter(p => p._score > 0)
+      .sort((a, b) => b._score - a._score)
+      .slice(0, 12); // Give a bit more variety to AI
+    } else {
+      // For general queries, only show a few featured products to keep the context clean
+      products = products.filter(p => (p as any).isFeatured).slice(0, 5);
+      // Fallback if no featured products
+      if (products.length === 0) products = allProducts.slice(0, 5);
     }
 
-    // Final slice for context
-    products = products.slice(0, 10);
-
-    const promos = await prisma.promoCode.findMany({
-      where: { isActive: true },
-      take: 5,
-      select: {
-        code: true,
-        type: true,
-        value: true,
-        minOrder: true,
-        maxDiscount: true,
-        allowedPaymentMethods: true,
-        categories: { select: { name: true } },
-        products: { select: { name: true } }
-      }
-    });
-
-    const categories = await prisma.category.findMany({
-      select: { name: true }
-    });
-
+    // 4. Order Info Search
     const orderMatch = query.match(/\b(ORD|DG)-[A-Z0-9-]+\b/i);
     let orderInfo = null;
     if (orderMatch) {
       orderInfo = await prisma.order.findUnique({
         where: { code: orderMatch[0].toUpperCase() },
         select: {
-          code: true,
-          orderStatus: true,
-          paymentStatus: true,
-          grandTotal: true,
-          createdAt: true,
-          scheduledDate: true,
-          deliveryType: true,
+          code: true, orderStatus: true, paymentStatus: true,
+          grandTotal: true, createdAt: true, scheduledDate: true, deliveryType: true,
         }
       });
     }
@@ -206,6 +217,7 @@ ATURAN PESANAN:
 - **DILARANG KERAS** menggunakan istilah teknis seperti "WAITING_PAYMENT", "PROCESSING", atau "SHIPPING" dalam jawaban Anda ke user. Jawablah dengan istilah Indonesia di atas.
 - Jika user bertanya status tapi tidak ada "Data Pesanan" yang terdeteksi, minta user memberikan Kode Pesanan (contoh: DG-260506-9606 atau ORD-12345).
 - JANGAN PERNAH mengarang status pesanan jika datanya tidak ada.
+- **ATURAN SATUAN & KUANTITAS**: Perhatikan kolom unit pada Context. Jika unit adalah "kg", "gram", "ons", atau "liter", maka user **HANYA BOLEH** membeli dalam satuan tersebut. DILARANG KERAS menyarankan atau mengizinkan pembelian dalam satuan "biji", "buah", atau "ekor" jika satuannya adalah berat/volume. Selalu gunakan satuan yang tertulis di Context.
 
 - PRIORITASKAN angka pada kolom stockQty. Jika stockQty berisi angka spesifik (misal: 5, 10, 20), ANDA **WAJIB** menyebutkan angka tersebut sebagai stok yang tersedia.
 - JANGAN PERNAH mengatakan "Stok tak terbatas" jika ada angka spesifik di stockQty, meskipun isUnlimitedStock bernilai true.
@@ -220,6 +232,8 @@ ATURAN PESANAN:
 - **DILARANG MEMBAHAS TOPIK LUAR**: Jika user bertanya soal transportasi (tumpangan), resep, curhat, atau hal di luar belanja bahan makanan, Anda WAJIB menjawab: "Maaf, saya hanya bisa membantu informasi seputar belanja produk di DapurGizi. Ada produk yang ingin Anda cari?"
 - **DILARANG MENGGUNAKAN PENGETAHUAN INTERNAL ANDA SENDIRI** untuk menjawab detail produk. Jika informasi spesifik (seperti rasa, aroma, atau tekstur) tidak tertulis di bagian DESC pada Context, Anda WAJIB menjawab: "Maaf, saya tidak memiliki informasi detail mengenai rasa/tekstur produk tersebut. Saya hanya memiliki data stok dan harga saat ini."
 - **DILARANG KERAS** menambahkan deskripsi rasa (seperti "manis", "pedas", "enak banget"), aroma, atau klaim kesehatan tambahan yang tidak tertulis di bagian DESC pada Context. Gunakan hanya informasi yang ada.
+- Jika user bertanya daftar kategori, sebutkan semua kategori yang ada di atas.
+- **JANGAN PERNAH** me-list semua produk jika user bertanya secara umum seperti "ada produk apa saja?". Cukup sebutkan bahwa DapurGizi memiliki berbagai produk segar di kategori [sebutkan 3-4 kategori], lalu tawarkan bantuan untuk mencari barang spesifik.
 - Jika user mencari nutrisi tertentu (misal: Vitamin C), Anda hanya boleh menyarankan produk yang BENAR-BENAR ada di Context. Jika tidak ada jeruk di Context, jangan sarankan jeruk.
 - Tampilkan rincian produk (Harga Asli & Harga Diskon) dengan jelas jika ada di Context.
 - **DILARANG TERTUKAR** antara Harga Asli dan Harga Diskon. Harga yang lebih murah adalah Harga Diskon/Promo. Selalu informasikan user jika barang tersebut sedang diskon.

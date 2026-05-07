@@ -31,6 +31,7 @@ export const metadata: Metadata = {
 };
 
 import AIChat from "@/components/AIChat/index";
+import NotificationInit from "@/components/NotificationInit/index";
 
 export default function RootLayout({
   children,
@@ -46,6 +47,7 @@ export default function RootLayout({
         <GlobalErrorBoundary>
           <ClientProviders>
             <AutoScrollToTop />
+            <NotificationInit />
             <Navbar />
             <div className="app-container">
               {children}

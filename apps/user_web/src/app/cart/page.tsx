@@ -8,6 +8,7 @@ import DgQuantitySelector from '@/components/DgQuantitySelector';
 import { useCartStore } from '@/store/cartStore';
 import DgSkeleton from '@/components/DgSkeleton';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import DgEmptyState from '@/components/DgEmptyState';
 
 export default function CartPage() {
   const [mounted, setMounted] = useState(false);
@@ -77,11 +78,13 @@ export default function CartPage() {
         </div>
       )}
       {cartItems.length === 0 ? (
-        <div className={styles.emptyState}>
-          <h2 className={styles.emptyTitle}>Keranjang Kosong</h2>
-          <p className={styles.emptySubtitle}>Yuk mulai belanja bahan dapur sehat!</p>
-          <Link href="/" className={styles.emptyAction}>Mulai Belanja</Link>
-        </div>
+        <DgEmptyState 
+          icon="shopping_cart"
+          title="Keranjang Kosong"
+          subtitle="Yuk mulai belanja bahan dapur sehat untuk keluarga!"
+          actionLabel="Mulai Belanja"
+          actionHref="/"
+        />
       ) : (
         <>
           <div className={styles.contentGrid}>

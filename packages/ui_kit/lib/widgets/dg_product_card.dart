@@ -144,7 +144,7 @@ class DgProductCard extends StatelessWidget {
                           style: AppTypography.labelLarge.copyWith(
                             color: AppColors.primaryDark,
                           ),
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),

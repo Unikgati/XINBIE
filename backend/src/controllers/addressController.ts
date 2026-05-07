@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { idParamSchema } from '../utils/schema';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
@@ -56,8 +57,9 @@ export async function createAddress(req: AuthRequest, res: Response, next: NextF
 // PUT /api/addresses/:id
 export async function updateAddress(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     const address = await prisma.address.findFirst({
-      where: { id: req.params.id, userId: req.userId },
+      where: { id, userId: req.userId },
     });
     if (!address) throw new AppError('Alamat tidak ditemukan', 404);
 
@@ -71,7 +73,7 @@ export async function updateAddress(req: AuthRequest, res: Response, next: NextF
     }
 
     const updated = await prisma.address.update({
-      where: { id: req.params.id },
+      where: { id },
       data: {
         ...(recipientName !== undefined && { recipientName }),
         ...(phoneWa !== undefined && { phoneWa }),
@@ -94,12 +96,13 @@ export async function updateAddress(req: AuthRequest, res: Response, next: NextF
 // DELETE /api/addresses/:id
 export async function deleteAddress(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { id } = idParamSchema.parse(req.params);
     const address = await prisma.address.findFirst({
-      where: { id: req.params.id, userId: req.userId },
+      where: { id, userId: req.userId },
     });
     if (!address) throw new AppError('Alamat tidak ditemukan', 404);
 
-    await prisma.address.delete({ where: { id: req.params.id } });
+    await prisma.address.delete({ where: { id } });
     res.json({ message: 'Alamat dihapus' });
   } catch (err) { next(err); }
 }
@@ -113,7 +116,7 @@ export async function setPrimaryAddress(req: AuthRequest, res: Response, next: N
         data: { isPrimary: false },
       }),
       prisma.address.update({
-        where: { id: req.params.id },
+        where: { id: req.params.id as string },
         data: { isPrimary: true },
       }),
     ]);

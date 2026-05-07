@@ -12,6 +12,7 @@ class DgQuantitySelector extends StatelessWidget {
     this.compact = false,
     this.min = 0,
     this.max = 99,
+    this.enabled = true,
   });
 
   final int quantity;
@@ -19,6 +20,7 @@ class DgQuantitySelector extends StatelessWidget {
   final bool compact;
   final int min;
   final int max;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -26,31 +28,34 @@ class DgQuantitySelector extends StatelessWidget {
     final iconSize = compact ? 16.0 : 24.0;
     final fontSize = compact ? 13.0 : 16.0;
 
+    final canMinus = enabled && quantity > min;
+    final canPlus = enabled && quantity < max;
+    final isAtMax = quantity >= max && enabled;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Minus
-        GestureDetector(
-          onTap: quantity > min ? () => onChanged?.call(quantity - 1) : null,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: AppColors.primaryAction,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            ),
-            child: Icon(Icons.remove, color: AppColors.textOnPrimary, size: iconSize),
-          ),
+        // Minus Button
+        _ControlButton(
+          icon: Icons.remove,
+          size: size,
+          iconSize: iconSize,
+          enabled: canMinus,
+          onTap: () => onChanged?.call(quantity - 1),
         ),
 
-        SizedBox(width: compact ? 2 : 4),
+        SizedBox(width: compact ? 4 : 8),
 
-        // Quantity
+        // Quantity Display
         Container(
-          width: compact ? 24 : 40,
+          width: compact ? 32 : 48,
           height: size,
           decoration: BoxDecoration(
-            border: Border.all(color: AppColors.primaryAction, width: 1.5),
+            color: enabled ? Colors.transparent : AppColors.border.withValues(alpha: 0.1),
+            border: Border.all(
+              color: enabled ? AppColors.primary.withValues(alpha: 0.5) : AppColors.border,
+              width: 1.5,
+            ),
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           ),
           child: Center(
@@ -58,28 +63,73 @@ class DgQuantitySelector extends StatelessWidget {
               '$quantity',
               style: AppTypography.labelLarge.copyWith(
                 fontSize: fontSize,
-                color: AppColors.primaryDark,
+                color: enabled ? AppColors.primaryDark : AppColors.textSecondary,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
         ),
 
-        SizedBox(width: compact ? 2 : 4),
+        SizedBox(width: compact ? 4 : 8),
 
-        // Plus
-        GestureDetector(
-          onTap: quantity < max ? () => onChanged?.call(quantity + 1) : null,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: AppColors.primaryAction,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            ),
-            child: Icon(Icons.add, color: AppColors.textOnPrimary, size: iconSize),
-          ),
+        // Plus Button
+        _ControlButton(
+          icon: Icons.add,
+          size: size,
+          iconSize: iconSize,
+          enabled: canPlus,
+          onTap: () => onChanged?.call(quantity + 1),
+          isAtMax: isAtMax,
         ),
       ],
+    );
+  }
+}
+
+class _ControlButton extends StatelessWidget {
+  const _ControlButton({
+    required this.icon,
+    required this.size,
+    required this.iconSize,
+    required this.enabled,
+    required this.onTap,
+    this.isAtMax = false,
+  });
+
+  final IconData icon;
+  final double size;
+  final double iconSize;
+  final bool enabled;
+  final VoidCallback onTap;
+  final bool isAtMax;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: enabled 
+              ? AppColors.primaryAction 
+              : AppColors.border.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          boxShadow: enabled ? [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            )
+          ] : null,
+        ),
+        child: Icon(
+          icon, 
+          color: enabled ? Colors.white : AppColors.textHint, 
+          size: iconSize,
+        ),
+      ),
     );
   }
 }

@@ -51,7 +51,10 @@ router.post('/message', optionalAuth, async (req: AuthRequest, res) => {
     if (productIds.length > 0) {
       products = await prisma.product.findMany({
         where: { id: { in: productIds }, isActive: true },
-        select: { id: true, name: true, price: true, discountPrice: true, images: true, slug: true }
+        select: { 
+          id: true, name: true, price: true, discountPrice: true, images: true, slug: true,
+          category: { select: { name: true } }
+        }
       });
     }
 

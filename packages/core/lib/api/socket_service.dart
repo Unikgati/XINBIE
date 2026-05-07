@@ -106,4 +106,48 @@ class SocketService {
       _socket?.off('order:new', callback);
     }
   }
+
+  /// Listen for real-time notifications.
+  void onNotificationNew(Function(Map<String, dynamic>) callback) {
+    if (_socket == null) return;
+    offNotificationNew();
+
+    void wrappedCallback(dynamic data) {
+      if (data is Map) {
+        callback(Map<String, dynamic>.from(data));
+      }
+    }
+
+    _listeners['notification:new'] = wrappedCallback;
+    _socket?.on('notification:new', wrappedCallback);
+  }
+
+  void offNotificationNew() {
+    final callback = _listeners.remove('notification:new');
+    if (callback != null && _socket != null) {
+      _socket?.off('notification:new', callback);
+    }
+  }
+
+  /// Listen for order status updates.
+  void onOrderStatusUpdate(Function(Map<String, dynamic>) callback) {
+    if (_socket == null) return;
+    offOrderStatusUpdate();
+
+    void wrappedCallback(dynamic data) {
+      if (data is Map) {
+        callback(Map<String, dynamic>.from(data));
+      }
+    }
+
+    _listeners['order:status'] = wrappedCallback;
+    _socket?.on('order:status', wrappedCallback);
+  }
+
+  void offOrderStatusUpdate() {
+    final callback = _listeners.remove('order:status');
+    if (callback != null && _socket != null) {
+      _socket?.off('order:status', callback);
+    }
+  }
 }

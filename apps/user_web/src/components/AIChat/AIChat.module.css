@@ -148,59 +148,92 @@
 .cardList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .productCard {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
-  border: 1px solid #eee;
+  border: 1px solid #edf2f7;
   display: flex;
-  height: 90px;
+  height: 110px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.productCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
 }
 
 .cardImg {
-  width: 90px;
-  height: 90px;
+  width: 110px;
+  height: 110px;
   object-fit: cover;
+  background: #f7fafc;
 }
 
 .cardContent {
   flex: 1;
-  padding: 10px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
 .cardName {
   font-size: 13px;
   font-weight: 600;
+  color: #2d3748;
   margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.cardCategory {
+  font-size: 10px;
+  color: #718096;
+  margin: 2px 0 0 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.cardInfo {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .cardPrice {
   color: #27ae60;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
+  margin-bottom: 2px;
 }
 
-.buyBtn {
+.viewBtn {
+  background: #f0fdf4;
+  color: #27ae60;
+  border: 1px solid #bbf7d0;
+  padding: 4px 0;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.viewBtn:hover {
   background: #27ae60;
   color: white;
-  border: none;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  align-self: flex-end;
+  border-color: #27ae60;
 }
 
 .typing {
@@ -230,5 +263,25 @@
 @keyframes wave {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+  .bubble {
+    bottom: var(--mobile-bottom, 85px); /* Dynamic based on page */
+    right: 16px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .chatWindow {
+    bottom: var(--mobile-bottom-window, 145px); /* Dynamic based on page */
+    right: 10px;
+    left: 10px;
+    width: auto;
+    height: 500px; /* Base height */
+    max-height: calc(100vh - var(--mobile-bottom-window, 145px) - 20px); /* Anti-clip logic */
+    border-radius: 20px;
+  }
 }
 

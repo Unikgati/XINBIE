@@ -17,8 +17,6 @@ export default async function CategoryPage({ params, searchParams }: { params: {
             <div className={styles.breadcrumb}>
               <DgSkeleton width="120px" height="14px" />
             </div>
-            <div style={{ height: '16px' }} />
-            <DgSkeleton width="200px" height="32px" borderRadius="8px" />
           </>
         }>
           <CategoryHeader slug={slug} initialName={resolvedSearchParams.name} />
