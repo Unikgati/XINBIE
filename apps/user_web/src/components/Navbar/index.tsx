@@ -66,8 +66,9 @@ export default function Navbar() {
     pathname.startsWith('/cart') || 
     pathname.startsWith('/checkout') || 
     pathname.startsWith('/payment') || 
-    pathname.startsWith('/orders/') || 
+    pathname.startsWith('/orders') || 
     pathname.startsWith('/product/') || 
+    pathname.startsWith('/resep/') || 
     pathname.startsWith('/profile');
 
   return (

@@ -38,6 +38,7 @@ export default function AIChat() {
   const pathname = usePathname();
   const isHome = pathname === '/';
   const isProductDetail = pathname.startsWith('/product/');
+  const isRecipePage = pathname.startsWith('/resep');
 
   // Storage keys scoped to user
   const STORAGE_KEY_MESSAGES = `dapurgizi_ai_messages_${userId}`;
@@ -156,13 +157,13 @@ export default function AIChat() {
 
   // Dynamic bottom positions for mobile/desktop
   const getBubbleBottom = () => {
-    if (isHome) return '110px';
+    if (isHome || isRecipePage) return '110px';
     if (isProductDetail) return '200px';
     return '85px';
   };
 
   const getWindowBottom = () => {
-    if (isHome) return '170px';
+    if (isHome || isRecipePage) return '170px';
     if (isProductDetail) return '260px';
     return '145px';
   };
