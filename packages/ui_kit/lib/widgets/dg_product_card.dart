@@ -7,6 +7,7 @@ import 'dg_badge.dart';
 import 'dg_shimmer.dart';
 import 'dg_quantity_selector.dart';
 import 'dg_discount_badge.dart';
+import 'dg_flash_sale_badge.dart';
 
 /// Product card matching DapurGizi UI design.
 /// White card, rounded-16, discount badge, unit pill, inline qty selector.
@@ -245,13 +246,16 @@ class DgProductCard extends StatelessWidget {
               ],
             ),
 
-            // Discount badge
-            if (_hasDiscount && discountPercent != null)
-              Positioned(
-                top: 12,
-                left: -6,
-                child: DgDiscountBadge(discountPercent: discountPercent!),
-              ),
+            // Badges
+            Positioned(
+              top: 12,
+              left: -6,
+              child: tags.contains('Flash Sale')
+                  ? const DgFlashSaleBadge()
+                  : (_hasDiscount && discountPercent != null
+                      ? DgDiscountBadge(discountPercent: discountPercent!)
+                      : const SizedBox.shrink()),
+            ),
 
             // Variant badge at top right
             if (variantCount > 0)

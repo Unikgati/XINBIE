@@ -13,6 +13,7 @@ import '../../providers/banner_provider.dart';
 import '../../providers/promo_provider.dart';
 import '../../widgets/dg_product_bottom_sheet.dart';
 import '../../widgets/dg_promo_voucher_card.dart';
+import 'widgets/flash_sale_section.dart';
 import 'package:core/core.dart'; // To access AppConfig
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -406,6 +407,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
+            // Flash Sale Section
+            const SliverToBoxAdapter(child: FlashSaleSection()),
 
             // 1. Pilihan Dapurgizi 🔥
             featuredProductsAsync.when(

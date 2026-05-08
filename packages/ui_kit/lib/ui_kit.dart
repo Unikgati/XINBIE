@@ -26,3 +26,4 @@ export 'widgets/dg_snackbar.dart';
 export 'widgets/dg_dropdown_field.dart';
 export 'widgets/dg_cooking_video_card.dart';
 export 'widgets/dg_variant_bottom_sheet.dart';
+export 'widgets/dg_flash_sale_badge.dart';

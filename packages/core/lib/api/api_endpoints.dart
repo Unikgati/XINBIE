@@ -22,6 +22,7 @@ class ApiEndpoints {
   static String product(String id) => '/products/$id';
   static const String banners = '/banners';
   static const String cookingVideos = '/cooking-videos';
+  static const String flashSales = '/flash-sales';
 
   // Cart
   static const String cartValidate = '/cart/validate';

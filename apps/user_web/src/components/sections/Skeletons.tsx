@@ -4,7 +4,7 @@ import styles from '@/app/page.module.css';
 
 export const BannerSkeleton = () => (
   <div style={{ marginTop: '24px', marginBottom: '40px' }}>
-    <DgSkeleton height="350px" width="100%" borderRadius="24px" className={styles.bannerSkeleton} />
+    <DgSkeleton height="350px" width="100%" borderRadius="24px" />
   </div>
 );
 
@@ -23,30 +23,33 @@ export const CategorySkeleton = () => (
 );
 
 export const ProductGridSkeleton = () => (
-  <section className={styles.productSection}>
-    <div style={{ marginBottom: '24px' }}>
-      <DgSkeleton width="180px" height="28px" borderRadius="8px" />
-    </div>
-    <div className={styles.productGrid}>
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '12px', 
-          background: '#fff', 
-          paddingBottom: '16px',
-          borderRadius: '16px',
-          border: '1px solid #eee'
-        }}>
-          <DgSkeleton width="100%" height="auto" borderRadius="16px 16px 0 0" style={{ aspectRatio: '1/1' }} />
-          <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <DgSkeleton width="90%" height="16px" borderRadius="4px" />
-            <DgSkeleton width="40%" height="14px" borderRadius="4px" />
-            <div style={{ height: '8px' }} />
-            <DgSkeleton width="100%" height="32px" borderRadius="100px" />
+  <div className={styles.productGrid} style={{ marginTop: '24px' }}>
+    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+      <div key={i} style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        background: '#fff', 
+        borderRadius: '16px',
+        border: '1px solid #eee',
+        overflow: 'hidden',
+        height: '100%'
+      }}>
+        {/* Image Shimmer with 1:1 Aspect Ratio using padding hack for absolute precision */}
+        <div style={{ width: '100%', paddingTop: '100%', position: 'relative' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <DgSkeleton width="100%" height="100%" borderRadius="0" />
           </div>
         </div>
-      ))}
-    </div>
-  </section>
+        
+        <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+          <DgSkeleton width="90%" height="16px" borderRadius="4px" />
+          <DgSkeleton width="60%" height="12px" borderRadius="4px" />
+          <div style={{ marginTop: 'auto', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <DgSkeleton width="50%" height="18px" borderRadius="4px" />
+            <DgSkeleton width="32px" height="32px" borderRadius="8px" />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
 );

@@ -4,6 +4,7 @@ import '../api/api_endpoints.dart';
 import '../models/product.dart';
 import '../models/category.dart';
 import '../models/cooking_video.dart';
+import '../models/flash_sale.dart';
 import '../auth/auth_repository.dart';
 
 /// Repository for product and category API calls.
@@ -71,6 +72,15 @@ class ProductRepository {
     final data = response.data as Map<String, dynamic>;
     final list = data['data'] as List;
     return list.map((e) => CookingVideo.fromJson(e as Map<String, dynamic>)).toList();
+  Future<List<FlashSaleSession>> getFlashSales({String status = 'active'}) async {
+    final response = await _api.get(
+      ApiEndpoints.flashSales,
+      queryParameters: {'status': status},
+    );
+    final list = response.data as List;
+    return list
+        .map((e) => FlashSaleSession.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }
 
