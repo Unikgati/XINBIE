@@ -130,10 +130,10 @@ const DgProductCard = React.memo(({
         <div className={styles.content}>
           <h3 className={styles.name} title={name}>{name}</h3>
 
-          {tags.length > 0 && (
+          {tags.filter(t => t !== 'Flash Sale').length > 0 && (
             <div className={styles.cardTags}>
-              {tags.slice(0, 3).join(' · ')}
-              {tags.length > 3 && ` +${tags.length - 3}`}
+              {tags.filter(t => t !== 'Flash Sale').slice(0, 3).join(' · ')}
+              {tags.filter(t => t !== 'Flash Sale').length > 3 && ` +${tags.filter(t => t !== 'Flash Sale').length - 3}`}
             </div>
           )}
           
