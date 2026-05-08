@@ -1,64 +1,37 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'product.dart';
 
-class FlashSaleSession {
-  final String id;
-  final String title;
-  final String description;
-  final DateTime startAt;
-  final DateTime endAt;
-  final bool isActive;
-  final List<FlashSaleItem> items;
+part 'flash_sale.freezed.dart';
+part 'flash_sale.g.dart';
 
-  FlashSaleSession({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.startAt,
-    required this.endAt,
-    required this.isActive,
-    required this.items,
-  });
+@freezed
+abstract class FlashSaleSession with _$FlashSaleSession {
+  const factory FlashSaleSession({
+    required String id,
+    required String title,
+    @Default('') String description,
+    required DateTime startAt,
+    required DateTime endAt,
+    @Default(false) bool isActive,
+    @Default([]) List<FlashSaleItem> items,
+  }) = _FlashSaleSession;
 
-  factory FlashSaleSession.fromJson(Map<String, dynamic> json) {
-    return FlashSaleSession(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      description: json['description'] ?? '',
-      startAt: DateTime.parse(json['startAt'] as String),
-      endAt: DateTime.parse(json['endAt'] as String),
-      isActive: json['isActive'] as bool? ?? false,
-      items: (json['items'] as List? ?? [])
-          .map((e) => FlashSaleItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
-  }
+  factory FlashSaleSession.fromJson(Map<String, dynamic> json) =>
+      _$FlashSaleSessionFromJson(json);
 }
 
-class FlashSaleItem {
-  final String id;
-  final String productId;
-  final int flashPrice;
-  final int flashStock;
-  final int soldQty;
-  final Product product;
+@freezed
+abstract class FlashSaleItem with _$FlashSaleItem {
+  const factory FlashSaleItem({
+    required String id,
+    required String productId,
+    required int flashPrice,
+    @JsonKey(name: 'flashStock') required int stockQty,
+    @Default(0) int soldQty,
+    Product? product,
+    FlashSaleSession? flashSale,
+  }) = _FlashSaleItem;
 
-  FlashSaleItem({
-    required this.id,
-    required this.productId,
-    required this.flashPrice,
-    required this.flashStock,
-    required this.soldQty,
-    required this.product,
-  });
-
-  factory FlashSaleItem.fromJson(Map<String, dynamic> json) {
-    return FlashSaleItem(
-      id: json['id'] as String,
-      productId: json['productId'] as String,
-      flashPrice: json['flashPrice'] as int,
-      flashStock: json['flashStock'] as int,
-      soldQty: json['soldQty'] as int? ?? 0,
-      product: Product.fromJson(json['product'] as Map<String, dynamic>),
-    );
-  }
+  factory FlashSaleItem.fromJson(Map<String, dynamic> json) =>
+      _$FlashSaleItemFromJson(json);
 }

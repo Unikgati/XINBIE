@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'cooking_video.dart';
 import 'product_variant.dart';
+import 'flash_sale.dart';
 
 part 'product.freezed.dart';
 part 'product.g.dart';
@@ -26,14 +27,15 @@ abstract class Product with _$Product {
     @Default(true) bool isActive,
     @Default(false) bool isFeatured,
     @Default(0) int sortOrder,
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
     // Joined fields
     String? categoryName,
     List<ProductVariant>? variants,
     @Default([]) List<CookingVideo> cookingVideos,
     @Default([]) List<Product> populatedRelatedProducts,
     @Default([]) List<Product> populatedSimilarProducts,
+    List<FlashSaleItem>? flashSaleItems,
   }) = _Product;
 
   factory Product.fromJson(Map<String, dynamic> json) =>
@@ -77,5 +79,12 @@ abstract class Product with _$Product {
     }
     return minDiscount;
   }
+
+  FlashSaleItem? get activeFlashSaleItem {
+    if (flashSaleItems == null || flashSaleItems!.isEmpty) return null;
+    return flashSaleItems!.first;
+  }
+
+  bool get isInFlashSale => activeFlashSaleItem != null;
 }
 

@@ -150,4 +150,26 @@ class SocketService {
       _socket?.off('order:status', callback);
     }
   }
+
+  /// Listen for real-time flash sale stock updates.
+  void onFlashSaleStockUpdate(Function(Map<String, dynamic>) callback) {
+    if (_socket == null) return;
+    offFlashSaleStockUpdate();
+
+    void wrappedCallback(dynamic data) {
+      if (data is Map) {
+        callback(Map<String, dynamic>.from(data));
+      }
+    }
+
+    _listeners['flash_sale:stock'] = wrappedCallback;
+    _socket?.on('flash_sale:stock', wrappedCallback);
+  }
+
+  void offFlashSaleStockUpdate() {
+    final callback = _listeners.remove('flash_sale:stock');
+    if (callback != null && _socket != null) {
+      _socket?.off('flash_sale:stock', callback);
+    }
+  }
 }

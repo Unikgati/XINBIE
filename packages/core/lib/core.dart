@@ -22,6 +22,7 @@ export 'models/pickup_point.dart';
 export 'models/cart_item.dart';
 export 'models/region.dart';
 export 'models/cooking_video.dart';
+export 'models/flash_sale.dart';
 
 
 // API

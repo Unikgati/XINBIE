@@ -130,3 +130,8 @@ export function notifyOrderStatus(userId: string, orderId: string, status: strin
 export function notifyPayment(userId: string, orderId: string, status: string) {
   emitToUser(userId, 'payment:update', { orderId, status });
 }
+
+/** Emit Flash Sale stock update to all clients */
+export function emitFlashSaleStock(flashSaleItemId: string, soldQty: number, stockQty: number) {
+  io?.emit('flash_sale:stock', { flashSaleItemId, soldQty, stockQty });
+}

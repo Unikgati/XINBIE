@@ -5,7 +5,7 @@ import 'package:core/core.dart';
 class CartNotifier extends StateNotifier<List<CartItem>> {
   CartNotifier() : super([]);
 
-  void addItem(Product product, {int quantity = 1, ProductVariant? variant}) {
+  void addItem(Product product, {int quantity = 1, ProductVariant? variant, int? price}) {
     // Check if same product AND same variant exists
     final existingIdx = state.indexWhere((item) => 
         item.productId == product.id && item.variantId == variant?.id);
@@ -15,12 +15,13 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
       final existing = updated[existingIdx];
       updated[existingIdx] = existing.copyWith(
         qty: existing.qty + quantity,
+        unitPrice: price ?? existing.unitPrice, // Update price if provided
       );
       state = updated;
     } else {
-      final price = variant != null && variant.price > 0 
+      final finalPrice = price ?? (variant != null && variant.price > 0 
           ? (variant.discountPrice ?? variant.price)
-          : (product.discountPrice ?? product.price);
+          : (product.discountPrice ?? product.price));
           
       state = [
         ...state,
@@ -29,7 +30,7 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
           variantId: variant?.id,
           productName: product.name,
           variantName: variant?.name,
-          unitPrice: price,
+          unitPrice: finalPrice,
           qty: quantity,
           unit: product.unit,
           productImage: variant?.imageUrl ?? (product.images.isNotEmpty ? product.images.first : null),

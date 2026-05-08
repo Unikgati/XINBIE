@@ -4,7 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { generateOrderCode } from '../utils/helpers';
 import { coreApi } from '../config/midtrans';
-import { emitToAdmins } from '../websocket';
+import { emitToAdmins, emitFlashSaleStock } from '../websocket';
 
 // POST /api/orders
 export async function createOrder(req: AuthRequest, res: Response, next: NextFunction) {
@@ -309,8 +309,11 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
     // ── DB Transaction: only runs if Midtrans succeeded (or COD) ──
     // If DB fails after Midtrans charge, cancel the Midtrans transaction.
     let order;
+    const fsUpdates: { id: string; soldQty: number; stockQty: number }[] = [];
+    
     try {
       order = await prisma.$transaction(async (tx) => {
+        // ... (existing promo validation code) ...
         // Re-validate promo atomically (in case concurrent usage)
         if (promoId && promoCode) {
           const promo = await tx.promoCode.findUnique({ 
@@ -432,9 +435,14 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
             // FLASH SALE ATOMIC UPDATE
             const orderItem = newOrder.items.find((oi: any) => oi.productId === item.productId && oi.isFlashSale);
             if (orderItem && orderItem.flashSaleItemId) {
-              await tx.flashSaleItem.update({
+              const updatedFsItem = await tx.flashSaleItem.update({
                 where: { id: orderItem.flashSaleItemId },
                 data: { soldQty: { increment: item.qty } }
+              });
+              fsUpdates.push({
+                id: updatedFsItem.id,
+                soldQty: updatedFsItem.soldQty,
+                stockQty: updatedFsItem.flashStock
               });
             }
           }
@@ -453,6 +461,11 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
 
         return newOrder;
       });
+
+      // Emit Flash Sale stock updates after transaction success
+      for (const update of fsUpdates) {
+        emitFlashSaleStock(update.id, update.soldQty, update.stockQty);
+      }
     } catch (dbError) {
       // DB failed after Midtrans charge succeeded → cancel Midtrans to prevent orphan payment
       if (chargeResponse) {

@@ -26,7 +26,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     // On refresh sync
     _fcmSubscription = service.onTokenRefresh.listen((token) {
-      if (state is Authenticated) {
+      if (state is AuthAuthenticated) {
         _repo.updateFcmToken(token);
       }
     });
@@ -59,7 +59,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState.loading();
     try {
       state = await _repo.login(email: email, password: password);
-      if (state is Authenticated) {
+      if (state is AuthAuthenticated) {
         _initFcm();
       }
     } catch (e) {
@@ -83,7 +83,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         avatarUrl: avatarUrl,
         googleId: googleId,
       );
-      if (state is Authenticated) {
+      if (state is AuthAuthenticated) {
         _initFcm();
       }
     } catch (e) {
@@ -109,7 +109,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState.loading();
     try {
       state = await _repo.verifyEmail(email: email, otp: otp);
-      if (state is Authenticated) {
+      if (state is AuthAuthenticated) {
         _initFcm();
       }
     } catch (e) {

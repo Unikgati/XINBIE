@@ -36,7 +36,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(flashSaleSocketProvider); // Initialize socket listener
     final asyProduct = ref.watch(productDetailProvider(widget.productId));
+    final stockUpdates = ref.watch(flashSaleStockUpdatesProvider);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -60,15 +62,31 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           final hasVariants = product.variants != null && product.variants!.isNotEmpty;
           
           // Determine active price based on variant or product
+          final activeFlash = product.activeFlashSaleItem;
+          final isInFlash = activeFlash != null;
+          
+          // Real-time stock override
+          FlashSaleStockUpdate? fsUpdate;
+          if (isInFlash) {
+            fsUpdate = stockUpdates[activeFlash.id];
+          }
+          
+          final displaySoldQty = fsUpdate?.soldQty ?? (activeFlash?.soldQty ?? 0);
+          final displayStockQty = fsUpdate?.stockQty ?? (activeFlash?.stockQty ?? product.stockQty);
+          
           int activePrice = product.price;
-          int? activeDiscount = product.discountPrice;
-          int activeStock = product.stockQty;
+          int? activeDiscount = isInFlash ? activeFlash.flashPrice : product.discountPrice;
+          int activeStock = isInFlash ? (displayStockQty - displaySoldQty) : product.stockQty;
 
           if (hasVariants) {
             _selectedVariant ??= product.variants!.first;
-            activePrice = _selectedVariant!.price;
-            activeDiscount = _selectedVariant!.discountPrice;
-            activeStock = _selectedVariant!.stockQty;
+            if (!isInFlash) {
+              activePrice = _selectedVariant!.price;
+              activeDiscount = _selectedVariant!.discountPrice;
+              activeStock = _selectedVariant!.stockQty;
+            } else {
+              activePrice = _selectedVariant!.price;
+            }
           }
 
           // Sync _qty with activeStock
@@ -121,8 +139,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Flash Sale Banner
+                      if (isInFlash) 
+                        _FlashSaleBanner(
+                          flashSale: activeFlash.flashSale!,
+                          stockQty: displayStockQty,
+                          soldQty: displaySoldQty,
+                        ),
+
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 36, 20, 20),
+                        padding: EdgeInsets.fromLTRB(20, isInFlash ? 20 : 36, 20, 20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -155,28 +181,31 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             Text(
                               formatRp.format(sellPrice),
                               style: AppTypography.priceActive.copyWith(
-                                color: AppColors.priceActive,
-                                fontSize: 24,
+                                color: isInFlash ? AppColors.error : AppColors.priceActive,
+                                fontSize: 26,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
-                            if (activeDiscount != null && product.discountPercent != null) ...[
+                            if (activeDiscount != null) ...[
                               const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.error,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${product.discountPercent}% OFF',
-                                  style: AppTypography.caption.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 11,
+                              if (product.discountPercent != null || isInFlash)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    isInFlash 
+                                      ? '${((1 - (activeFlash.flashPrice / activePrice)) * 100).toStringAsFixed(0)}% OFF'
+                                      : '${product.discountPercent}% OFF',
+                                    style: AppTypography.caption.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ),
-                              ),
                               const SizedBox(width: 8),
                               Text(
                                 formatRp.format(activePrice),
@@ -324,170 +353,194 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           const SizedBox(height: 24),
                         ],
 
-                          ],
-                        ),
-                      ),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
 
-                        // Mungkin Kamu Suka
-                        if (product.populatedRelatedProducts.isNotEmpty) ...[
-                          const Divider(),
-                          const SizedBox(height: 16),
-                          Text('Mungkin Kamu Suka', style: AppTypography.h4),
-                          const SizedBox(height: 12),
-                          Consumer(
-                            builder: (context, cartRef, _) {
-                              final cart = cartRef.watch(cartProvider);
-                              return GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                padding: EdgeInsets.zero,
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  childAspectRatio: 0.55,
-                                  mainAxisSpacing: 12,
-                                  crossAxisSpacing: 12,
-                                ),
-                                itemCount: product.populatedRelatedProducts.length,
-                                itemBuilder: (context, index) {
-                                  final p = product.populatedRelatedProducts[index];
-                                  final cartIdx = cart.indexWhere((item) => item.productId == p.id);
-                                  final currentQty = cartIdx >= 0 ? cart[cartIdx].qty : 0;
-                                  return DgProductCard(
-                                    name: p.name,
-                                    price: p.price,
-                                    unit: p.unit,
-                                    imageUrl: p.images.isNotEmpty ? AppConfig.fixImageUrl(p.images.first) : null,
-                                    discountPrice: p.discountPrice,
-                                    discountPercent: p.discountPercent,
-                                    isOutOfStock: p.stockQty <= 0,
-                                    variantCount: p.variants?.length ?? 0,
-                                    hasMultiplePrices: p.hasMultiplePrices,
-                                    tags: p.tags,
-                                    quantity: currentQty,
-                                    maxQuantity: p.stockQty,
-                                    onTap: () => context.push('/product/${p.id}'),
-                                    onAddToCart: () {
-                                      if (p.variants != null && p.variants!.isNotEmpty) {
-                                        context.push('/product/${p.id}');
-                                      } else {
-                                        cartRef.read(cartProvider.notifier).addItem(p);
-                                        DgSnackbar.showSuccess(context, message: '1 item ditambahkan ke keranjang');
-                                      }
-                                    },
-                                    onQuantityChanged: (newQty) {
-                                      cartRef.read(cartProvider.notifier).updateQuantity(p.id, newQty);
-                                    },
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-
-                        // Produk Terkait
-                        if (product.populatedSimilarProducts.isNotEmpty) ...[
-                          const Divider(),
-                          const SizedBox(height: 16),
-                          Text('Produk Terkait', style: AppTypography.h4),
-                          const SizedBox(height: 12),
-                          Consumer(
-                            builder: (context, cartRef, _) {
-                              final cart = cartRef.watch(cartProvider);
-                              return GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                padding: EdgeInsets.zero,
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  childAspectRatio: 0.55,
-                                  mainAxisSpacing: 12,
-                                  crossAxisSpacing: 12,
-                                ),
-                                itemCount: product.populatedSimilarProducts.length,
-                                itemBuilder: (context, index) {
-                                  final p = product.populatedSimilarProducts[index];
-                                  final cartIdx = cart.indexWhere((item) => item.productId == p.id);
-                                  final currentQty = cartIdx >= 0 ? cart[cartIdx].qty : 0;
-                                  return DgProductCard(
-                                    name: p.name,
-                                    price: p.price,
-                                    unit: p.unit,
-                                    imageUrl: p.images.isNotEmpty ? AppConfig.fixImageUrl(p.images.first) : null,
-                                    discountPrice: p.discountPrice,
-                                    discountPercent: p.discountPercent,
-                                    isOutOfStock: p.stockQty <= 0,
-                                    variantCount: p.variants?.length ?? 0,
-                                    hasMultiplePrices: p.hasMultiplePrices,
-                                    tags: p.tags,
-                                    quantity: currentQty,
-                                    maxQuantity: p.stockQty,
-                                    onTap: () => context.push('/product/${p.id}'),
-                                    onAddToCart: () {
-                                      if (p.variants != null && p.variants!.isNotEmpty) {
-                                        context.push('/product/${p.id}');
-                                      } else {
-                                        cartRef.read(cartProvider.notifier).addItem(p);
-                                        DgSnackbar.showSuccess(context, message: '1 item ditambahkan ke keranjang');
-                                      }
-                                    },
-                                    onQuantityChanged: (newQty) {
-                                      cartRef.read(cartProvider.notifier).updateQuantity(p.id, newQty);
-                                    },
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-
-                        // Inspirasi Masakan (Full Width Section)
-                        if (product.cookingVideos.isNotEmpty) ...[
-                          const Divider(),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Inspirasi Masakan dari Bahan Ini',
-                            style: AppTypography.h4,
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            height: 220,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: product.cookingVideos.length,
+              // Mungkin Kamu Suka
+              if (product.populatedRelatedProducts.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Divider(),
+                        const SizedBox(height: 16),
+                        Text('Mungkin Kamu Suka', style: AppTypography.h4),
+                        const SizedBox(height: 12),
+                        Consumer(
+                          builder: (context, cartRef, _) {
+                            final cart = cartRef.watch(cartProvider);
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
                               padding: EdgeInsets.zero,
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 0.55,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                              ),
+                              itemCount: product.populatedRelatedProducts.length,
                               itemBuilder: (context, index) {
-                                final video = product.cookingVideos[index];
-                                const cardWidth = 280.0;
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 16),
-                                  child: DgCookingVideoCard(
-                                    video: video,
-                                    width: cardWidth,
-                                    onTap: () {
-                                      context.push('/cooking-video', extra: {
-                                        'video': video,
-                                        'products': video.products,
-                                      });
-                                    },
-                                  ),
+                                final p = product.populatedRelatedProducts[index];
+                                final cartIdx = cart.indexWhere((item) => item.productId == p.id);
+                                final currentQty = cartIdx >= 0 ? cart[cartIdx].qty : 0;
+                                return DgProductCard(
+                                  name: p.name,
+                                  price: p.price,
+                                  unit: p.unit,
+                                  imageUrl: p.images.isNotEmpty ? AppConfig.fixImageUrl(p.images.first) : null,
+                                  discountPrice: p.discountPrice,
+                                  discountPercent: p.discountPercent,
+                                  isOutOfStock: p.stockQty <= 0,
+                                  variantCount: p.variants?.length ?? 0,
+                                  hasMultiplePrices: p.hasMultiplePrices,
+                                  tags: p.tags,
+                                  quantity: currentQty,
+                                  maxQuantity: p.stockQty,
+                                  onTap: () => context.push('/product/${p.id}'),
+                                  onAddToCart: () {
+                                    if (p.variants != null && p.variants!.isNotEmpty) {
+                                      context.push('/product/${p.id}');
+                                    } else {
+                                      cartRef.read(cartProvider.notifier).addItem(p);
+                                      DgSnackbar.showSuccess(context, message: '1 item ditambahkan ke keranjang');
+                                    }
+                                  },
+                                  onQuantityChanged: (newQty) {
+                                    cartRef.read(cartProvider.notifier).updateQuantity(p.id, newQty);
+                                  },
                                 );
                               },
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-
-
-                        const SizedBox(height: 100),
-                          ],
+                            );
+                          },
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 24),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+
+              // Produk Terkait
+              if (product.populatedSimilarProducts.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Divider(),
+                        const SizedBox(height: 16),
+                        Text('Produk Terkait', style: AppTypography.h4),
+                        const SizedBox(height: 12),
+                        Consumer(
+                          builder: (context, cartRef, _) {
+                            final cart = cartRef.watch(cartProvider);
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: EdgeInsets.zero,
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 0.55,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                              ),
+                              itemCount: product.populatedSimilarProducts.length,
+                              itemBuilder: (context, index) {
+                                final p = product.populatedSimilarProducts[index];
+                                final cartIdx = cart.indexWhere((item) => item.productId == p.id);
+                                final currentQty = cartIdx >= 0 ? cart[cartIdx].qty : 0;
+                                return DgProductCard(
+                                  name: p.name,
+                                  price: p.price,
+                                  unit: p.unit,
+                                  imageUrl: p.images.isNotEmpty ? AppConfig.fixImageUrl(p.images.first) : null,
+                                  discountPrice: p.discountPrice,
+                                  discountPercent: p.discountPercent,
+                                  isOutOfStock: p.stockQty <= 0,
+                                  variantCount: p.variants?.length ?? 0,
+                                  hasMultiplePrices: p.hasMultiplePrices,
+                                  tags: p.tags,
+                                  quantity: currentQty,
+                                  maxQuantity: p.stockQty,
+                                  onTap: () => context.push('/product/${p.id}'),
+                                  onAddToCart: () {
+                                    if (p.variants != null && p.variants!.isNotEmpty) {
+                                      context.push('/product/${p.id}');
+                                    } else {
+                                      cartRef.read(cartProvider.notifier).addItem(p);
+                                      DgSnackbar.showSuccess(context, message: '1 item ditambahkan ke keranjang');
+                                    }
+                                  },
+                                  onQuantityChanged: (newQty) {
+                                    cartRef.read(cartProvider.notifier).updateQuantity(p.id, newQty);
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Inspirasi Masakan
+              if (product.cookingVideos.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Divider(),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Inspirasi Masakan dari Bahan Ini',
+                          style: AppTypography.h4,
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 220,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: product.cookingVideos.length,
+                            padding: EdgeInsets.zero,
+                            itemBuilder: (context, index) {
+                              final video = product.cookingVideos[index];
+                              const cardWidth = 280.0;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 16),
+                                child: DgCookingVideoCard(
+                                  video: video,
+                                  width: cardWidth,
+                                  onTap: () {
+                                    context.push('/cooking-video', extra: {
+                                      'video': video,
+                                      'products': video.products,
+                                    });
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+              
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           );
         },
@@ -496,12 +549,71 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       // Bottom bar
       bottomNavigationBar: asyProduct.maybeWhen(
         data: (product) {
-          final int basePrice = _selectedVariant?.price ?? product.price;
-          final int discountPrice = _selectedVariant?.discountPrice ?? product.discountPrice ?? basePrice;
-          final int sellPrice = discountPrice < basePrice ? discountPrice : basePrice;
+          final activeFlash = product.activeFlashSaleItem;
+          final isInFlash = activeFlash != null;
+          
+          // Real-time stock override
+          FlashSaleStockUpdate? fsUpdate;
+          if (isInFlash) {
+            fsUpdate = stockUpdates[activeFlash.id];
+          }
+          
+          final displaySoldQty = fsUpdate?.soldQty ?? (activeFlash?.soldQty ?? 0);
+          final displayStockQty = fsUpdate?.stockQty ?? (activeFlash?.stockQty ?? product.stockQty);
+          
+          final int activeStock = isInFlash ? (displayStockQty - displaySoldQty) : (_selectedVariant?.stockQty ?? product.stockQty);
+          
+          int activePrice = product.price;
+          int? activeDiscount = isInFlash ? activeFlash.flashPrice : product.discountPrice;
+          
+          if (_selectedVariant != null && !isInFlash) {
+            activePrice = _selectedVariant!.price;
+            activeDiscount = _selectedVariant!.discountPrice;
+          }
+          
+          final int sellPrice = activeDiscount ?? activePrice;
           final int subtotal = sellPrice * _qty;
-          final int activeStock = _selectedVariant?.stockQty ?? product.stockQty;
           final formatRp = NumberFormat.currency(locale: 'id', symbol: 'Rp. ', decimalDigits: 0);
+
+          void handleAddToCart() {
+            if (activeStock <= 0) {
+              DgSnackbar.showError(context, message: 'Stok tidak mencukupi');
+              return;
+            }
+            
+            // Time validation for flash sale
+            if (isInFlash && activeFlash.flashSale != null) {
+              if (DateTime.now().isAfter(activeFlash.flashSale!.endAt)) {
+                DgSnackbar.showError(context, message: 'Flash sale telah berakhir');
+                return;
+              }
+            }
+
+            _addToCart(product);
+          }
+
+          void handleBuyNow() {
+             if (activeStock <= 0) {
+              DgSnackbar.showError(context, message: 'Stok tidak mencukupi');
+              return;
+            }
+
+            // Time validation for flash sale
+            if (isInFlash && activeFlash.flashSale != null) {
+              if (DateTime.now().isAfter(activeFlash.flashSale!.endAt)) {
+                DgSnackbar.showError(context, message: 'Flash sale telah berakhir');
+                return;
+              }
+            }
+
+            ref.read(cartProvider.notifier).addItem(
+              product,
+              quantity: _qty,
+              variant: _selectedVariant,
+              price: sellPrice,
+            );
+            context.push('/checkout');
+          }
 
           return Container(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
@@ -548,19 +660,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       Expanded(
                         child: DgButton(
                           label: activeStock > 0 ? 'Keranjang' : 'Stok Habis',
-                          icon: activeStock > 0 ? Icons.add : null,
+                          icon: activeStock > 0 ? Icons.add_shopping_cart : null,
                           isOutlined: true,
-                          onPressed: activeStock > 0 ? () => _addToCart(product) : null,
+                          onPressed: activeStock > 0 ? handleAddToCart : null,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: DgButton(
-                          label: 'Beli Langsung',
-                          onPressed: activeStock > 0 ? () {
-                            _addToCart(product);
-                            context.push('/cart');
-                          } : null,
+                          label: 'Beli Sekarang',
+                          onPressed: activeStock > 0 ? handleBuyNow : null,
                         ),
                       ),
                     ],
@@ -571,6 +680,137 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           );
         },
         orElse: () => const SizedBox.shrink(),
+      ),
+    );
+  }
+}
+
+class _FlashSaleBanner extends StatefulWidget {
+  const _FlashSaleBanner({
+    required this.flashSale,
+    required this.stockQty,
+    required this.soldQty,
+  });
+
+  final FlashSaleSession flashSale;
+  final int stockQty;
+  final int soldQty;
+
+  @override
+  State<_FlashSaleBanner> createState() => _FlashSaleBannerState();
+}
+
+class _FlashSaleBannerState extends State<_FlashSaleBanner> {
+  late Timer _timer;
+  Duration _timeLeft = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateTimeLeft();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTimeLeft());
+  }
+
+  void _updateTimeLeft() {
+    final now = DateTime.now();
+    final end = widget.flashSale.endAt;
+    setState(() {
+      _timeLeft = end.isAfter(now) ? end.difference(now) : Duration.zero;
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  String _formatDuration(Duration d) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final h = twoDigits(d.inHours);
+    final m = twoDigits(d.inMinutes.remainder(60));
+    final s = twoDigits(d.inSeconds.remainder(60));
+    return '$h:$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final totalStock = widget.stockQty + widget.soldQty;
+    final progress = totalStock > 0 ? widget.soldQty / totalStock : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 32, 16, 16), // Increased top padding for curve
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        gradient: LinearGradient(
+          colors: [AppColors.error, Color(0xFFFF8E53)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.flash_on, color: Colors.white, size: 24),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'FLASH SALE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    valueColor: const AlwaysStoppedAnimation(Colors.white),
+                    minHeight: 6,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tersisa ${widget.stockQty} item',
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const Text(
+                'Berakhir dalam',
+                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 2),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  _formatDuration(_timeLeft),
+                  style: const TextStyle(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

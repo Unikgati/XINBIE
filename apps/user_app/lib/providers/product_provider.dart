@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/core.dart';
 
@@ -125,4 +126,45 @@ final paginatedCookingVideosProvider = AsyncNotifierProvider<PaginatedCookingVid
 final cookingVideosProvider = FutureProvider<List<CookingVideo>>((ref) async {
   final repo = ref.watch(productRepositoryProvider);
   return repo.getCookingVideos(limit: 10);
+});
+
+/// Provider for the active flash sale session.
+final activeFlashSaleProvider = FutureProvider<FlashSaleSession?>((ref) async {
+  final repo = ref.watch(productRepositoryProvider);
+  try {
+    final sessions = await repo.getFlashSales(status: 'active');
+    if (sessions.isNotEmpty) return sessions.first;
+  } catch (e) {
+    debugPrint('Error fetching active flash sale: $e');
+  }
+  return null;
+});
+
+/// Model for real-time stock updates.
+class FlashSaleStockUpdate {
+  final int soldQty;
+  final int stockQty;
+  FlashSaleStockUpdate({required this.soldQty, required this.stockQty});
+}
+
+/// Stores real-time stock updates for flash sale items.
+final flashSaleStockUpdatesProvider = StateProvider<Map<String, FlashSaleStockUpdate>>((ref) => {});
+
+/// Provider that listens to socket events and updates the flash sale stock state.
+/// This should be watched at a top level to keep the connection alive and state fresh.
+final flashSaleSocketProvider = Provider<void>((ref) {
+  final socket = ref.watch(socketServiceProvider);
+  
+  socket.onFlashSaleStockUpdate((data) {
+    final itemId = data['flashSaleItemId'] as String;
+    final soldQty = data['soldQty'] as int;
+    final stockQty = data['stockQty'] as int;
+    
+    ref.read(flashSaleStockUpdatesProvider.notifier).update((state) {
+      return {
+        ...state,
+        itemId: FlashSaleStockUpdate(soldQty: soldQty, stockQty: stockQty),
+      };
+    });
+  });
 });

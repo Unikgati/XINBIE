@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../api/api_endpoints.dart';
@@ -60,8 +61,24 @@ class ProductRepository {
   }
 
   Future<Product> getProduct(String id) async {
-    final response = await _api.get(ApiEndpoints.product(id));
-    return Product.fromJson(response.data as Map<String, dynamic>);
+    try {
+      debugPrint('Fetching product detail for ID: $id');
+      final response = await _api.get(ApiEndpoints.product(id));
+      
+      final data = response.data;
+      if (data == null) {
+        throw Exception('API returned null data for product $id');
+      }
+      
+      if (data is! Map<String, dynamic>) {
+        throw Exception('Expected Map from API but got ${data.runtimeType}: $data');
+      }
+      
+      return Product.fromJson(data);
+    } catch (e) {
+      debugPrint('Error in getProduct($id): $e');
+      rethrow;
+    }
   }
 
   Future<List<CookingVideo>> getCookingVideos({int page = 1, int limit = 10}) async {
@@ -72,6 +89,8 @@ class ProductRepository {
     final data = response.data as Map<String, dynamic>;
     final list = data['data'] as List;
     return list.map((e) => CookingVideo.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   Future<List<FlashSaleSession>> getFlashSales({String status = 'active'}) async {
     final response = await _api.get(
       ApiEndpoints.flashSales,

@@ -13,6 +13,7 @@ import { useSnackbarStore } from '@/store/snackbarStore';
 import ProductImageGallery from './ProductImageGallery';
 import CookingVideoSection from './CookingVideoSection';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { getSocket } from '@/lib/socket';
 
 interface Variant {
   id: string;
@@ -97,6 +98,30 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
   // Flash Sale Price Override
   const activeFlashSale = product.flashSaleItems && product.flashSaleItems.length > 0 ? product.flashSaleItems[0] : null;
   const isFlashSaleActive = !!activeFlashSale;
+
+  // Real-time stock state
+  const [realTimeStock, setRealTimeStock] = useState<number>(activeFlashSale?.flashStock || 0);
+  const [realTimeSold, setRealTimeSold] = useState<number>(activeFlashSale?.soldQty || 0);
+
+  useEffect(() => {
+    if (!isFlashSaleActive || !activeFlashSale) return;
+
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleStockUpdate = (data: { flashSaleItemId: string, soldQty: number, stockQty: number }) => {
+      if (data.flashSaleItemId === activeFlashSale.id) {
+        setRealTimeStock(data.stockQty);
+        setRealTimeSold(data.soldQty);
+      }
+    };
+
+    socket.on('flash_sale:stock', handleStockUpdate);
+
+    return () => {
+      socket.off('flash_sale:stock', handleStockUpdate);
+    };
+  }, [isFlashSaleActive, activeFlashSale]);
   
   if (isFlashSaleActive) {
     finalPrice = activeFlashSale.flashPrice;
@@ -140,6 +165,42 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
     router.push('/cart');
   };
 
+  // Timer logic for Flash Sale
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+
+  useEffect(() => {
+    if (!isFlashSaleActive || !activeFlashSale.flashSale?.endAt) return;
+
+    const calculateTimeLeft = () => {
+      const end = new Date(activeFlashSale.flashSale.endAt).getTime();
+      const now = new Date().getTime();
+      return Math.max(0, Math.floor((end - now) / 1000));
+    };
+
+    setTimeLeft(calculateTimeLeft());
+
+    const timer = setInterval(() => {
+      const remaining = calculateTimeLeft();
+      setTimeLeft(remaining);
+      if (remaining <= 0) clearInterval(timer);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isFlashSaleActive, activeFlashSale]);
+
+  const formatDuration = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
+  };
+
+  // Progress calculation
+  const currentStock = realTimeStock;
+  const currentSold = realTimeSold;
+  const fsTotalStock = currentStock + currentSold;
+  const fsProgress = fsTotalStock > 0 ? (currentSold / fsTotalStock) * 100 : 0;
+
   return (
     <div className={styles.container}>
       <Breadcrumbs 
@@ -156,6 +217,30 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
 
         {/* Right: Info */}
         <div className={styles.infoSection}>
+          {isFlashSaleActive && (
+            <div className={styles.flashSaleBanner}>
+              <div className={styles.fsMainCol}>
+                <div className={styles.fsTitleRow}>
+                  <span className="material-symbols-outlined">bolt</span>
+                  <span className={styles.fsTitleText}>FLASH SALE</span>
+                </div>
+                <div className={styles.fsProgressWrapper}>
+                  <div className={styles.fsProgressBar}>
+                    <div 
+                      className={styles.fsProgressFill} 
+                      style={{ width: `${fsProgress}%` }}
+                    />
+                  </div>
+                  <div className={styles.fsStockText}>Tersisa {currentStock} item</div>
+                </div>
+              </div>
+              <div className={styles.fsTimerCol}>
+                <span className={styles.fsTimerLabel}>Berakhir dalam</span>
+                <div className={styles.fsTimerBox}>{formatDuration(timeLeft)}</div>
+              </div>
+            </div>
+          )}
+
           <div className={styles.headerGroup}>
             <div className={styles.categoryBadge}>{product.categoryName || 'Produk'}</div>
             <h1 className={styles.title}>{product.name}</h1>
@@ -166,10 +251,9 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
               <div className={styles.discountBox}>
                 {isFlashSaleActive ? (
                   <>
-                    <div className={styles.flashSaleBadge}>
-                      <span className="material-symbols-outlined">bolt</span>
-                      Flash Sale
-                    </div>
+                    {hasDiscount && (
+                      <span className={styles.discountBadge}>{calculatedDiscountPercent}% OFF</span>
+                    )}
                     {hasDiscount && (
                       <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
                     )}
