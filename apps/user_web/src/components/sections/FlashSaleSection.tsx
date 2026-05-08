@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './FlashSaleSection.module.css';
 import DgProductCard from "@/components/DgProductCard/index";
 import FlashSaleCountdown from './FlashSaleCountdown';
+import FlashSaleGrid from './FlashSaleGrid';
 
 async function fetchActiveFlashSale() {
   try {
@@ -39,7 +40,7 @@ export default async function FlashSaleSection() {
         <FlashSaleCountdown endTime={flashSale.endAt} />
       </div>
 
-      <div className={styles.grid}>
+      <FlashSaleGrid>
         {flashSale.items.map((item: any) => (
           <DgProductCard
             key={item.id}
@@ -58,7 +59,7 @@ export default async function FlashSaleSection() {
             tags={['Flash Sale']}
           />
         ))}
-      </div>
+      </FlashSaleGrid>
     </section>
   );
 }

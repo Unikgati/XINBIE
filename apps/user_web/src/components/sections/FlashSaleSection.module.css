@@ -5,20 +5,8 @@
   border-radius: 20px;
   padding: 24px;
   position: relative;
-  overflow: hidden;
 }
 
-/* Aksen petir halus di latar belakang */
-.flashSaleSection::after {
-  content: 'bolt';
-  font-family: 'Material Symbols Outlined';
-  position: absolute;
-  right: -20px;
-  bottom: -40px;
-  font-size: 200px;
-  color: rgba(255, 77, 77, 0.03);
-  pointer-events: none;
-}
 
 .header {
   display: flex;
@@ -90,11 +78,109 @@
   border-radius: 4px;
 }
 
-/* Grid disamakan dengan homepage: 180px */
+/* Grid wrapper for scroll arrows + fade edges */
+.gridWrapper {
+  position: relative;
+}
+
+.gridWrapper::before,
+.gridWrapper::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 48px;
+  z-index: 12;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.gridWrapper::before {
+  left: 0;
+  background: linear-gradient(to right, #f8f9fa, transparent);
+  opacity: 0;
+}
+
+.gridWrapper::after {
+  right: 0;
+  background: linear-gradient(to left, #f8f9fa, transparent);
+  opacity: 1;
+}
+
+/* Data-attribute driven fade visibility */
+.gridWrapper[data-scroll-left="true"]::before {
+  opacity: 1;
+}
+
+.gridWrapper[data-scroll-right="false"]::after {
+  opacity: 0;
+}
+
+.navButton {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: white;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease, background-color 0.2s ease;
+  z-index: 15;
+  cursor: pointer;
+  border: none;
+}
+
+.gridWrapper:hover .navButton {
+  opacity: 1;
+}
+
+.navButton.navButtonHidden {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+.navButton:hover {
+  background-color: #f0f0f0;
+}
+
+.prevButton {
+  left: -12px;
+}
+
+.nextButton {
+  right: -12px;
+}
+
+/* Horizontal scroll list — CSS Grid for reliable equal heights */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: 180px;
   gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  padding-left: 6px;
+}
+
+/* Hide scrollbar but keep functionality */
+.grid::-webkit-scrollbar {
+  display: none;
+}
+.grid {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.grid > * {
+  scroll-snap-align: start;
 }
 
 @media (max-width: 768px) {
@@ -111,7 +197,7 @@
   }
 
   .grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-auto-columns: 150px;
     gap: 12px;
   }
   

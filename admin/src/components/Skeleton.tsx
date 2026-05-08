@@ -1,5 +1,21 @@
 import React from 'react';
 
+export function TableRowSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, rowIndex) => (
+        <tr key={`tr-${rowIndex}`}>
+          {Array.from({ length: columns }).map((_, colIndex) => (
+            <td key={`td-${rowIndex}-${colIndex}`}>
+              <div className="skeleton" style={{ height: 20, width: `${60 + ((rowIndex + colIndex) % 4) * 10}%`, borderRadius: 4 }} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
   return (
     <div style={{ width: '100%' }}>
@@ -14,15 +30,7 @@ export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; column
           </tr>
         </thead>
         <tbody>
-          {Array.from({ length: rows }).map((_, rowIndex) => (
-            <tr key={`tr-${rowIndex}`}>
-              {Array.from({ length: columns }).map((_, colIndex) => (
-                <td key={`td-${rowIndex}-${colIndex}`}>
-                  <div className="skeleton" style={{ height: 20, width: `${60 + ((rowIndex + colIndex) % 4) * 10}%`, borderRadius: 4 }} />
-                </td>
-              ))}
-            </tr>
-          ))}
+          <TableRowSkeleton rows={rows} columns={columns} />
         </tbody>
       </table>
     </div>

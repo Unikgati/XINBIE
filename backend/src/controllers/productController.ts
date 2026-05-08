@@ -109,7 +109,7 @@ export async function getProduct(req: Request, res: Response, next: NextFunction
           include: {
             flashSale: true
           }
-        }
+        },
       },
     });
 

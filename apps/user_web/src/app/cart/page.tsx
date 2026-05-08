@@ -94,8 +94,6 @@ export default function CartPage() {
                 <button className={styles.clearAllBtn} onClick={clearCart}>Clear All</button>
               </div>
               
-              <h1 className={styles.desktopPageTitle}>Keranjang Belanja</h1>
-
               <div className={styles.itemList}>
                 {cartItems.map((item, idx) => (
                   <div key={`${item.productId}-${item.variantId || 'base'}-${idx}`} className={styles.cartItem}>

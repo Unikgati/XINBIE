@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode, useMemo } from 'react';
 
 interface Toast {
   id: number;
@@ -38,11 +38,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setTimeout(() => dismiss(id), 3500);
   }, [dismiss]);
 
-  const ctx: ToastContextType = {
-    success: (msg) => addToast(msg, 'success'),
-    error: (msg) => addToast(msg, 'error'),
-    info: (msg) => addToast(msg, 'info'),
-  };
+  const ctx = useMemo(() => ({
+    success: (msg: string) => addToast(msg, 'success'),
+    error: (msg: string) => addToast(msg, 'error'),
+    info: (msg: string) => addToast(msg, 'info'),
+  }), [addToast]);
 
   const icons: Record<string, string> = {
     success: 'check_circle',

@@ -14,6 +14,7 @@ const navItems = [
     { href: '/categories', icon: 'category', label: 'Kategori' },
     { href: '/products', icon: 'inventory_2', label: 'Produk' },
     { href: '/cooking-videos', icon: 'movie', label: 'Inspirasi Masak' },
+    { href: '/recipes', icon: 'menu_book', label: 'Inspirasi Resep' },
   ]},
   { section: 'Pengguna', items: [
     { href: '/drivers', icon: 'local_shipping', label: 'Driver' },

@@ -77,10 +77,27 @@ export default function AIChat() {
   }, [messages, STORAGE_KEY_MESSAGES]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    // Scroll to bottom immediately on open/new message
+    const scrollToBottom = () => {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    };
+
+    if (isOpen) {
+      scrollToBottom();
     }
-  }, [messages, loading]);
+
+    // Use ResizeObserver to handle content height changes (like images loading)
+    const resizeObserver = new ResizeObserver(() => {
+      if (isOpen) scrollToBottom();
+    });
+
+    resizeObserver.observe(scrollContainer);
+    
+    return () => resizeObserver.disconnect();
+  }, [isOpen, messages, loading]);
 
   const hiddenRoutes = ['/login', '/register', '/forgot-password', '/otp', '/reset-password'];
   if (hiddenRoutes.includes(pathname)) return null;

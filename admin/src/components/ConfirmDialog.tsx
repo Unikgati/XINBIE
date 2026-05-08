@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
 
 interface ConfirmOptions {
   title: string;
@@ -27,8 +27,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     setState(null);
   };
 
+  const value = useMemo(() => ({ confirm }), [confirm]);
+
   return (
-    <ConfirmContext.Provider value={{ confirm }}>
+    <ConfirmContext.Provider value={value}>
       {children}
       {state && (
         <div className="modal-overlay" onClick={() => handleClose(false)}>

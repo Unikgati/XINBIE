@@ -1,0 +1,159 @@
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--color-divider);
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+  position: relative;
+  /* overflow: hidden is gone to allow ribbon fold */
+}
+
+/* Removed hover effect as requested */
+
+.imageLink {
+  width: 90px;
+  flex-shrink: 0;
+  position: relative;
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+  overflow: hidden; /* Clips the image but NOT the ribbon anymore */
+}
+
+.imageWrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: var(--color-background);
+}
+
+.imageWrapper img {
+  object-fit: cover;
+}
+
+/* Badge Container positioned relative to the whole row */
+.flashSaleBadgeContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  position: absolute;
+  top: 0; /* Absolute top */
+  left: -4px; /* Shifted right (lebih masuk) */
+  z-index: 20;
+}
+
+.flashSaleBadge {
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+  color: white;
+  font-weight: 800;
+  font-size: 10px;
+  text-transform: uppercase;
+  border-radius: 0 8px 8px 0; /* Flat top left to wrap around corner */
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+}
+
+.flashSaleBadge span {
+  font-size: 14px;
+}
+
+.flashSaleFold {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 10px 10px 0; /* Maximum fold triangle */
+  border-color: transparent #8B2500 transparent transparent; /* Deep shadow */
+}
+
+.discountBadgeWrapper {
+  position: absolute;
+  top: 0; /* Absolute top */
+  left: -2px; /* Shifted right (lebih masuk) */
+  z-index: 20;
+  transform: scale(0.95);
+  transform-origin: top left;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.name {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.priceRow {
+  display: flex;
+  flex-direction: column; /* Stack vertically */
+  align-items: flex-start;
+  gap: 0;
+}
+
+.price {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-price-active);
+}
+
+.oldPrice {
+  font-size: 11px;
+  color: var(--color-text-hint);
+  text-decoration: line-through;
+}
+
+.unitText {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.action {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 16px;
+  min-width: 100px;
+}
+
+.addBtn {
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: var(--color-primary-surface);
+  color: var(--color-primary-dark);
+  border: 1px solid var(--color-primary-light);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.addBtn:hover {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.addBtn span {
+  font-size: 18px;
+}

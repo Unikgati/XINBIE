@@ -9,6 +9,7 @@ import FeaturedProducts from "@/components/sections/FeaturedProducts";
 import PromoProducts from "@/components/sections/PromoProducts";
 import AllProductsList from "@/components/sections/AllProductsList";
 import FlashSaleSection from "@/components/sections/FlashSaleSection";
+import RecipeSection from "@/components/sections/RecipeSection";
 import PromoSection from "./components/home/PromoSection";
 
 // Skeletons
@@ -32,7 +33,7 @@ export default function Home() {
           <HeroBanners />
         </Suspense>
 
-        <Suspense fallback={null}>
+        <Suspense fallback={<ProductGridSkeleton />}>
           <FlashSaleSection />
         </Suspense>
 
@@ -48,6 +49,10 @@ export default function Home() {
 
         <Suspense fallback={<ProductGridSkeleton />}>
           <PromoProducts />
+        </Suspense>
+
+        <Suspense fallback={<ProductGridSkeleton />}>
+          <RecipeSection />
         </Suspense>
 
         <Suspense fallback={<ProductGridSkeleton />}>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Select from 'react-select';
+import Select, { components } from 'react-select';
 import ActionMenu from '@/components/ActionMenu';
 import CustomSelect from '@/components/CustomSelect';
 import { useToast } from '@/components/Toast';
@@ -98,6 +98,53 @@ function calcMargin(sell: number, cost: number) {
   if (cost <= 0 || sell <= 0) return 0;
   return Math.round(((sell - cost) / sell) * 100);
 }
+
+// Custom components for React-Select to show images
+const CustomOption = (props: any) => {
+  const { data } = props;
+  return (
+    <components.Option {...props}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ 
+          width: 32, height: 32, borderRadius: 4, overflow: 'hidden', 
+          background: 'var(--divider)', flexShrink: 0 
+        }}>
+          {data.image ? (
+            <img src={data.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-hint)' }}>image</span>
+            </div>
+          )}
+        </div>
+        <span>{data.label}</span>
+      </div>
+    </components.Option>
+  );
+};
+
+const CustomMultiValueLabel = (props: any) => {
+  const { data } = props;
+  return (
+    <components.MultiValueLabel {...props}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ 
+          width: 20, height: 20, borderRadius: 3, overflow: 'hidden', 
+          background: 'var(--divider)', flexShrink: 0 
+        }}>
+          {data.image ? (
+            <img src={data.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 10, color: 'var(--text-hint)' }}>image</span>
+            </div>
+          )}
+        </div>
+        <span>{props.children}</span>
+      </div>
+    </components.MultiValueLabel>
+  );
+};
 
 function marginColor(margin: number) {
   if (margin >= 40) return 'green';
@@ -450,15 +497,28 @@ export default function ProductsPage() {
                     <React.Fragment key={p.id}>
                       <tr style={{ cursor: hasVariants ? 'pointer' : 'default' }} onClick={() => hasVariants && toggleExpand(p.id)}>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             {hasVariants && (
-                              <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--text-hint)', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--text-hint)', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)', flexShrink: 0 }}>
                                 chevron_right
                               </span>
                             )}
-                            <div>
-                              <div style={{ fontWeight: 600 }}>{p.name}</div>
-                              <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                            <div style={{ 
+                              width: 48, height: 48, borderRadius: 'var(--radius-sm)', 
+                              overflow: 'hidden', background: 'var(--divider)',
+                              boxShadow: 'var(--shadow-sm)', flexShrink: 0
+                            }}>
+                              {p.images && p.images.length > 0 ? (
+                                <img src={p.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                  <span className="material-symbols-outlined" style={{ color: 'var(--text-hint)', fontSize: 20 }}>image</span>
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                              <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
                                 {p.isFeatured && <span className="badge green" style={{ fontSize: 10, padding: '2px 6px' }}><span className="material-symbols-outlined" style={{ fontSize: 12 }}>star</span> Pilihan</span>}
                                 {hasVariants && <span className="badge blue" style={{ fontSize: 10, padding: '2px 6px' }}><span className="material-symbols-outlined" style={{ fontSize: 12 }}>tune</span> {p.variants.length} varian</span>}
                               </div>
@@ -571,75 +631,113 @@ export default function ProductsPage() {
               <h3><span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>{editingId ? 'edit' : 'add_shopping_cart'}</span> {editingId ? 'Edit Produk' : 'Tambah Produk'}</h3>
               <button className="btn btn-outline btn-icon" onClick={handleCloseModal}><span className="material-symbols-outlined">close</span></button>
             </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">
-                  Foto Produk
-                </label>
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
-                  {/* Existing images from server */}
-                  {existingImages.map((url, idx) => (
-                    <div key={`existing-${idx}`} style={{ 
-                      width: 80, height: 80, borderRadius: 'var(--radius-md)', 
-                      background: 'var(--divider)', position: 'relative', overflow: 'hidden',
-                      boxShadow: 'var(--shadow-sm)'
-                    }}>
-                      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <button type="button" 
-                        onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== idx))}
-                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
-                      </button>
-                    </div>
-                  ))}
+            <div className="modal-body" style={{ maxWidth: 800, margin: '0 auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 24, marginBottom: 16 }}>
+                <div className="left-col">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">
+                      Foto Produk
+                    </label>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
+                      {/* Existing images from server */}
+                      {existingImages.map((url, idx) => (
+                        <div key={`existing-${idx}`} style={{ 
+                          width: 180, height: 180, borderRadius: 'var(--radius-md)', 
+                          background: 'var(--divider)', position: 'relative', overflow: 'hidden',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}>
+                          <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button type="button" 
+                            onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== idx))}
+                            style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                          </button>
+                        </div>
+                      ))}
 
-                  {/* Newly uploaded images */}
-                  {formImages.map((file, idx) => (
-                    <div key={`new-${idx}`} style={{ 
-                      width: 80, height: 80, borderRadius: 'var(--radius-md)', 
-                      background: 'var(--divider)', position: 'relative', overflow: 'hidden',
-                      boxShadow: 'var(--shadow-sm)'
-                    }}>
-                      <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <button type="button" 
-                        onClick={() => setFormImages(prev => prev.filter((_, i) => i !== idx))}
-                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
-                      </button>
-                    </div>
-                  ))}
+                      {/* Newly uploaded images */}
+                      {formImages.map((file, idx) => (
+                        <div key={`new-${idx}`} style={{ 
+                          width: 180, height: 180, borderRadius: 'var(--radius-md)', 
+                          background: 'var(--divider)', position: 'relative', overflow: 'hidden',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}>
+                          <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button type="button" 
+                            onClick={() => setFormImages(prev => prev.filter((_, i) => i !== idx))}
+                            style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                          </button>
+                        </div>
+                      ))}
 
-                  {/* Upload button - always visible so user can add more */}
-                  <label className="upload-tile hover-scale" style={{ 
-                    width: 80, height: 80, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                    cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
-                    background: 'var(--primary-surface)'
-                  }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 24, marginBottom: 4, color: 'var(--primary-light)' }}>add_photo_alternate</span>
-                    <span style={{ fontSize: 10, fontWeight: 500 }}>{existingImages.length > 0 || formImages.length > 0 ? 'Ganti' : 'Upload'}</span>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      style={{ display: 'none' }} 
-                      onChange={e => {
-                        if (e.target.files?.length) {
-                          setFormImages([e.target.files[0]]);
-                          setExistingImages([]);
-                        }
-                      }} 
-                    />
-                  </label>
+                      {/* Upload button - only visible if no images */}
+                      {(existingImages.length === 0 && formImages.length === 0) && (
+                        <label className="upload-tile hover-scale" style={{ 
+                          width: 180, height: 180, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                          cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
+                          background: 'var(--primary-surface)'
+                        }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 48, marginBottom: 8, color: 'var(--primary-light)' }}>add_photo_alternate</span>
+                          <span style={{ fontSize: 12, fontWeight: 500 }}>Upload Foto</span>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            style={{ display: 'none' }} 
+                            onChange={e => {
+                              if (e.target.files?.length) {
+                                setFormImages([e.target.files[0]]);
+                                setExistingImages([]);
+                              }
+                            }} 
+                          />
+                        </label>
+                      )}
+                      
+                      {/* Change button if image exists */}
+                      {(existingImages.length > 0 || formImages.length > 0) && (
+                         <label style={{ 
+                           position: 'absolute', bottom: 8, left: 8, right: 8,
+                           background: 'rgba(255,255,255,0.9)', color: 'var(--primary)',
+                           padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                           fontSize: 11, fontWeight: 600, textAlign: 'center', cursor: 'pointer',
+                           boxShadow: 'var(--shadow-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
+                         }}>
+                           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+                           Ganti Foto
+                           <input 
+                            type="file" 
+                            accept="image/*" 
+                            style={{ display: 'none' }} 
+                            onChange={e => {
+                              if (e.target.files?.length) {
+                                setFormImages([e.target.files[0]]);
+                                setExistingImages([]);
+                              }
+                            }} 
+                          />
+                         </label>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="form-group"><label className="form-label">Nama Produk</label><input className="form-input" placeholder="Masukkan nama produk" value={formName} onChange={e => setFormName(e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">Kategori</label>
-                <CustomSelect
-                  value={productCategory}
-                  onChange={setProductCategory}
-                  options={categories.map(c => ({ value: c.id, label: c.name }))}
-                  placeholder="Pilih kategori"
-                />
+
+                <div className="right-col" style={{ display: 'flex', flexDirection: 'column', gap: 16, justifyContent: 'center' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Nama Produk</label>
+                    <input className="form-input" placeholder="Masukkan nama produk" value={formName} onChange={e => setFormName(e.target.value)} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Kategori</label>
+                    <CustomSelect
+                      value={productCategory}
+                      onChange={setProductCategory}
+                      options={categories.map(c => ({ value: c.id, label: c.name }))}
+                      placeholder="Pilih kategori"
+                    />
+                  </div>
+                </div>
               </div>
               <div style={formVariants.length > 0 ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
@@ -732,8 +830,16 @@ export default function ProductsPage() {
                 <label className="form-label">Produk Pelengkap (Cross-Selling)</label>
                 <Select
                   isMulti
-                  options={products.filter(p => p.id !== editingId).map(p => ({ value: p.id, label: p.name }))}
-                  value={products.filter(p => formRelatedProductIds.includes(p.id)).map(p => ({ value: p.id, label: p.name }))}
+                  options={products.filter(p => p.id !== editingId).map(p => ({ 
+                    value: p.id, 
+                    label: p.name,
+                    image: p.images?.[0] || null
+                  }))}
+                  value={products.filter(p => formRelatedProductIds.includes(p.id)).map(p => ({ 
+                    value: p.id, 
+                    label: p.name,
+                    image: p.images?.[0] || null
+                  }))}
                   onChange={(selected) => setFormRelatedProductIds((selected || []).map((s: any) => s.value))}
                   placeholder="Cari produk pelengkap (misal: Mentega, Keju)"
                   noOptionsMessage={() => 'Produk tidak ditemukan'}
@@ -748,6 +854,10 @@ export default function ProductsPage() {
                     multiValueRemove: (base: any) => ({ ...base, color: 'var(--primary)', borderRadius: '0 12px 12px 0', ':hover': { background: 'var(--primary-light)', color: '#fff' } }),
                     input: (base: any) => ({ ...base, color: 'var(--text-primary)' }),
                     placeholder: (base: any) => ({ ...base, color: 'var(--text-hint)', fontSize: 13 }),
+                  }}
+                  components={{
+                    Option: CustomOption,
+                    MultiValueLabel: CustomMultiValueLabel,
                   }}
                 />
               </div>

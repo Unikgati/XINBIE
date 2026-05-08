@@ -37,7 +37,6 @@ export default function FlashSaleCountdown({ endTime }: Props) {
 
   return (
     <div className={styles.timer}>
-      <span className={styles.timerLabel}>Berakhir dalam</span>
       <div className={styles.timeUnits}>
         <div className={styles.timeUnit}>{timeLeft.h}</div>
         <span>:</span>

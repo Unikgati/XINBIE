@@ -44,6 +44,7 @@ interface Product {
   variants: Variant[];
   cookingVideos?: CookingVideo[];
   flashSaleItems?: any[];
+  recipeIngredients?: { recipe: { id: string; title: string; slug: string; heroImage?: string } }[];
 }
 
 interface ProductDetailClientProps {
@@ -341,6 +342,33 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
                 tags={p.tags}
               />
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Recipes Using This Product Section */}
+      {product.recipeIngredients && product.recipeIngredients.length > 0 && (
+        <section className={styles.relatedSection} style={{ background: '#f0f7f0', padding: '40px 0', margin: '40px -20px 0', borderRadius: 0 }}>
+          <div className="main-content" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
+            <h2 className={styles.relatedTitle} style={{ textAlign: 'center', marginBottom: '30px' }}>
+              🍳 Inspirasi Resep Terkait
+            </h2>
+            <div className={styles.relatedGrid}>
+              {product.recipeIngredients.map((ri: any) => (
+                <Link key={ri.recipe.id} href={`/resep/${ri.recipe.slug}`} className={styles.recipeCard}>
+                  <div className={styles.recipeImageWrapper}>
+                    <img src={ri.recipe.heroImage} alt={ri.recipe.title} className={styles.recipeImage} />
+                  </div>
+                  <div className={styles.recipeContent}>
+                    <h3 className={styles.recipeTitle}>{ri.recipe.title}</h3>
+                    <div className={styles.recipeLink}>
+                      Lihat Cara Memasak
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
       )}

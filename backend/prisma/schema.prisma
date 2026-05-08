@@ -493,6 +493,31 @@ model FlashSaleItem {
   @@map("flash_sale_items")
 }
 
+model Recipe {
+  id                String   @id @default(uuid())
+  title             String
+  slug              String   @unique
+  heroImage         String?  @map("hero_image")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  relatedProductIds String[] @default([]) @map("related_product_ids")
+
+  steps RecipeStep[]
+
+  @@map("recipes")
+}
+
+model RecipeStep {
+  id          String   @id @default(uuid())
+  recipeId    String   @map("recipe_id")
+  stepNumber  Int      @map("step_number")
+  instruction String
+  imageUrl    String?  @map("image_url")
+  recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@map("recipe_steps")
+}
+
 enum UserRole {
   USER
   DRIVER

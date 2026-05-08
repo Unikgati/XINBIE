@@ -12,6 +12,7 @@ import { ensureBucket } from './config/minio';
 import { errorHandler } from './middleware/errorHandler';
 import { initWebSocket } from './websocket';
 import { initFirebase } from './utils/firebase';
+import prisma from './config/database';
 
 // Routes
 import authRoutes from './routes/auth';
@@ -28,6 +29,7 @@ import promoRoutes from './routes/promo';
 import aiRoutes from './routes/ai';
 import chatRoutes from './routes/chat';
 import flashSaleRoutes from './routes/flashSale';
+import recipeRoutes from './routes/recipe';
 
 const app = express();
 const server = createServer(app);
@@ -81,6 +83,7 @@ app.use('/api/promos', promoRoutes);
 app.use('/api/admin/ai', aiRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api', flashSaleRoutes);
+app.use('/api', recipeRoutes);
 
 // 404
 app.use((req, res) => {
@@ -111,10 +114,6 @@ async function start() {
 
 start();
 
-// Raw Debug Route
-app.get('/api/debug/fs', async (req, res) => {
-  const fs = await prisma.flashSale.findMany({ include: { items: true } });
-  res.json({ now: new Date().toISOString(), data: fs });
-});
+
 
 export default app;

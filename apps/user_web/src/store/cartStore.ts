@@ -20,6 +20,9 @@ interface CartState {
   /** Add item or increment quantity if already exists */
   addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void;
   
+  /** Add multiple items at once */
+  addMultipleItems: (items: { item: Omit<CartItem, 'quantity'>; quantity: number }[]) => void;
+  
   /** Update quantity for specific product+variant combo */
   updateQuantity: (productId: string, quantity: number, variantId?: string | null) => void;
   
@@ -74,6 +77,29 @@ export const useCartStore = create<CartState>()(
           return {
             items: [...state.items, { ...itemData, quantity }],
           };
+        });
+      },
+      
+      addMultipleItems: (newItems) => {
+        set((state) => {
+          let updatedItems = [...state.items];
+          
+          newItems.forEach(({ item, quantity }) => {
+            const existingIdx = updatedItems.findIndex(i => 
+              matchItem(i, item.productId, item.variantId)
+            );
+            
+            if (existingIdx >= 0) {
+              updatedItems[existingIdx] = {
+                ...updatedItems[existingIdx],
+                quantity: updatedItems[existingIdx].quantity + quantity,
+              };
+            } else {
+              updatedItems.push({ ...item, quantity });
+            }
+          });
+          
+          return { items: updatedItems };
         });
       },
 

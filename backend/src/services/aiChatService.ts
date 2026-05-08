@@ -42,14 +42,37 @@ export class AiChatService {
       'mie': ['indomie', 'instan', 'noodle'],
     };
 
+    // Nutrition compound terms — keep these as single keywords
+    const nutritionPatterns = [
+      /vitamin\s+[a-z]\d*/gi,   // vitamin a, vitamin b12, vitamin c
+      /omega\s+\d+/gi,          // omega 3, omega 6
+      /tinggi\s+\w+/gi,         // tinggi protein, tinggi serat
+      /rendah\s+\w+/gi,         // rendah gula, rendah lemak
+      /kaya\s+\w+/gi,           // kaya zat besi
+    ];
+    const extractedNutritionTerms: string[] = [];
+    let cleanedQuery = lowerQuery;
+    for (const pattern of nutritionPatterns) {
+      const matches = lowerQuery.match(pattern);
+      if (matches) {
+        for (const m of matches) {
+          extractedNutritionTerms.push(m.trim());
+          cleanedQuery = cleanedQuery.replace(m, ' ');
+        }
+      }
+    }
+
     // 1. Extract and Clean Keywords
     const stopWords = /kalau|apa|ada|saya|kamu|disini|yang|tanya|cari|ingin|beli|dong|kah|adakah|buat|untuk|mohon|info|dong|bang|sis|gan/gi;
-    let keywords = lowerQuery
+    let keywords = cleanedQuery
       .replace(/[^\w\s]/gi, ' ') // Remove punctuation
       .replace(stopWords, ' ')
       .trim()
       .split(/\s+/)
       .filter(w => w.length >= 2);
+
+    // Add nutrition terms back as compound keywords
+    keywords.push(...extractedNutritionTerms);
 
     // Expand keywords using synonyms
     const expandedKeywords = [...keywords];
@@ -60,6 +83,10 @@ export class AiChatService {
     }
     
     const uniqueKeywords = [...new Set(expandedKeywords)];
+
+    // Detect if this is a nutrition-specific query
+    const isNutritionQuery = extractedNutritionTerms.length > 0 ||
+      /nutrisi|gizi|vitamin|mineral|protein|serat|kalsium|zat besi|kalori|lemak|karbohidrat|antioksidan/i.test(lowerQuery);
 
     // 2. Fetch Data
     const [allProducts, promos, categories] = await Promise.all([
@@ -101,28 +128,52 @@ export class AiChatService {
                           /semua|apa saja|daftar|produk|barang|jual|ada apa|yang ada|rekomendasi|lihat/i.test(lowerQuery);
 
     if (!isGeneralQuery) {
-      products = allProducts.map(p => {
-        let score = 0;
-        const nameLower = p.name.toLowerCase();
-        const descLower = (p.description || '').toLowerCase();
-        const catLower = p.category?.name.toLowerCase() || '';
-        
-        // Exact full query match (Highest priority)
-        if (nameLower.includes(lowerQuery)) score += 100;
-        
-        // Keyword matches
-        uniqueKeywords.forEach(kw => {
-          if (nameLower.includes(kw)) score += 20;
-          if (p.tags.some(t => t.toLowerCase().includes(kw))) score += 15;
-          if (catLower.includes(kw)) score += 10;
-          if (descLower.includes(kw)) score += 5;
-        });
+      // For nutrition queries, pre-filter to only products whose tags match
+      if (isNutritionQuery) {
+        const nutritionKeywords = [
+          ...extractedNutritionTerms,
+          ...uniqueKeywords.filter(kw =>
+            /vitamin|mineral|protein|serat|kalsium|zat|besi|kalori|lemak|karbohidrat|antioksidan|omega|nutrisi|gizi/i.test(kw)
+          )
+        ];
 
-        return { ...p, _score: score };
-      })
-      .filter(p => p._score > 0)
-      .sort((a, b) => b._score - a._score)
-      .slice(0, 12); // Give a bit more variety to AI
+        const tagMatchedProducts = allProducts.filter(p =>
+          p.tags.some(tag => {
+            const tagLower = tag.toLowerCase();
+            return nutritionKeywords.some(nk => tagLower.includes(nk) || nk.includes(tagLower));
+          })
+        );
+
+        if (tagMatchedProducts.length > 0) {
+          products = tagMatchedProducts.slice(0, 12);
+        } else {
+          // No products match the nutrition tag — send empty so AI says "not available"
+          products = [];
+        }
+      } else {
+        products = allProducts.map(p => {
+          let score = 0;
+          const nameLower = p.name.toLowerCase();
+          const descLower = (p.description || '').toLowerCase();
+          const catLower = p.category?.name.toLowerCase() || '';
+          
+          // Exact full query match (Highest priority)
+          if (nameLower.includes(lowerQuery)) score += 100;
+          
+          // Keyword matches
+          uniqueKeywords.forEach(kw => {
+            if (nameLower.includes(kw)) score += 20;
+            if (p.tags.some(t => t.toLowerCase().includes(kw))) score += 15;
+            if (catLower.includes(kw)) score += 10;
+            if (descLower.includes(kw)) score += 5;
+          });
+
+          return { ...p, _score: score };
+        })
+        .filter(p => p._score > 0)
+        .sort((a, b) => b._score - a._score)
+        .slice(0, 12);
+      }
     } else {
       // For general queries, only show a few featured products to keep the context clean
       products = products.filter(p => (p as any).isFeatured).slice(0, 5);
@@ -143,7 +194,7 @@ export class AiChatService {
       });
     }
 
-    return { products, promos, categories, orderInfo };
+    return { products, promos, categories, orderInfo, isNutritionQuery, nutritionTerms: extractedNutritionTerms };
   }
 
   private static async callAI(userMessage: string, context: any, history: any[] = []): Promise<ChatResponse> {
@@ -234,7 +285,8 @@ ATURAN PESANAN:
 - **DILARANG KERAS** menambahkan deskripsi rasa (seperti "manis", "pedas", "enak banget"), aroma, atau klaim kesehatan tambahan yang tidak tertulis di bagian DESC pada Context. Gunakan hanya informasi yang ada.
 - Jika user bertanya daftar kategori, sebutkan semua kategori yang ada di atas.
 - **JANGAN PERNAH** me-list semua produk jika user bertanya secara umum seperti "ada produk apa saja?". Cukup sebutkan bahwa DapurGizi memiliki berbagai produk segar di kategori [sebutkan 3-4 kategori], lalu tawarkan bantuan untuk mencari barang spesifik.
-- Jika user mencari nutrisi tertentu (misal: Vitamin C), Anda hanya boleh menyarankan produk yang BENAR-BENAR ada di Context. Jika tidak ada jeruk di Context, jangan sarankan jeruk.
+- **ATURAN NUTRISI WAJIB**: Jika user bertanya tentang kandungan nutrisi (misal: Vitamin A, Vitamin C, Protein, dll), Anda **HANYA BOLEH** merekomendasikan produk yang **TAGS-nya SECARA EKSPLISIT** mengandung nutrisi tersebut. DILARANG KERAS menggunakan pengetahuan internal Anda tentang kandungan gizi makanan. Jika tidak ada produk di Context yang TAG-nya cocok, jawab: "Maaf, saat ini belum ada produk di DapurGizi yang ditandai dengan kandungan [nutrisi] tersebut."
+- Jika user mencari nutrisi tertentu (misal: Vitamin C), Anda hanya boleh menyarankan produk yang BENAR-BENAR ada di Context DAN yang TAGS-nya mengandung nutrisi tersebut. Jika tidak ada produk yang cocok di Context, jangan sarankan apapun.
 - Tampilkan rincian produk (Harga Asli & Harga Diskon) dengan jelas jika ada di Context.
 - **DILARANG TERTUKAR** antara Harga Asli dan Harga Diskon. Harga yang lebih murah adalah Harga Diskon/Promo. Selalu informasikan user jika barang tersebut sedang diskon.
 - Jika user bertanya daftar kategori, sebutkan semua kategori yang ada di atas.

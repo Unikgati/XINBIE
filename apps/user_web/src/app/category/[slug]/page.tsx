@@ -5,7 +5,13 @@ import CategoryProductGrid from './CategoryProductGrid';
 import { ProductGridSkeleton } from '@/components/sections/Skeletons';
 import DgSkeleton from '@/components/DgSkeleton';
 
-export default async function CategoryPage({ params, searchParams }: { params: { slug: string }, searchParams: { name?: string } }) {
+export default async function CategoryPage({ 
+  params, 
+  searchParams 
+}: { 
+  params: Promise<{ slug: string }>, 
+  searchParams: Promise<{ name?: string }> 
+}) {
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
 
