@@ -18,8 +18,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const recipe = await getRecipe(slug);
   if (!recipe) return { title: 'Resep Tidak Ditemukan' };
   return {
-    title: `${recipe.title} - Dapur Gizi`,
-    description: `Cara memasak ${recipe.title} dengan bahan segar dari Dapur Gizi.`,
+    title: `${recipe.title} - Dapurgizi`,
+    description: `Cara memasak ${recipe.title} dengan bahan segar dari Dapurgizi.`,
     openGraph: {
       images: recipe.heroImage ? [recipe.heroImage] : [],
     },
@@ -67,7 +67,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
               
               <div className={styles.ingredientsBox}>
                 <h2 className={styles.sidebarTitle}>Bahan Masakan</h2>
-                <p className={styles.sidebarSubtitle}>Beli bahan segar ini di Dapur Gizi</p>
+                <p className={styles.sidebarSubtitle}>Beli bahan segar ini di Dapurgizi</p>
                 
                 <div className={styles.productsList}>
                   {recipe.products && recipe.products.length > 0 ? (

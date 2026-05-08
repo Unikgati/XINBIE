@@ -14,16 +14,16 @@ const transporter = nodemailer.createTransport({
 
 export async function sendOTP(email: string, otp: string, type: string) {
   try {
-    let subject = 'Dapur Gizi - Kode OTP Verifikasi Email';
-    let text = `Halo,\n\nKode OTP Anda untuk verifikasi email adalah: ${otp}\n\nKode ini berlaku selama 10 menit. Jangan berikan kode ini kepada siapa pun.\n\nTerima kasih,\nTim Dapur Gizi`;
+    let subject = 'Dapurgizi - Kode OTP Verifikasi Email';
+    let text = `Halo,\n\nKode OTP Anda untuk verifikasi email adalah: ${otp}\n\nKode ini berlaku selama 10 menit. Jangan berikan kode ini kepada siapa pun.\n\nTerima kasih,\nTim Dapurgizi`;
 
     if (type === 'PASSWORD_RESET') {
-      subject = 'Dapur Gizi - Reset Password';
-      text = `Halo,\n\nKode OTP Anda untuk reset password adalah: ${otp}\n\nKode ini berlaku selama 10 menit. Jangan berikan kode ini kepada siapa pun.\n\nTerima kasih,\nTim Dapur Gizi`;
+      subject = 'Dapurgizi - Reset Password';
+      text = `Halo,\n\nKode OTP Anda untuk reset password adalah: ${otp}\n\nKode ini berlaku selama 10 menit. Jangan berikan kode ini kepada siapa pun.\n\nTerima kasih,\nTim Dapurgizi`;
     }
 
     const info = await transporter.sendMail({
-      from: `"Dapur Gizi" <${config.smtp.from}>`,
+      from: `"Dapurgizi" <${config.smtp.from}>`,
       to: email,
       subject: subject,
       text: text,

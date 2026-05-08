@@ -3,7 +3,7 @@ dotenv.config();
 
 export const config = {
   port: parseInt(process.env.API_PORT || '3001'),
-  appName: process.env.APP_NAME || 'Dapur Gizi',
+  appName: process.env.APP_NAME || 'Dapurgizi',
   apiUrl: process.env.API_URL || 'http://localhost:3001',
   adminUrl: process.env.ADMIN_URL || 'http://localhost:3000',
   adminWa: process.env.ADMIN_WA || '',
