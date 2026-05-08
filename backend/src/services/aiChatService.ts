@@ -162,7 +162,8 @@ export class AiChatService {
           
           // Keyword matches
           uniqueKeywords.forEach(kw => {
-            if (nameLower.includes(kw)) score += 20;
+            if (nameLower === kw) score += 100; // Exact word match (e.g. "Terong" matches "Terong")
+            if (nameLower.includes(kw)) score += 30;
             if (p.tags.some(t => t.toLowerCase().includes(kw))) score += 15;
             if (catLower.includes(kw)) score += 10;
             if (descLower.includes(kw)) score += 5;
@@ -279,6 +280,7 @@ ATURAN PESANAN:
 - JIKA stockQty bernilai 10 atau kurang, ANDA WAJIB MENYEBUTKAN ANGKA STOKNYA (Misal: "Stok Bawang Merah sisa 10 kg lagi").
 - JIKA user meminta jumlah barang yang tidak masuk akal (misal: ribuan/jutaan kg atau pesanan partai besar), ANDA **WAJIB** menjawab bahwa untuk pemesanan grosir/partai besar harus melalui WhatsApp Admin, dan set showWhatsApp: true. DILARANG MENGATAKAN "Bisa" untuk jumlah fantastis tersebut.
 - Jawablah jujur sesuai data. Jangan membulatkan atau mengarang status stok.
+- **ID MAPPING WAJIB**: Anda WAJIB memastikan bahwa \`recommendedProductIds\` yang Anda berikan adalah benar-benar milik produk yang Anda bahas dalam \`replyText\`. JANGAN PERNAH memberikan ID produk A (misal: Kacang Panjang) jika Anda sedang membahas produk B (misal: Terong Panjang). Periksa kembali kesesuaian Nama dan ID sebelum mengirim JSON.
 
 - JANGAN PERNAH mengarang harga, stok, atau nama produk yang tidak terdaftar di Context.
 - **DILARANG KERAS** menyebutkan angka harga atau stok yang tidak tertulis eksplisit di Context. Anda WAJIB menyalin angka (copy-paste) dari Context, dilarang menebak atau menggunakan pengetahuan internal sendiri. Periksa kembali setiap angka sebelum mengirim jawaban.
