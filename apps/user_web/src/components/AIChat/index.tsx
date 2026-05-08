@@ -22,7 +22,7 @@ interface Message {
 const INITIAL_MESSAGE: Message = {
   id: '1',
   sender: 'ai',
-  text: 'Halo! Kenalin, gue Bro Cool, asisten belanja gaul DapurGizi. Ada yang bisa gue bantu cari produk hari ini? 😎🥦'
+  text: 'Halo! Kenalin, gue Bro Cool, asisten belanja gaul Dapurgizi. Ada yang bisa gue bantu cari produk hari ini? 😎🥦'
 };
 
 export default function AIChat() {
@@ -241,7 +241,7 @@ export default function AIChat() {
                     {m.recommendations.showWhatsApp && (
                       <div style={{ background: '#e8f5e9', padding: '12px', borderRadius: '12px', border: '1px solid #2ecc71', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div>
-                          <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#075E54' }}>Customer Service DapurGizi</p>
+                          <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#075E54' }}>Customer Service Dapurgizi</p>
                           <p style={{ margin: 0, fontSize: '11px', color: '#666' }}>Tanya admin langsung via WhatsApp</p>
                         </div>
                         <a 

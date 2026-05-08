@@ -10,7 +10,7 @@ router.post('/generate-desc', async (req, res) => {
       return res.status(400).json({ message: 'productName is required' });
     }
 
-    const prompt = `Buat deskripsi produk untuk marketplace bahan dapur (DapurGizi).
+    const prompt = `Buat deskripsi produk untuk marketplace bahan dapur (Dapurgizi).
 
 Nama Produk: ${productName}
 Kategori: ${categoryName || 'Bahan Makanan'}
@@ -22,7 +22,7 @@ Aturan Penulisan (WAJIB DIIKUTI):
 - JANGAN berikan klaim medis/obat.
 - Bahasa sederhana, natural, tidak berlebihan, dan tidak puitis.
 - Hindari pengulangan fungsi produk atau kata-kata yang tidak perlu.
-- TIDAK BOLEH menyebutkan nama brand/merek apapun termasuk "DapurGizi".
+- TIDAK BOLEH menyebutkan nama brand/merek apapun termasuk "Dapurgizi".
 - TIDAK BOLEH menggunakan bullet point (<ul> atau <li>).
 - Format deskripsi harus teks biasa (PLAIN TEXT), dilarang menggunakan tag HTML apapun (seperti <p>, <b>, dsb). Gunakan newline (\n) untuk pemisah paragraf jika diperlukan.
 
