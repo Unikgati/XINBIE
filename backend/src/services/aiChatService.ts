@@ -16,7 +16,8 @@ export class AiChatService {
     // 1. Retrieval Phase (RAG)
     // Combine current message with previous one to maintain context for follow-ups
     const lastUserMsg = history.filter(h => h.role === 'user').pop()?.content || '';
-    const searchContext = `${lastUserMsg} ${userMessage}`.trim();
+    const lastAssistantMsg = history.filter(h => h.role === 'assistant').pop()?.content || '';
+    const searchContext = `${lastAssistantMsg} ${lastUserMsg} ${userMessage}`.trim();
     const contextData = await this.getRelevantContext(searchContext);
     
     // 2. AI Interaction
@@ -105,7 +106,10 @@ export class AiChatService {
           description: true,
           tags: true,
           isFeatured: true,
-          category: { select: { name: true } }
+          category: { select: { name: true } },
+          variants: {
+            select: { name: true, price: true, discountPrice: true, stockQty: true }
+          }
         }
       }),
       prisma.promoCode.findMany({
@@ -151,6 +155,8 @@ export class AiChatService {
           products = [];
         }
       } else {
+        const isCheckingVariants = /varian|pilihan|ukuran|size|jenis/i.test(lowerQuery);
+        
         products = allProducts.map(p => {
           let score = 0;
           const nameLower = p.name.toLowerCase();
@@ -162,12 +168,18 @@ export class AiChatService {
           
           // Keyword matches
           uniqueKeywords.forEach(kw => {
-            if (nameLower === kw) score += 100; // Exact word match (e.g. "Terong" matches "Terong")
-            if (nameLower.includes(kw)) score += 30;
+            if (nameLower === kw) score += 100;
+            if (nameLower.includes(kw)) score += 50; // Increased from 30
             if (p.tags.some(t => t.toLowerCase().includes(kw))) score += 15;
             if (catLower.includes(kw)) score += 10;
             if (descLower.includes(kw)) score += 5;
           });
+
+          // CRITICAL: If user is asking for variants, and this product HAS variants, give it a HUGE boost
+          // even if the keywords don't match. This ensures AI sees products with variants.
+          if (isCheckingVariants && p.variants && p.variants.length > 0) {
+            score += 80;
+          }
 
           return { ...p, _score: score };
         })
@@ -176,9 +188,17 @@ export class AiChatService {
         .slice(0, 12);
       }
     } else {
-      // For general queries, only show a few featured products to keep the context clean
-      products = products.filter(p => (p as any).isFeatured).slice(0, 5);
-      // Fallback if no featured products
+      const isCheckingVariants = /varian|pilihan|ukuran|size|jenis/i.test(lowerQuery);
+      
+      // For general queries, show featured products OR products with variants if checking for them
+      if (isCheckingVariants) {
+        products = allProducts.filter(p => p.variants && p.variants.length > 0).slice(0, 8);
+        if (products.length === 0) products = allProducts.filter(p => (p as any).isFeatured).slice(0, 5);
+      } else {
+        products = allProducts.filter(p => (p as any).isFeatured).slice(0, 5);
+      }
+      
+      // Fallback if no products found yet
       if (products.length === 0) products = allProducts.slice(0, 5);
     }
 
@@ -377,7 +397,7 @@ Wajib JSON murni:
 
     console.error('AI API Final Error:', lastError.message || lastError);
     return {
-      replyText: "Maaf, asisten sedang sangat sibuk melayani banyak pelanggan. Mohon coba lagi beberapa saat lagi ya. 🙏",
+      replyText: "Maaf, sepertinya saya sedang kesulitan terhubung dengan 'otak' saya (server AI). Mohon pastikan koneksi internet stabil dan coba lagi ya. 🙏",
       recommendedProductIds: [],
       recommendedPromoCodes: [],
       showWhatsApp: false

@@ -23,10 +23,12 @@ export 'models/cart_item.dart';
 export 'models/region.dart';
 export 'models/cooking_video.dart';
 export 'models/flash_sale.dart';
+export 'models/recipe.dart';
 
 
 // API
 export 'api/api_client.dart';
+export 'api/api_providers.dart';
 export 'api/api_endpoints.dart';
 export 'api/api_exception.dart';
 export 'api/socket_service.dart';
@@ -44,6 +46,7 @@ export 'repositories/driver_repository.dart';
 export 'repositories/banner_repository.dart';
 export 'repositories/delivery_repository.dart';
 export 'repositories/region_repository.dart';
+export 'repositories/recipe_repository.dart';
 
 // Utils
 export 'utils/currency_formatter.dart';

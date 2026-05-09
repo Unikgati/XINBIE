@@ -13,6 +13,7 @@ abstract class Product with _$Product {
   const factory Product({
     required String id,
     required String name,
+    String? slug,
     @Default('') String description,
     String? categoryId,
     required int price,

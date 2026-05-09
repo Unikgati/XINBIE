@@ -7,6 +7,7 @@ interface Recipe {
   title: string;
   slug: string;
   heroImage?: string;
+  stepsCount?: number;
   _count?: {
     steps: number;
   };
@@ -27,7 +28,7 @@ export default function DgRecipeCard({ recipe }: { recipe: Recipe }) {
         <div className={styles.meta} style={{ marginTop: 8 }}>
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>format_list_numbered</span>
           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' }}>
-            {recipe._count?.steps || 0} Langkah Memasak
+            {recipe.stepsCount ?? recipe._count?.steps ?? 0} Langkah Memasak
           </span>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
+import '../api/api_providers.dart';
 import '../api/api_endpoints.dart';
 import '../models/product.dart';
 import '../models/category.dart';

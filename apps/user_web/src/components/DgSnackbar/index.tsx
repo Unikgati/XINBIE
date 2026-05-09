@@ -12,7 +12,7 @@ export default function DgSnackbar() {
   return (
     <div className={`${styles.snackbar} ${styles[type]}`}>
       <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
-        {type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}
+        {type === 'success' ? 'check_circle' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info'}
       </span>
       {message}
     </div>

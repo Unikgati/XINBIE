@@ -1,5 +1,6 @@
 import React from 'react';
 import ProductDetailClient from './ProductDetailClient';
+import DOMPurify from 'isomorphic-dompurify';
 
 async function fetchProduct(slug: string) {
   try {
@@ -31,6 +32,11 @@ export default async function ProductDetailContainer({ slug }: { slug: string })
 
   const relatedProducts = product.populatedRelatedProducts || [];
   const similarProducts = product.populatedSimilarProducts || [];
+
+  // Sanitize description on the server
+  if (product.description) {
+    product.description = DOMPurify.sanitize(product.description.replace(/&nbsp;/g, ' '));
+  }
 
   return <ProductDetailClient product={product} relatedProducts={relatedProducts} similarProducts={similarProducts} />;
 }

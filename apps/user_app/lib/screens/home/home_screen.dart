@@ -10,6 +10,7 @@ import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/user_providers.dart';
 import '../../providers/banner_provider.dart';
+import '../../providers/recipe_provider.dart';
 import '../../providers/promo_provider.dart';
 import '../../widgets/dg_product_bottom_sheet.dart';
 import '../../widgets/dg_promo_voucher_card.dart';
@@ -434,7 +435,91 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               },
             ),
 
-            // Inspirasi Masak Section
+            // Inspirasi Resep Section
+            SliverToBoxAdapter(
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final recipesAsync = ref.watch(paginatedRecipesProvider);
+                  
+                  return recipesAsync.when(
+                    data: (recipes) {
+                      if (recipes.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Inspirasi Resep 🧑‍🍳', style: AppTypography.h4),
+                                GestureDetector(
+                                  onTap: () => context.push('/recipes'),
+                                  child: Text(
+                                    'Lihat Semua',
+                                    style: AppTypography.labelLarge.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            height: 280,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: recipes.length > 5 ? 5 : recipes.length,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemBuilder: (context, index) {
+                                final recipe = recipes[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 16),
+                                  child: DgRecipeCard(
+                                    recipe: recipe,
+                                    width: 180,
+                                    onTap: () => context.push('/recipe/${recipe.slug}'),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+                          child: DgShimmer(width: 150, height: 24),
+                        ),
+                        SizedBox(
+                          height: 280,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: 3,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemBuilder: (context, index) => Padding(
+                              padding: const EdgeInsets.only(right: 16),
+                              child: DgShimmer(
+                                width: 180,
+                                height: 280,
+                                borderRadius: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    error: (err, _) => const SizedBox.shrink(),
+                  );
+                },
+              ),
+            ),
+
+            // Inspirasi Masak Section (Videos)
             SliverToBoxAdapter(
               child: Consumer(
                 builder: (context, ref, child) {
@@ -451,7 +536,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Inspirasi Masak Hari Ini 🧑‍🍳', style: AppTypography.h4),
+                                Text('Inspirasi Video Masak 📹', style: AppTypography.h4),
                                 GestureDetector(
                                   onTap: () => context.push('/cooking-video-gallery'),
                                   child: Text(

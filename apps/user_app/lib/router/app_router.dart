@@ -30,6 +30,8 @@ import '../screens/profile/address_list_screen.dart';
 import '../screens/profile/address_form_screen.dart';
 import '../screens/notification/notification_screen.dart';
 import '../screens/search/search_screen.dart';
+import '../screens/recipe/recipe_list_screen.dart';
+import '../screens/recipe/recipe_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -228,6 +230,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/cooking-video-gallery',
         builder: (_, __) => const CookingVideoGalleryScreen(),
+      ),
+      GoRoute(
+        path: '/recipes',
+        builder: (_, __) => const RecipeListScreen(),
+      ),
+      GoRoute(
+        path: '/recipe/:slug',
+        builder: (_, state) => RecipeDetailScreen(
+          slug: state.pathParameters['slug']!,
+        ),
       ),
     ],
   );

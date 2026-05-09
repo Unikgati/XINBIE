@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import DOMPurify from 'isomorphic-dompurify';
 import styles from './ProductDetail.module.css';
 import DgQuantitySelector from '@/components/DgQuantitySelector';
 import DgProductCard from '@/components/DgProductCard';
@@ -18,8 +17,10 @@ import { getSocket } from '@/lib/socket';
 interface Variant {
   id: string;
   name: string;
-  price?: number;
-  discountPrice?: number;
+  price: number;
+  discountPrice: number | null;
+  imageUrl: string | null;
+  stockQty: number;
 }
 
 interface CookingVideo {
@@ -55,9 +56,7 @@ interface ProductDetailClientProps {
 }
 
 export default function ProductDetailClient({ product, relatedProducts, similarProducts }: ProductDetailClientProps) {
-  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
-    product.variants?.length > 0 ? product.variants[0] : null
-  );
+  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const router = useRouter();
   const snackbar = useSnackbarStore();
   const [isDescExpanded, setIsDescExpanded] = useState(false);
@@ -100,8 +99,10 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
   const isFlashSaleActive = !!activeFlashSale;
 
   // Real-time stock state
-  const [realTimeStock, setRealTimeStock] = useState<number>(activeFlashSale?.flashStock || 0);
-  const [realTimeSold, setRealTimeSold] = useState<number>(activeFlashSale?.soldQty || 0);
+  const initialSold = activeFlashSale?.soldQty || 0;
+  const initialTotal = activeFlashSale?.flashStock || 0;
+  const [realTimeStock, setRealTimeStock] = useState<number>(initialTotal - initialSold);
+  const [realTimeSold, setRealTimeSold] = useState<number>(initialSold);
 
   useEffect(() => {
     if (!isFlashSaleActive || !activeFlashSale) return;
@@ -111,7 +112,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
 
     const handleStockUpdate = (data: { flashSaleItemId: string, soldQty: number, stockQty: number }) => {
       if (data.flashSaleItemId === activeFlashSale.id) {
-        setRealTimeStock(data.stockQty);
+        setRealTimeStock(data.stockQty - data.soldQty);
         setRealTimeSold(data.soldQty);
       }
     };
@@ -136,10 +137,47 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
   const displayPrice = finalPrice;
   const calculatedDiscountPercent = hasDiscount ? Math.round(((basePrice - finalPrice) / basePrice) * 100) : 0;
 
-  const isOutOfStock = product.stockQty <= 0;
+  // Calculate total stock from all variants for the master display
+  const totalVariantStock = product.variants?.reduce((sum, v) => sum + (v.stockQty || 0), 0) || 0;
+  
+  const isLongDescription = product.description && product.description.length > 200;
 
-  const handleAddToCart = () => {
-    if (isOutOfStock) return;
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = product.name;
+    const text = `Cek produk segar ${product.name} di DapurGizi!`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: title,
+          text: text,
+          url: url,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        }
+      }
+    } else {
+      // Fallback for browsers that don't support native share
+      navigator.clipboard.writeText(url);
+      snackbar.show('Link berhasil disalin', 'success');
+    }
+  };
+
+  // Effective stock and price based on selection
+  const effectiveStock = selectedVariant ? selectedVariant.stockQty : (product.variants?.length > 0 ? totalVariantStock : product.stockQty);
+  const isOutOfStock = effectiveStock <= 0;
+  const isSelectionMissing = product.variants?.length > 0 && !selectedVariant;
+
+  const handleAddToCart = (): boolean => {
+    if (isOutOfStock) return false;
+
+    if (product.variants?.length > 0 && !selectedVariant) {
+      snackbar.show('Silakan pilih varian terlebih dahulu', 'warning');
+      return false;
+    }
 
     if (cartQty > 0) {
       updateQuantity(product.id, quantity, selectedVariant?.id);
@@ -152,17 +190,20 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
         originalPrice: basePrice,
         unit: product.unit,
         imageUrl: images[0],
-        stockQty: product.stockQty,
+        stockQty: effectiveStock,
         isUnlimitedStock: product.isUnlimitedStock,
       }, quantity);
     }
     
     snackbar.show('Berhasil ditambahkan ke keranjang', 'success');
+    return true;
   };
 
   const handleBuyNow = () => {
-    handleAddToCart();
-    router.push('/cart');
+    const success = handleAddToCart();
+    if (success) {
+      router.push('/cart');
+    }
   };
 
   // Timer logic for Flash Sale
@@ -213,7 +254,11 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
 
       <div className={styles.grid}>
         {/* Left: Images */}
-        <ProductImageGallery images={images} name={product.name} />
+        <ProductImageGallery 
+          images={images} 
+          name={product.name} 
+          variantImage={selectedVariant?.imageUrl}
+        />
 
         {/* Right: Info */}
         <div className={styles.infoSection}>
@@ -243,7 +288,14 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
 
           <div className={styles.headerGroup}>
             <div className={styles.categoryBadge}>{product.categoryName || 'Produk'}</div>
+            <div className={styles.titleWrapper}>
             <h1 className={styles.title}>{product.name}</h1>
+            <div className={styles.shareActions}>
+              <button onClick={handleShare} className={styles.shareBtn} title="Bagikan Produk">
+                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>share</span>
+              </button>
+            </div>
+          </div>
             
             <div className={styles.priceContainer}>
               <span className={styles.activePrice}>Rp {formatRp(displayPrice)}</span>
@@ -296,7 +348,8 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
             <div className={styles.metaRow}>
               <span className={styles.metaLabel}>Stok</span>
               <span className={styles.metaValue} style={{ color: isOutOfStock ? 'var(--color-error)' : 'var(--color-success)' }}>
-                {isOutOfStock ? 'Habis' : `Sisa ${product.stockQty}`}
+                {isOutOfStock ? 'Habis' : `Sisa ${effectiveStock} ${product.unit || ''}`}
+                {selectedVariant && <span style={{ fontSize: '12px', opacity: 0.7, marginLeft: '4px' }}>(Varian dipilih)</span>}
               </span>
             </div>
           </div>
@@ -315,7 +368,14 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
                       className={`${styles.variantButton} ${selectedVariant?.id === v.id ? styles.variantButtonActive : ''}`}
                       onClick={() => setSelectedVariant(v)}
                     >
-                      {v.name}
+                      {v.imageUrl && (
+                        <img 
+                          src={v.imageUrl} 
+                          alt={v.name} 
+                          className={styles.variantThumbnail}
+                        />
+                      )}
+                      <span>{v.name}</span>
                       {isDiscounted && (
                         <div className={styles.variantDiscountCorner}>%</div>
                       )}
@@ -331,16 +391,26 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
               quantity={quantity} 
               onChanged={setQuantity} 
               min={1} 
-              max={product.stockQty}
+              max={effectiveStock}
               large
               editable
             />
             <div className={styles.actionButtonsRow}>
-              <button className={styles.addToCartBtn} disabled={isOutOfStock} onClick={handleAddToCart}>
+              <button 
+                className={styles.addToCartBtn} 
+                disabled={isOutOfStock} 
+                onClick={handleAddToCart}
+                style={{ opacity: isSelectionMissing ? 0.7 : 1 }}
+              >
                 {!isOutOfStock && <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>}
                 {isOutOfStock ? 'Stok Habis' : 'Keranjang'}
               </button>
-              <button className={styles.buyNowBtn} disabled={isOutOfStock} onClick={handleBuyNow}>
+              <button 
+                className={styles.buyNowBtn} 
+                disabled={isOutOfStock} 
+                onClick={handleBuyNow}
+                style={{ opacity: isSelectionMissing ? 0.7 : 1 }}
+              >
                 {!isOutOfStock && <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>shopping_bag</span>}
                 {isOutOfStock ? 'Stok Habis' : 'Beli Langsung'}
               </button>
@@ -355,7 +425,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
                   ref={descRef}
                   className={`${styles.descriptionHtml} ${!isDescExpanded && isCollapsible ? styles.collapsed : ''}`}
                   dangerouslySetInnerHTML={{ 
-                    __html: DOMPurify.sanitize(product.description.replace(/&nbsp;/g, ' ')) 
+                    __html: product.description 
                   }} 
                 />
                 {!isDescExpanded && isCollapsible && <div className={styles.descriptionFade} />}
@@ -480,16 +550,18 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
             className={styles.stickyAddToCartBtn} 
             disabled={isOutOfStock} 
             onClick={handleAddToCart}
+            style={{ opacity: isSelectionMissing ? 0.7 : 1 }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
-            Keranjang
+            {!isOutOfStock && <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>}
+            {isOutOfStock ? 'Stok Habis' : 'Keranjang'}
           </button>
           <button 
             className={styles.stickyBuyNowBtn} 
             disabled={isOutOfStock} 
             onClick={handleBuyNow}
+            style={{ opacity: isSelectionMissing ? 0.7 : 1 }}
           >
-            Beli Langsung
+            {isOutOfStock ? 'Stok Habis' : 'Beli Langsung'}
           </button>
         </div>
       </div>

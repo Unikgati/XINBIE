@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:ui_kit/ui_kit.dart';
 import 'package:core/core.dart';
 import '../../providers/product_provider.dart';
@@ -74,19 +76,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           final displaySoldQty = fsUpdate?.soldQty ?? (activeFlash?.soldQty ?? 0);
           final displayStockQty = fsUpdate?.stockQty ?? (activeFlash?.stockQty ?? product.stockQty);
           
+          int totalVariantStock = hasVariants ? product.variants!.fold(0, (sum, v) => sum + v.stockQty) : product.stockQty;
+          
           int activePrice = product.price;
           int? activeDiscount = isInFlash ? activeFlash.flashPrice : product.discountPrice;
-          int activeStock = isInFlash ? (displayStockQty - displaySoldQty) : product.stockQty;
+          int activeStock = isInFlash 
+              ? (displayStockQty - displaySoldQty) 
+              : (_selectedVariant?.stockQty ?? (hasVariants ? totalVariantStock : product.stockQty));
 
-          if (hasVariants) {
-            _selectedVariant ??= product.variants!.first;
-            if (!isInFlash) {
-              activePrice = _selectedVariant!.price;
-              activeDiscount = _selectedVariant!.discountPrice;
-              activeStock = _selectedVariant!.stockQty;
-            } else {
-              activePrice = _selectedVariant!.price;
-            }
+          if (_selectedVariant != null && !isInFlash) {
+            activePrice = _selectedVariant!.price;
+            activeDiscount = _selectedVariant!.discountPrice;
+            activeStock = _selectedVariant!.stockQty;
           }
 
           // Sync _qty with activeStock
@@ -108,9 +109,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 expandedHeight: 300,
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
-                  background: product.images.isNotEmpty 
+                  background: (product.images.isNotEmpty || (_selectedVariant?.imageUrl != null))
                     ? Image.network(
-                        AppConfig.fixImageUrl(product.images.first),
+                        AppConfig.fixImageUrl(_selectedVariant?.imageUrl ?? product.images.first),
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                           color: AppColors.background,
@@ -127,6 +128,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       ),
                 ),
                 leading: _CircleBack(onTap: () => context.pop()),
+                actions: [
+                  _CircleShare(onTap: () {
+                    final link = 'https://dapurgizi.com/product/${product.slug ?? product.id}';
+                    Share.share('Beli ${product.name} di Dapurgizi: $link');
+                  }),
+                  const SizedBox(width: 8),
+                ],
               ),
 
               SliverToBoxAdapter(
@@ -246,7 +254,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         const SizedBox(height: 16),
 
                         // Info rows: Satuan & Stok
-                        _InfoRow(label: 'Satuan', value: '${product.stockQty == 0 && !product.isUnlimitedStock ? '' : ''}1 ${product.unit}'),
+                        _InfoRow(label: 'Satuan', value: '1 ${product.unit}'),
                         const SizedBox(height: 10),
                         _InfoRow(
                           label: 'Stok',
@@ -259,7 +267,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           Padding(
                             padding: const EdgeInsets.only(top: 4, left: 80),
                             child: Text(
-                              'Sisa $activeStock item lagi!',
+                              'Sisa $activeStock ${product.unit} lagi!',
                               style: AppTypography.caption.copyWith(
                                 color: AppColors.error,
                                 fontWeight: FontWeight.bold,
@@ -301,12 +309,29 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                         ),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
-                                      child: Text(
-                                        v.name,
-                                        style: AppTypography.bodyMedium.copyWith(
-                                          color: isSelected ? AppColors.primaryDark : AppColors.textPrimary,
-                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                        ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (v.imageUrl != null) ...[
+                                            ClipRRect(
+                                              borderRadius: BorderRadius.circular(4),
+                                              child: Image.network(
+                                                AppConfig.fixImageUrl(v.imageUrl!),
+                                                width: 24,
+                                                height: 24,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          Text(
+                                            v.name,
+                                            style: AppTypography.bodyMedium.copyWith(
+                                              color: isSelected ? AppColors.primaryDark : AppColors.textPrimary,
+                                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                     // Red discount corner badge (bottom-right)
@@ -777,7 +802,7 @@ class _FlashSaleBannerState extends State<_FlashSaleBanner> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Tersisa ${widget.stockQty} item',
+                  'Tersisa ${widget.stockQty - widget.soldQty} item',
                   style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -811,6 +836,33 @@ class _FlashSaleBannerState extends State<_FlashSaleBanner> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CircleShare extends StatelessWidget {
+  const _CircleShare({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+          ),
+          child: const Center(
+            child: Icon(Icons.share, size: 20, color: AppColors.textPrimary),
+          ),
+        ),
       ),
     );
   }

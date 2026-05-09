@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Select from 'react-select';
+import Select, { components } from 'react-select';
 import ActionMenu from '@/components/ActionMenu';
 import CustomSelect from '@/components/CustomSelect';
 import { useToast } from '@/components/Toast';
@@ -48,6 +48,33 @@ const selectStyles = {
   option: (base: any, state: any) => ({ ...base, background: state.isFocused ? 'var(--primary-surface)' : 'transparent', color: 'var(--text-primary)', fontSize: 13 }),
   input: (base: any) => ({ ...base, color: 'var(--text-primary)' }),
   placeholder: (base: any) => ({ ...base, color: 'var(--text-hint)', fontSize: 13 }),
+};
+
+// Custom components for React-Select to show images
+const CustomOption = (props: any) => {
+  const { data } = props;
+  return (
+    <components.Option {...props}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ 
+          width: 32, height: 32, borderRadius: 4, overflow: 'hidden', 
+          background: 'var(--divider)', flexShrink: 0 
+        }}>
+          {data.image ? (
+            <img src={data.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-hint)' }}>image</span>
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontWeight: 500 }}>{data.label}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>Stok: {data.stock}</span>
+        </div>
+      </div>
+    </components.Option>
+  );
 };
 
 export default function FlashSalesPage() {
@@ -306,11 +333,27 @@ export default function FlashSalesPage() {
                       <div className="form-group">
                         <label className="form-label">Produk</label>
                         <Select
-                          options={allProducts.map(p => ({ value: p.id, label: `${p.name} (Stok: ${p.stockQty})` }))}
-                          value={allProducts.filter(p => p.id === item.productId).map(p => ({ value: p.id, label: p.name }))[0]}
+                          options={allProducts.map(p => ({ 
+                            value: p.id, 
+                            label: p.name,
+                            image: p.images?.[0] || null,
+                            stock: p.stockQty
+                          }))}
+                          value={allProducts
+                            .filter(p => p.id === item.productId)
+                            .map(p => ({ 
+                              value: p.id, 
+                              label: p.name,
+                              image: p.images?.[0] || null,
+                              stock: p.stockQty
+                            }))[0]}
                           onChange={(val: any) => updateItem(idx, 'productId', val.value)}
                           styles={selectStyles}
                           placeholder="Pilih Produk"
+                          menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                          components={{
+                            Option: CustomOption
+                          }}
                         />
                       </div>
                       <div className="form-group">

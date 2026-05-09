@@ -160,6 +160,8 @@ interface FormVariant {
   costPrice: string;
   discountPrice: string;
   stockQty: string;
+  imageUrl?: string;
+  file?: File;
 }
 
 export default function ProductsPage() {
@@ -323,7 +325,8 @@ export default function ProductsPage() {
       price: String(v.price),
       costPrice: String(v.costPrice),
       discountPrice: v.discountPrice ? String(v.discountPrice) : '',
-      stockQty: String(v.stockQty)
+      stockQty: String(v.stockQty),
+      imageUrl: v.imageUrl
     })) : []);
     setShowModal(true);
   };
@@ -374,6 +377,7 @@ export default function ProductsPage() {
           varData.append('costPrice', v.costPrice || '0');
           if (v.discountPrice) varData.append('discountPrice', v.discountPrice);
           varData.append('stockQty', v.stockQty || '0');
+          if (v.file) varData.append('image', v.file);
 
           if (v.tempId.includes('-')) {
             // It's a Prisma UUID, so update it
@@ -626,104 +630,77 @@ export default function ProductsPage() {
 
       {showModal && (
         <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 840 }}>
             <div className="modal-header">
               <h3><span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>{editingId ? 'edit' : 'add_shopping_cart'}</span> {editingId ? 'Edit Produk' : 'Tambah Produk'}</h3>
               <button className="btn btn-outline btn-icon" onClick={handleCloseModal}><span className="material-symbols-outlined">close</span></button>
             </div>
-            <div className="modal-body" style={{ maxWidth: 800, margin: '0 auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 24, marginBottom: 16 }}>
-                <div className="left-col">
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">
-                      Foto Produk
-                    </label>
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
-                      {/* Existing images from server */}
-                      {existingImages.map((url, idx) => (
-                        <div key={`existing-${idx}`} style={{ 
-                          width: 180, height: 180, borderRadius: 'var(--radius-md)', 
-                          background: 'var(--divider)', position: 'relative', overflow: 'hidden',
-                          boxShadow: 'var(--shadow-sm)'
-                        }}>
-                          <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <button type="button" 
-                            onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== idx))}
-                            style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
-                          </button>
-                        </div>
-                      ))}
-
-                      {/* Newly uploaded images */}
-                      {formImages.map((file, idx) => (
-                        <div key={`new-${idx}`} style={{ 
-                          width: 180, height: 180, borderRadius: 'var(--radius-md)', 
-                          background: 'var(--divider)', position: 'relative', overflow: 'hidden',
-                          boxShadow: 'var(--shadow-sm)'
-                        }}>
-                          <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <button type="button" 
-                            onClick={() => setFormImages(prev => prev.filter((_, i) => i !== idx))}
-                            style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
-                          </button>
-                        </div>
-                      ))}
-
-                      {/* Upload button - only visible if no images */}
-                      {(existingImages.length === 0 && formImages.length === 0) && (
-                        <label className="upload-tile hover-scale" style={{ 
-                          width: 180, height: 180, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                          cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
-                          background: 'var(--primary-surface)'
-                        }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: 48, marginBottom: 8, color: 'var(--primary-light)' }}>add_photo_alternate</span>
-                          <span style={{ fontSize: 12, fontWeight: 500 }}>Upload Foto</span>
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            style={{ display: 'none' }} 
-                            onChange={e => {
-                              if (e.target.files?.length) {
-                                setFormImages([e.target.files[0]]);
-                                setExistingImages([]);
-                              }
-                            }} 
-                          />
-                        </label>
-                      )}
-                      
-                      {/* Change button if image exists */}
-                      {(existingImages.length > 0 || formImages.length > 0) && (
-                         <label style={{ 
-                           position: 'absolute', bottom: 8, left: 8, right: 8,
-                           background: 'rgba(255,255,255,0.9)', color: 'var(--primary)',
-                           padding: '6px 12px', borderRadius: 'var(--radius-sm)',
-                           fontSize: 11, fontWeight: 600, textAlign: 'center', cursor: 'pointer',
-                           boxShadow: 'var(--shadow-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
-                         }}>
-                           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
-                           Ganti Foto
-                           <input 
-                            type="file" 
-                            accept="image/*" 
-                            style={{ display: 'none' }} 
-                            onChange={e => {
-                              if (e.target.files?.length) {
-                                setFormImages([e.target.files[0]]);
-                                setExistingImages([]);
-                              }
-                            }} 
-                          />
-                         </label>
-                      )}
+            <div className="modal-body">
+              {/* Top Gallery Section */}
+              <div className="form-group" style={{ marginBottom: 24 }}>
+                <label className="form-label" style={{ marginBottom: 12 }}>Galeri Foto Produk</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 16 }}>
+                  {/* Existing images from server */}
+                  {existingImages.map((url, idx) => (
+                    <div key={`existing-${idx}`} style={{ 
+                      width: '100%', height: 140, borderRadius: 'var(--radius-md)', 
+                      background: 'var(--divider)', position: 'relative', overflow: 'hidden',
+                      boxShadow: 'var(--shadow-sm)', border: '1px solid var(--divider)'
+                    }}>
+                      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button type="button" 
+                        onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+                      </button>
                     </div>
-                  </div>
-                </div>
+                  ))}
 
-                <div className="right-col" style={{ display: 'flex', flexDirection: 'column', gap: 16, justifyContent: 'center' }}>
+                  {/* Newly uploaded images */}
+                  {formImages.map((file, idx) => (
+                    <div key={`new-${idx}`} style={{ 
+                      width: '100%', height: 140, borderRadius: 'var(--radius-md)', 
+                      background: 'var(--divider)', position: 'relative', overflow: 'hidden',
+                      boxShadow: 'var(--shadow-sm)', border: '1px solid var(--divider)'
+                    }}>
+                      <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button type="button" 
+                        onClick={() => setFormImages(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Upload button */}
+                  {(existingImages.length + formImages.length < 10) && (
+                    <label className="upload-tile hover-scale" style={{ 
+                      width: '100%', height: 140, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)', 
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                      cursor: 'pointer', color: 'var(--text-hint)', transition: 'all 0.2s',
+                      background: 'var(--primary-surface)'
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 40, marginBottom: 4, color: 'var(--primary-light)' }}>add_photo_alternate</span>
+                      <span style={{ fontSize: 12, fontWeight: 500 }}>Upload Foto</span>
+                      <input 
+                        type="file" 
+                        multiple
+                        accept="image/*" 
+                        style={{ display: 'none' }} 
+                        onChange={e => {
+                          if (e.target.files?.length) {
+                            setFormImages(prev => [...prev, ...Array.from(e.target.files!)]);
+                          }
+                        }} 
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Info Grid Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label">Nama Produk</label>
                     <input className="form-input" placeholder="Masukkan nama produk" value={formName} onChange={e => setFormName(e.target.value)} />
@@ -738,29 +715,13 @@ export default function ProductsPage() {
                     />
                   </div>
                 </div>
-              </div>
-              <div style={formVariants.length > 0 ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      Harga Beli (Rp)
-                      <div className="tooltip-wrapper">
-                        <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--text-hint)', cursor: 'help', pointerEvents: 'auto' }}>info</span>
-                        <span className="tooltip-text">Harga beli hanya terlihat di admin panel. Tidak ditampilkan ke pelanggan.</span>
-                      </div>
-                    </label>
-                    <input className="form-input" type="number" placeholder="HPP" value={formCostPrice} onChange={e => setFormCostPrice(e.target.value)} />
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Stok</label>
+                    <input className="form-input" type="number" placeholder="0" value={formStock} onChange={e => setFormStock(e.target.value)} />
                   </div>
-                  <div className="form-group"><label className="form-label">Harga Jual (Rp)</label><input className="form-input" type="number" placeholder="0" value={formPrice} onChange={e => setFormPrice(e.target.value)} /></div>
-                  <div className="form-group"><label className="form-label">Harga Diskon (Rp)</label><input className="form-input" type="number" placeholder="Opsional" value={formDiscountPrice} onChange={e => setFormDiscountPrice(e.target.value)} /></div>
-                </div>
-                {formVariants.length > 0 && (
-                  <div style={{ fontSize: 12, color: 'var(--warning)', marginTop: -8, marginBottom: 12 }}>* Harga utama diabaikan karena produk memiliki varian.</div>
-                )}
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div className="form-group"><label className="form-label">Stok</label><input className="form-input" type="number" placeholder="0" value={formStock} onChange={e => setFormStock(e.target.value)} /></div>
-                  <div className="form-group">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label">Satuan</label>
                     <CustomSelect
                       value={formUnit}
@@ -773,6 +734,33 @@ export default function ProductsPage() {
                     />
                   </div>
                 </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      Harga Beli
+                      <div className="tooltip-wrapper">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--text-hint)', cursor: 'help', pointerEvents: 'auto' }}>info</span>
+                        <span className="tooltip-text">Harga beli (HPP) hanya terlihat di admin.</span>
+                      </div>
+                    </label>
+                    <input className="form-input" type="number" placeholder="HPP" value={formCostPrice} onChange={e => setFormCostPrice(e.target.value)} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Harga Jual</label>
+                    <input className="form-input" type="number" placeholder="0" value={formPrice} onChange={e => setFormPrice(e.target.value)} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Diskon</label>
+                    <input className="form-input" type="number" placeholder="Opsional" value={formDiscountPrice} onChange={e => setFormDiscountPrice(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              <div style={formVariants.length > 0 ? { opacity: 0.5, pointerEvents: 'none', marginTop: 12 } : { marginTop: 12 }}>
+                {formVariants.length > 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--warning)', marginTop: 4, marginBottom: 12 }}>* Harga utama diabaikan karena produk memiliki varian.</div>
+                )}
               </div>
               <div className="form-group">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -908,34 +896,82 @@ export default function ProductsPage() {
                 {formVariants.length === 0 ? null : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {formVariants.map((v, idx) => (
-                      <div key={v.tempId} style={{ padding: 14, background: 'var(--primary-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--divider)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                          <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--primary-dark)' }}>
+                      <div key={v.tempId} style={{ padding: 14, background: 'var(--background)', borderRadius: 'var(--radius-md)', border: '1px solid var(--divider)', boxShadow: 'var(--shadow-sm)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                          <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--primary)' }}>
                             <span className="material-symbols-outlined" style={{ fontSize: 16, verticalAlign: -3 }}>subdirectory_arrow_right</span> Varian {idx + 1}
                           </span>
                           <button className="btn btn-outline btn-icon" type="button" onClick={() => removeFormVariant(v.tempId)} style={{ width: 28, height: 28, color: 'var(--error)' }}>
                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
                           </button>
                         </div>
-                        <div className="form-group" style={{ marginBottom: 8 }}>
-                          <input className="form-input" placeholder="Nama varian (cth: Besar, 1kg, 500ml)" value={v.name} onChange={e => updateFormVariant(v.tempId, 'name', e.target.value)} />
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label className="form-label" style={{ fontSize: 11 }}>Harga Beli</label>
-                            <input className="form-input" type="number" placeholder="0" value={v.costPrice} onChange={e => updateFormVariant(v.tempId, 'costPrice', e.target.value)} />
+                        
+                        <div style={{ display: 'flex', gap: 20, marginBottom: 4 }}>
+                          <div style={{ flexShrink: 0 }}>
+                            <label className="upload-tile hover-scale" style={{ 
+                              width: 150, height: 150, borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', overflow: 'hidden', background: 'var(--primary-surface)', position: 'relative',
+                              boxShadow: 'var(--shadow-sm)', color: 'var(--text-hint)'
+                            }}>
+                              {(v.file || v.imageUrl) ? (
+                                <>
+                                  <img 
+                                    src={v.file ? URL.createObjectURL(v.file) : v.imageUrl} 
+                                    alt="" 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                  />
+                                  <div style={{ 
+                                    position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', 
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    transition: 'background 0.2s'
+                                  }}>
+                                    <span className="material-symbols-outlined" style={{ color: '#fff', fontSize: 24, opacity: 0.9 }}>edit</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="material-symbols-outlined" style={{ fontSize: 48, color: 'var(--primary-light)', marginBottom: 8 }}>add_photo_alternate</span>
+                                  <span style={{ fontSize: 12, fontWeight: 500 }}>Upload Foto</span>
+                                </>
+                              )}
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                style={{ display: 'none' }} 
+                                onChange={e => {
+                                  if (e.target.files?.[0]) {
+                                    updateFormVariant(v.tempId, 'file', e.target.files[0] as any);
+                                  }
+                                }} 
+                              />
+                            </label>
                           </div>
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label className="form-label" style={{ fontSize: 11 }}>Harga Jual</label>
-                            <input className="form-input" type="number" placeholder="0" value={v.price} onChange={e => updateFormVariant(v.tempId, 'price', e.target.value)} />
-                          </div>
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label className="form-label" style={{ fontSize: 11 }}>Diskon</label>
-                            <input className="form-input" type="number" placeholder="Opsional" value={v.discountPrice} onChange={e => updateFormVariant(v.tempId, 'discountPrice', e.target.value)} />
-                          </div>
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label className="form-label" style={{ fontSize: 11 }}>Stok</label>
-                            <input className="form-input" type="number" placeholder="0" value={v.stockQty} onChange={e => updateFormVariant(v.tempId, 'stockQty', e.target.value)} />
+                          
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label className="form-label" style={{ fontSize: 11 }}>Nama Varian</label>
+                              <input className="form-input" placeholder="cth: Besar, 1kg, 500ml" value={v.name} onChange={e => updateFormVariant(v.tempId, 'name', e.target.value)} />
+                            </div>
+                            
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label" style={{ fontSize: 11 }}>Harga Beli</label>
+                                <input className="form-input" type="number" placeholder="0" value={v.costPrice} onChange={e => updateFormVariant(v.tempId, 'costPrice', e.target.value)} />
+                              </div>
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label" style={{ fontSize: 11 }}>Harga Jual</label>
+                                <input className="form-input" type="number" placeholder="0" value={v.price} onChange={e => updateFormVariant(v.tempId, 'price', e.target.value)} />
+                              </div>
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label" style={{ fontSize: 11 }}>Diskon</label>
+                                <input className="form-input" type="number" placeholder="Opsional" value={v.discountPrice} onChange={e => updateFormVariant(v.tempId, 'discountPrice', e.target.value)} />
+                              </div>
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label" style={{ fontSize: 11 }}>Stok</label>
+                                <input className="form-input" type="number" placeholder="0" value={v.stockQty} onChange={e => updateFormVariant(v.tempId, 'stockQty', e.target.value)} />
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

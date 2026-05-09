@@ -30,6 +30,10 @@
   background-color: #1976d2;
 }
 
+.warning {
+  background-color: #ed6c02;
+}
+
 @keyframes slideDown {
   from {
     top: -50px;

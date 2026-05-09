@@ -32,7 +32,10 @@ export async function getRecipes(req: Request, res: Response, next: NextFunction
     ]);
 
     res.json({
-      data: recipes,
+      data: recipes.map(r => ({
+        ...r,
+        stepsCount: r._count?.steps ?? 0
+      })),
       meta: {
         total,
         page,
