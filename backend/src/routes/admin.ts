@@ -83,8 +83,6 @@ router.put('/delivery-slots/day/:day', admin.adminUpdateDeliverySlotsByDay);
 router.put('/delivery-slots/:id', admin.adminUpdateDeliverySlot);
 router.delete('/delivery-slots/:id', admin.adminDeleteDeliverySlot);
 
-// Broadcast
-router.post('/broadcast', admin.adminBroadcast);
 
 // Cooking Videos
 router.get('/cooking-videos', admin.adminGetCookingVideos);

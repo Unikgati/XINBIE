@@ -999,31 +999,6 @@ export async function adminUpdateSettings(req: AuthRequest, res: Response, next:
 // Admin Broadcast
 // ═══════════════════════════════════════
 
-export async function adminBroadcast(req: AuthRequest, res: Response, next: NextFunction) {
-  try {
-    const { title, body, target } = req.body; // target: 'all_users' | 'all_drivers'
-
-    const where: any = {};
-    if (target === 'all_users') where.role = 'USER';
-    else if (target === 'all_drivers') where.role = 'DRIVER';
-
-    const users = await prisma.user.findMany({ where, select: { id: true } });
-
-    await prisma.notification.createMany({
-      data: users.map((u) => ({
-        userId: u.id,
-        title,
-        body,
-        type: 'broadcast',
-      })),
-    });
-
-    // TODO: Send FCM to topic
-
-    res.json({ message: `Broadcast terkirim ke ${users.length} user` });
-  } catch (err) { next(err); }
-}
-
 // ═══════════════════════════════════════
 // Driver Financial & Withdrawals
 // ═══════════════════════════════════════

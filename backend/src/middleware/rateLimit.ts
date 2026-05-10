@@ -30,7 +30,7 @@ export const loginLimiter = rateLimit({
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   message: { message: 'Terlalu banyak permintaan, silakan coba lagi nanti' },
   standardHeaders: true,
   legacyHeaders: false,

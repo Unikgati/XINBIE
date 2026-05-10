@@ -257,16 +257,6 @@ toast.error('Gagal menghapus resep');
                         </div>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{r.title}</div>
-                          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                            <span className="badge blue" style={{ fontSize: 10, padding: '2px 8px' }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>shopping_basket</span>
-                              {r.relatedProductIds?.length || 0} Produk
-                            </span>
-                            <span className="badge purple" style={{ fontSize: 10, padding: '2px 8px' }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>format_list_numbered</span>
-                              {r._count?.steps || 0} Langkah
-                            </span>
-                          </div>
                         </div>
                       </div>
                     </td>

@@ -29,7 +29,6 @@ const navItems = [
   { section: 'Sistem', items: [
     { href: '/delivery-slots', icon: 'event', label: 'Jadwal Pengiriman' },
     { href: '/settings', icon: 'settings', label: 'Pengaturan' },
-    { href: '/broadcast', icon: 'campaign', label: 'Broadcast' },
   ]},
 ];
 
