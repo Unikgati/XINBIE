@@ -691,6 +691,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           price: p.displayPrice,
           unit: p.unit,
           discountPrice: p.displayDiscountPrice,
+          flashPrice: p.activeFlashSaleItem?.flashPrice,
           discountPercent: p.discountPercent,
           variantCount: p.variants?.length ?? 0,
           hasMultiplePrices: p.hasMultiplePrices,

@@ -12,4 +12,5 @@ export const paginationQuerySchema = z.object({
   featured: z.string().optional().transform(v => v === 'true'),
   promo: z.string().optional().transform(v => v === 'true'),
   sort: z.string().optional().default('newest'),
+  ids: z.string().optional(),
 });

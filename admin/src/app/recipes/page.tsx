@@ -9,6 +9,7 @@ import { TableSkeleton, TableRowSkeleton } from '@/components/Skeleton';
 import { Pagination } from '@/components/Pagination';
 import RichTextEditor from '@/components/RichTextEditor';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
+import AsyncProductSelect from '@/components/AsyncProductSelect';
 
 interface Step {
   id?: string;
@@ -23,6 +24,7 @@ interface Recipe {
   slug: string;
   heroImage?: string;
   relatedProductIds: string[];
+  ingredients: string[];
   createdAt: string;
   steps: Step[];
   _count?: { steps: number };
@@ -34,56 +36,9 @@ interface Product {
   images: string[];
 }
 
-// Custom components for React-Select to show images
-const CustomOption = (props: any) => {
-  const { data } = props;
-  return (
-    <components.Option {...props}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ 
-          width: 32, height: 32, borderRadius: 4, overflow: 'hidden', 
-          background: 'var(--divider)', flexShrink: 0 
-        }}>
-          {data.image ? (
-            <img src={data.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-hint)' }}>image</span>
-            </div>
-          )}
-        </div>
-        <span>{data.label}</span>
-      </div>
-    </components.Option>
-  );
-};
-
-const CustomMultiValueLabel = (props: any) => {
-  const { data } = props;
-  return (
-    <components.MultiValueLabel {...props}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <div style={{ 
-          width: 20, height: 20, borderRadius: 3, overflow: 'hidden', 
-          background: 'var(--divider)', flexShrink: 0 
-        }}>
-          {data.image ? (
-            <img src={data.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 10, color: 'var(--text-hint)' }}>image</span>
-            </div>
-          )}
-        </div>
-        <span>{props.children}</span>
-      </div>
-    </components.MultiValueLabel>
-  );
-};
 
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
@@ -96,10 +51,13 @@ export default function RecipesPage() {
   const [formData, setFormData] = useState({
     title: '',
     relatedProductIds: [] as string[],
+    ingredients: [] as string[],
   });
   const [steps, setSteps] = useState<Step[]>([]);
   const [heroImage, setHeroImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [expandedStepIndex, setExpandedStepIndex] = useState<number | null>(0);
+  const [relatedProductOptions, setRelatedProductOptions] = useState<any[]>([]);
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -117,44 +75,58 @@ export default function RecipesPage() {
     }
   }, [page, searchTerm, toast]);
 
-  const fetchProducts = useCallback(async () => {
-    try {
-      const res = await apiGet('/products?limit=1000');
-      setProducts(res.data);
-    } catch (err) {
-      console.error('Failed to fetch products', err);
-    }
-  }, []);
 
   useEffect(() => {
     fetchRecipes();
-    fetchProducts();
-  }, [fetchRecipes, fetchProducts]);
+  }, [fetchRecipes]);
 
-  const handleOpenModal = (recipe: Recipe | null = null) => {
+  const handleOpenModal = async (recipe: Recipe | null = null) => {
     if (recipe) {
       setEditingRecipe(recipe);
       setFormData({
         title: recipe.title,
         relatedProductIds: recipe.relatedProductIds || [],
+        ingredients: recipe.ingredients || [],
       });
       setSteps(recipe.steps || []);
       setPreviewUrl(recipe.heroImage || null);
+      
+      // Fetch details for related products
+      if (recipe.relatedProductIds?.length > 0) {
+        try {
+          const res = await apiGet<any>(`/products?ids=${recipe.relatedProductIds.join(',')}`);
+          const products = res.data || (Array.isArray(res) ? res : []);
+          setRelatedProductOptions(products.map((p: any) => ({
+            value: p.id,
+            label: p.name,
+            image: p.images?.[0] || null
+          })));
+        } catch (err) {
+          console.error('Failed to fetch related products details', err);
+        }
+      } else {
+        setRelatedProductOptions([]);
+      }
     } else {
       setEditingRecipe(null);
       setFormData({
         title: '',
         relatedProductIds: [],
+        ingredients: [''],
       });
       setSteps([{ stepNumber: 1, instruction: '' }]);
+      setExpandedStepIndex(0);
       setPreviewUrl(null);
+      setRelatedProductOptions([]);
     }
     setHeroImage(null);
     setModalOpen(true);
   };
 
   const handleAddStep = () => {
-    setSteps([...steps, { stepNumber: steps.length + 1, instruction: '' }]);
+    const next = [...steps, { stepNumber: steps.length + 1, instruction: '' }];
+    setSteps(next);
+    setExpandedStepIndex(next.length - 1);
   };
 
   const handleRemoveStep = (index: number) => {
@@ -215,27 +187,11 @@ export default function RecipesPage() {
       toast.success('Resep dihapus');
       fetchRecipes();
     } catch (err) {
-      toast.error('Gagal menghapus resep');
+toast.error('Gagal menghapus resep');
     }
   };
 
-  const customSelectStyles = {
-    control: (base: any) => ({ ...base, background: 'var(--surface)', borderColor: 'var(--divider)', borderRadius: 'var(--radius-md)', minHeight: 40, fontSize: 14 }),
-    menu: (base: any) => ({ ...base, background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 'var(--radius-md)' }),
-    menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
-    option: (base: any, state: any) => ({ ...base, background: state.isFocused ? 'var(--primary-surface)' : 'transparent', color: 'var(--text-primary)', fontSize: 13 }),
-    multiValue: (base: any) => ({ ...base, background: 'var(--primary-surface)', borderRadius: 12 }),
-    multiValueLabel: (base: any) => ({ ...base, color: 'var(--primary-dark)', fontSize: 12, fontWeight: 500, padding: '2px 6px' }),
-    multiValueRemove: (base: any) => ({ ...base, color: 'var(--primary)', borderRadius: '0 12px 12px 0', ':hover': { background: 'var(--primary-light)', color: '#fff' } }),
-    input: (base: any) => ({ ...base, color: 'var(--text-primary)' }),
-    placeholder: (base: any) => ({ ...base, color: 'var(--text-hint)', fontSize: 13 }),
-  };
 
-  const productOptions = products.map(p => ({
-    value: p.id,
-    label: p.name,
-    image: p.images?.[0] || null
-  }));
 
   return (
     <>
@@ -417,22 +373,59 @@ export default function RecipesPage() {
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Produk Terkait (Bahan)</label>
-                      <Select 
+                      <AsyncProductSelect
                         isMulti
-                        options={productOptions}
-                        value={productOptions.filter(o => formData.relatedProductIds.includes(o.value))}
-                        onChange={selected => setFormData({ ...formData, relatedProductIds: (selected || []).map((s: any) => s.value) })}
-                        placeholder="Cari produk bahan masakan (misal: Mentega, Keju)"
-                        noOptionsMessage={() => 'Produk tidak ditemukan'}
-                        menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-                        styles={customSelectStyles}
-                        components={{
-                          Option: CustomOption,
-                          MultiValueLabel: CustomMultiValueLabel,
+                        placeholder="Cari produk bahan masakan..."
+                        value={relatedProductOptions}
+                        onChange={(selected: any) => {
+                          const options = selected || [];
+                          setRelatedProductOptions(options);
+                          setFormData({ ...formData, relatedProductIds: options.map((o: any) => o.value) });
                         }}
                       />
                     </div>
                   </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 24, marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>list_alt</span>
+                      Daftar Bahan (Umum)
+                    </h4>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setFormData({ ...formData, ingredients: [...formData.ingredients, ''] })}>
+                      <span className="material-symbols-outlined">add</span> Tambah Bahan
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    {formData.ingredients.map((ing, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input 
+                          className="form-input"
+                          placeholder="Cth: 3 siung bawang putih"
+                          value={ing}
+                          onChange={(e) => {
+                            const next = [...formData.ingredients];
+                            next[idx] = e.target.value;
+                            setFormData({ ...formData, ingredients: next });
+                          }}
+                        />
+                        <button type="button" className="btn btn-outline btn-icon" style={{ color: 'var(--error)', height: '40px', width: '40px', flexShrink: 0 }} onClick={() => setFormData({ ...formData, ingredients: formData.ingredients.filter((_, i) => i !== idx) })}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {formData.ingredients.length > 0 && (
+                    <button 
+                      type="button" 
+                      className="btn btn-outline" 
+                      style={{ marginTop: 12, width: '100%', borderStyle: 'dashed', background: 'var(--primary-surface)', color: 'var(--primary-dark)', borderColor: 'var(--primary-light)' }} 
+                      onClick={() => setFormData({ ...formData, ingredients: [...formData.ingredients, ''] })}
+                    >
+                      <span className="material-symbols-outlined">add_circle</span> Tambah Bahan Lainnya
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 24 }}>
@@ -447,28 +440,68 @@ export default function RecipesPage() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {steps.map((step, idx) => (
-                      <div key={idx} style={{ 
-                        padding: 16, 
-                        background: 'var(--surface)', 
-                        borderRadius: 'var(--radius-md)', 
-                        border: '1px solid var(--divider)',
-                        boxShadow: 'var(--shadow-sm)'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                          <span style={{ fontWeight: 600, color: 'var(--primary-dark)', fontSize: 14 }}>Langkah {step.stepNumber}</span>
-                          <button type="button" className="btn btn-outline btn-icon" style={{ width: 28, height: 28, color: 'var(--error)', border: 'none' }} onClick={() => handleRemoveStep(idx)}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
-                          </button>
+                    {steps.map((step, idx) => {
+                      const isExpanded = expandedStepIndex === idx;
+                      // Simple regex to strip HTML tags for snippet view
+                      const snippet = step.instruction.replace(/<[^>]*>/g, ' ').substring(0, 100);
+                      
+                      return (
+                        <div key={idx} style={{ 
+                          padding: 16, 
+                          background: isExpanded ? 'var(--surface)' : 'var(--background)', 
+                          borderRadius: 'var(--radius-md)', 
+                          border: isExpanded ? '1px solid var(--primary-light)' : '1px solid var(--divider)',
+                          boxShadow: isExpanded ? 'var(--shadow-sm)' : 'none',
+                          transition: 'all 0.2s ease'
+                        }}>
+                          <div 
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isExpanded ? 12 : 0, cursor: 'pointer' }}
+                            onClick={() => setExpandedStepIndex(isExpanded ? null : idx)}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                              <span className="material-symbols-outlined" style={{ 
+                                fontSize: 18, 
+                                color: isExpanded ? 'var(--primary)' : 'var(--text-hint)',
+                                transform: isExpanded ? 'rotate(90deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}>
+                                chevron_right
+                              </span>
+                              <span style={{ fontWeight: 600, color: isExpanded ? 'var(--primary-dark)' : 'var(--text-secondary)', fontSize: 14 }}>Langkah {step.stepNumber}</span>
+                              {!isExpanded && step.instruction && (
+                                <span style={{ fontSize: 12, color: 'var(--text-hint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>
+                                  — {snippet}...
+                                </span>
+                              )}
+                            </div>
+                            <button type="button" className="btn btn-outline btn-icon" style={{ width: 28, height: 28, color: 'var(--error)', border: 'none' }} onClick={(e) => { e.stopPropagation(); handleRemoveStep(idx); }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                            </button>
+                          </div>
+                          
+                          {isExpanded && (
+                            <div className="fade-in">
+                              <RichTextEditor 
+                                value={step.instruction}
+                                onChange={val => handleUpdateStep(idx, val)}
+                                placeholder="Tulis instruksi langkah ini..."
+                              />
+                            </div>
+                          )}
                         </div>
-                        <RichTextEditor 
-                          value={step.instruction}
-                          onChange={val => handleUpdateStep(idx, val)}
-                          placeholder="Tulis instruksi langkah ini..."
-                        />
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
+                  {steps.length > 0 && (
+                    <button 
+                      type="button" 
+                      className="btn btn-outline" 
+                      style={{ marginTop: 16, width: '100%', borderStyle: 'dashed', background: 'var(--primary-surface)', color: 'var(--primary-dark)', borderColor: 'var(--primary-light)', height: 48 }} 
+                      onClick={handleAddStep}
+                    >
+                      <span className="material-symbols-outlined">add_circle</span> Tambah Langkah Lainnya
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="modal-footer" style={{ borderTop: '1px solid var(--divider)', background: 'var(--surface-alt)' }}>

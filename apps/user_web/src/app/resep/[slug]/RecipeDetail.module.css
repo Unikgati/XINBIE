@@ -81,31 +81,69 @@
 }
 
 .title {
-  font-size: 36px;
-  font-weight: 800;
+  font-size: clamp(28px, 4.5vw, 42px);
+  font-weight: 900;
   color: var(--color-text-primary);
-  margin-bottom: 12px;
-  line-height: 1.2;
+  margin-bottom: 16px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 .metaInfo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 12px;
   font-size: 14px;
-  color: var(--color-primary-dark);
-  font-weight: 600;
-  margin-bottom: 40px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin-bottom: 32px;
 }
 
 .sectionTitle {
-  font-size: 24px;
-  font-weight: 800;
-  margin-bottom: 24px;
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 850;
+  margin-bottom: 20px;
   color: var(--color-text-primary);
-  border-bottom: 2px solid var(--color-primary-surface);
-  padding-bottom: 12px;
+  border-bottom: 3px solid var(--color-primary-surface);
+  padding-bottom: 10px;
   display: inline-block;
+  letter-spacing: -0.01em;
+}
+
+.ingredientsSection {
+  margin-bottom: 32px;
+  background: #f7fafc;
+  padding: 24px;
+  border-radius: 24px;
+}
+
+.generalIngredientsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ingredientItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--color-text-primary);
+  font-weight: 500;
+  transition: transform 0.2s ease;
+}
+
+.ingredientItem:hover {
+  transform: translateX(4px);
+}
+
+.ingredientDot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .stepsList {
@@ -116,40 +154,48 @@
 
 .stepItem {
   display: flex;
-  gap: 20px;
-  align-items: flex-start; /* Ensure they start at the top */
+  gap: 24px;
+  align-items: flex-start;
+  transition: transform 0.3s ease;
 }
 
 .stepNumber {
-  width: 32px;
-  height: 32px;
-  background: var(--color-primary);
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   color: #fff;
-  border-radius: 50%;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   flex-shrink: 0;
-  font-size: 16px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  margin-top: 4px; /* Visual alignment with first line of text */
+  font-size: 18px;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.25);
+  margin-top: 2px;
 }
 
 .stepInstruction {
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: 17px;
+  line-height: 1.7;
   color: var(--color-text-primary);
-  margin-top: 0; /* Reset default p margin */
-  margin-bottom: 16px;
+  margin-top: 0;
+  margin-bottom: 20px;
 }
 
 .stepImageWrapper {
   width: 100%;
-  max-width: 500px;
-  border-radius: 16px;
+  max-width: 600px;
+  border-radius: 24px;
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.stepImageWrapper:hover {
+  box-shadow: var(--shadow-md);
+  transform: scale(1.01);
 }
 
 .stepImage {
@@ -159,26 +205,55 @@
 
 @media (max-width: 1024px) {
   .splitLayout {
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 320px 1fr;
     gap: 30px;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 868px) {
   .splitLayout {
     grid-template-columns: 1fr;
   }
-  
+
   .stickySidebar {
     position: relative;
     top: 0;
-  }
-  
-  .title {
-    font-size: 28px;
+    gap: 20px;
   }
   
   .heroImageWrapper {
     aspect-ratio: 16/9;
+    border-radius: 20px;
+  }
+
+  .generalIngredientsList {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 20px;
+  }
+  
+  .content {
+    padding: 20px 0;
+  }
+
+  .title {
+    margin-top: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .generalIngredientsList {
+    grid-template-columns: 1fr;
+  }
+  
+  .stepItem {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .stepNumber {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
   }
 }

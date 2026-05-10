@@ -109,6 +109,20 @@ export class AiChatService {
           category: { select: { name: true } },
           variants: {
             select: { name: true, price: true, discountPrice: true, stockQty: true }
+          },
+          flashSaleItems: {
+            where: {
+              flashSale: {
+                isActive: true,
+                startAt: { lte: new Date() },
+                endAt: { gte: new Date() }
+              }
+            },
+            select: {
+              flashPrice: true,
+              flashStock: true,
+              soldQty: true
+            }
           }
         }
       }),
@@ -245,6 +259,7 @@ ${context.products.map((p: any) => `
   UNLIMITED: ${p.isUnlimitedStock ? 'YA' : 'TIDAK'}
   HARGA ASLI: Rp ${p.price} / ${p.unit}
   ${p.discountPrice ? `HARGA DISKON: Rp ${p.discountPrice} / ${p.unit}` : 'HARGA DISKON: Tidak ada'}
+  ${p.flashSaleItems && p.flashSaleItems.length > 0 ? `HARGA FLASH SALE: Rp ${p.flashSaleItems[0].flashPrice} / ${p.unit} (SISA STOK FLASH SALE: ${p.flashSaleItems[0].flashStock - p.flashSaleItems[0].soldQty})` : 'HARGA FLASH SALE: Tidak ada'}
   VARIAN: ${p.variants && p.variants.length > 0 ? p.variants.map((v: any) => `${v.name} (Rp ${v.price})`).join(', ') : 'Tidak ada varian'}
   DESC: ${p.description}
   TAGS: ${p.tags.join(', ')}
@@ -312,8 +327,8 @@ ATURAN PESANAN:
 - **JANGAN PERNAH** me-list semua produk jika user bertanya secara umum seperti "ada produk apa saja?". Cukup sebutkan bahwa Dapurgizi memiliki berbagai produk segar di kategori [sebutkan 3-4 kategori], lalu tawarkan bantuan untuk mencari barang spesifik.
 - **ATURAN NUTRISI WAJIB**: Jika user bertanya tentang kandungan nutrisi (misal: Vitamin A, Vitamin C, Protein, dll), Anda **HANYA BOLEH** merekomendasikan produk yang **TAGS-nya SECARA EKSPLISIT** mengandung nutrisi tersebut. DILARANG KERAS menggunakan pengetahuan internal Anda tentang kandungan gizi makanan. Jika tidak ada produk di Context yang TAG-nya cocok, jawab: "Maaf, saat ini belum ada produk di Dapurgizi yang ditandai dengan kandungan [nutrisi] tersebut."
 - Jika user mencari nutrisi tertentu (misal: Vitamin C), Anda hanya boleh menyarankan produk yang BENAR-BENAR ada di Context DAN yang TAGS-nya mengandung nutrisi tersebut. Jika tidak ada produk yang cocok di Context, jangan sarankan apapun.
-- Tampilkan rincian produk (Harga Asli & Harga Diskon) dengan jelas jika ada di Context.
-- **DILARANG TERTUKAR** antara Harga Asli dan Harga Diskon. Harga yang lebih murah adalah Harga Diskon/Promo. Selalu informasikan user jika barang tersebut sedang diskon.
+- Tampilkan rincian produk (Harga Asli, Harga Diskon, dan Harga Flash Sale) dengan jelas jika ada di Context.
+- **DILARANG TERTUKAR** antara Harga Asli, Harga Diskon, dan Harga Flash Sale. Urutan harga dari yang termahal ke termurah biasanya: Harga Asli > Harga Diskon > Harga Flash Sale. Selalu informasikan user jika barang tersebut sedang Flash Sale karena itu adalah HARGA TERMURAH.
 - Jika user bertanya daftar kategori, sebutkan semua kategori yang ada di atas.
 - Jelaskan syarat promo (Min. belanja, Metode bayar, dan Batasan Kategori/Produk) dengan jelas.
 - **DILARANG MENGATAKAN VOUCHER BERLAKU UNTUK SEMUA PRODUK** jika di data Context ada batasan "KHUSUS KATEGORI" atau "KHUSUS PRODUK".

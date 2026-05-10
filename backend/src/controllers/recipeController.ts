@@ -133,9 +133,12 @@ const parseRecipeData = (body: any) => {
   if (typeof data.steps === 'string') {
     try { data.steps = JSON.parse(data.steps); } catch (e) { data.steps = []; }
   }
+  if (typeof data.ingredients === 'string') {
+    try { data.ingredients = JSON.parse(data.ingredients); } catch (e) { data.ingredients = []; }
+  }
 
   return data;
-};
+}
 
 const generateUniqueSlug = async (title: string, excludeId?: string) => {
   let baseSlug = slugify(title, { lower: true, strict: true });
@@ -168,9 +171,7 @@ export async function adminCreateRecipe(req: AuthRequest, res: Response, next: N
         slug,
 
         heroImage,
-
-
-
+        ingredients: data.ingredients || [],
         relatedProductIds: data.relatedProductIds || [],
         steps: {
           create: data.steps?.map((step: any, index: number) => ({
@@ -203,6 +204,7 @@ export async function adminUpdateRecipe(req: AuthRequest, res: Response, next: N
 
 
       relatedProductIds: data.relatedProductIds,
+      ingredients: data.ingredients,
     };
 
     if (heroImage) updateData.heroImage = heroImage;

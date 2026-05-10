@@ -23,6 +23,7 @@ interface Props {
   variantCount?: number;
   hasMultiplePrices?: boolean;
   tags?: string[];
+  flashPrice?: number;
 }
 
 const DgProductCard = React.memo(({
@@ -34,13 +35,15 @@ const DgProductCard = React.memo(({
   imageUrl,
   discountPrice,
   discountPercent,
-  isOutOfStock: isOutOfStockProp = false,
+  isOutOfStock: isOutOfStockProp,
   stockQty = 0,
   isUnlimitedStock = true,
   variantCount = 0,
   hasMultiplePrices = false,
   tags = [],
+  flashPrice,
 }: Props) => {
+  const isOutOfStock = isOutOfStockProp || (!isUnlimitedStock && stockQty <= 0);
   const [mounted, setMounted] = useState(false);
   const qty = useCartStore((s) => s.getQuantity(id));
   const updateQuantity = useCartStore((s) => s.updateQuantity);
@@ -48,8 +51,8 @@ const DgProductCard = React.memo(({
 
   useEffect(() => { setMounted(true); }, []);
 
-  const displayPrice = discountPrice ?? price;
-  const hasDiscount = discountPrice != null && discountPrice < price;
+  const displayPrice = flashPrice ?? discountPrice ?? price;
+  const hasDiscount = (discountPrice != null && discountPrice < price) || flashPrice != null;
 
   const handleQtyChange = (newQty: number) => {
     updateQuantity(id, newQty);
@@ -98,7 +101,7 @@ const DgProductCard = React.memo(({
             </div>
           )}
 
-          {isOutOfStockProp && (
+          {isOutOfStock && (
             <div className={styles.outOfStockOverlay}>
               <div className={styles.outOfStockLabel}>Habis</div>
             </div>
@@ -138,7 +141,7 @@ const DgProductCard = React.memo(({
           )}
           
           <div className={styles.priceContainer}>
-            <span className={styles.activePrice}>Rp {formatRp(displayPrice)}</span>
+            <span className={`${styles.activePrice} ${flashPrice ? styles.flashPrice : ''}`}>Rp {formatRp(displayPrice)}</span>
             {hasDiscount && !hasMultiplePrices && (
               <span className={styles.strikethroughPrice}>Rp {formatRp(price)}</span>
             )}
@@ -147,7 +150,7 @@ const DgProductCard = React.memo(({
           <div className={styles.footer}>
             <div className={styles.unitBadge}>/{unit}</div>
             
-            {!isOutOfStockProp && (
+            {!isOutOfStock && (
               <div className={styles.actionContainer}>
                 {mounted && qty > 0 && variantCount === 0 ? (
                   <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>

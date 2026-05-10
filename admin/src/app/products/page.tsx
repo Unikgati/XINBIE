@@ -976,6 +976,23 @@ export default function ProductsPage() {
                         </div>
                       </div>
                     ))}
+
+                    <button 
+                      className="btn btn-outline" 
+                      type="button" 
+                      onClick={addFormVariant}
+                      style={{ 
+                        marginTop: 4, 
+                        width: '100%', 
+                        borderStyle: 'dashed', 
+                        height: 50,
+                        background: 'var(--primary-surface)',
+                        borderColor: 'var(--primary-light)',
+                        color: 'var(--primary-dark)'
+                      }}
+                    >
+                      <span className="material-symbols-outlined">add_circle</span> Tambah Varian Lainnya
+                    </button>
                   </div>
                 )}
               </div>

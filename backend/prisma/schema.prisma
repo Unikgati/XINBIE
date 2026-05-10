@@ -498,6 +498,7 @@ model Recipe {
   title             String
   slug              String   @unique
   heroImage         String?  @map("hero_image")
+  ingredients       String[] @default([])
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   relatedProductIds String[] @default([]) @map("related_product_ids")

@@ -23,7 +23,7 @@ export async function getCategories(req: Request, res: Response, next: NextFunct
 // GET /api/products
 export async function getProducts(req: Request, res: Response, next: NextFunction) {
   try {
-    const { categoryId, search, featured, promo, sort, page, limit } = paginationQuerySchema.parse(req.query);
+    const { categoryId, search, featured, promo, sort, page, limit, ids } = paginationQuerySchema.parse(req.query);
 
     const where: any = { isActive: true };
     if (categoryId) where.categoryId = categoryId;
@@ -32,6 +32,9 @@ export async function getProducts(req: Request, res: Response, next: NextFunctio
       where.discountPrice = { gt: 0 };
     }
     if (search) where.name = { contains: search, mode: 'insensitive' };
+    if (ids) {
+      where.id = { in: ids.split(',') };
+    }
 
     const orderBy: any = {};
     switch (sort) {
@@ -53,6 +56,15 @@ export async function getProducts(req: Request, res: Response, next: NextFunctio
         include: {
           category: { select: { name: true } },
           variants: { where: { isActive: true } },
+          flashSaleItems: {
+            where: {
+              flashSale: {
+                isActive: true,
+                startAt: { lte: new Date() },
+                endAt: { gte: new Date() }
+              }
+            }
+          }
         },
       }),
       prisma.product.count({ where }),
@@ -246,10 +258,19 @@ export async function getCookingVideos(req: Request, res: Response, next: NextFu
         include: {
           products: {
             where: { isActive: true },
-            include: {
-              category: { select: { name: true } },
-              variants: { where: { isActive: true } },
-            },
+              include: {
+                category: { select: { name: true } },
+                variants: { where: { isActive: true } },
+                flashSaleItems: {
+                  where: {
+                    flashSale: {
+                      isActive: true,
+                      startAt: { lte: new Date() },
+                      endAt: { gte: new Date() }
+                    }
+                  }
+                }
+              },
           },
         },
       }),

@@ -65,9 +65,24 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
                 <img src={recipe.heroImage || '/placeholder-recipe.jpg'} alt={recipe.title} className={styles.heroImage} />
               </div>
               
+              {recipe.ingredients && recipe.ingredients.length > 0 && (
+                <div className={styles.ingredientsBox} style={{ marginBottom: 24 }}>
+                  <h2 className={styles.sidebarTitle}>Bahan-bahan</h2>
+                  <p className={styles.sidebarSubtitle}>Daftar bahan yang diperlukan</p>
+                  <div className={styles.generalIngredientsList}>
+                    {recipe.ingredients.map((ing: string, idx: number) => (
+                      <div key={idx} className={styles.ingredientItem}>
+                        <span className={styles.ingredientDot}></span>
+                        {ing}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <div className={styles.ingredientsBox}>
-                <h2 className={styles.sidebarTitle}>Bahan Masakan</h2>
-                <p className={styles.sidebarSubtitle}>Beli bahan segar ini di Dapurgizi</p>
+                <h2 className={styles.sidebarTitle}>Bahan Tersedia</h2>
+                <p className={styles.sidebarSubtitle}>Beli produk ini di Dapurgizi</p>
                 
                 <div className={styles.productsList}>
                   {recipe.products && recipe.products.length > 0 ? (
@@ -88,7 +103,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
                       />
                     ))
                   ) : (
-                    <p className={styles.noProducts}>Bahan masakan belum ditautkan.</p>
+                    <p className={styles.noProducts}>Produk terkait belum tersedia.</p>
                   )}
                 </div>
               </div>
@@ -100,7 +115,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
             <h1 className={styles.title}>{recipe.title}</h1>
             <div className={styles.metaInfo}>
               <span className="material-symbols-outlined">restaurant_menu</span>
-              {recipe.steps?.length || 0} Langkah Memasak
+              {recipe.steps?.length || 0} Langkah · {recipe.ingredients?.length || 0} Bahan
             </div>
 
             <section className={styles.stepsSection}>

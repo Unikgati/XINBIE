@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { TableSkeleton } from '@/components/Skeleton';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
+import AsyncProductSelect from '@/components/AsyncProductSelect';
 
 interface FlashSaleItem {
   id?: string;
@@ -79,7 +80,7 @@ const CustomOption = (props: any) => {
 
 export default function FlashSalesPage() {
   const [sessions, setSessions] = useState<FlashSale[]>([]);
-  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [formProductOptions, setFormProductOptions] = useState<{ [key: number]: any[] }>({});
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   
@@ -97,12 +98,8 @@ export default function FlashSalesPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [fsRes, prRes] = await Promise.all([
-        apiGet<FlashSale[]>('/flash-sales'),
-        apiGet<any>('/products?limit=200'),
-      ]);
+      const fsRes = await apiGet<FlashSale[]>('/flash-sales');
       setSessions(Array.isArray(fsRes) ? fsRes : []);
-      setAllProducts(Array.isArray(prRes?.data) ? prRes.data : []);
     } catch (err: any) {
       toast.error(err.message || 'Gagal memuat data');
     } finally {
@@ -130,13 +127,31 @@ export default function FlashSalesPage() {
       setFormDesc(detail.description || '');
       setFormStartAt(new Date(detail.startAt).toISOString().slice(0, 16));
       setFormEndAt(new Date(detail.endAt).toISOString().slice(0, 16));
-      setFormItems(detail.items.map(item => ({
+      
+      const items = detail.items.map(item => ({
         productId: item.productId,
         flashPrice: item.flashPrice,
         flashStock: item.flashStock,
         limitPerUser: item.limitPerUser,
-        sortOrder: item.sortOrder
-      })));
+        sortOrder: item.sortOrder,
+        product: item.product
+      }));
+      setFormItems(items);
+      
+      // Load initial product options for each item
+      const initialOptions: { [key: number]: any[] } = {};
+      items.forEach((item, idx) => {
+        if (item.product) {
+          initialOptions[idx] = [{
+            value: item.product.id,
+            label: item.product.name,
+            image: item.product.images?.[0] || null,
+            stock: item.product.stockQty
+          }];
+        }
+      });
+      setFormProductOptions(initialOptions);
+      
       setShowModal(true);
     } catch (err: any) {
       toast.error('Gagal memuat detail Flash Sale');
@@ -322,42 +337,28 @@ export default function FlashSalesPage() {
                   {formItems.map((item, idx) => (
                     <div key={idx} style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: '2fr 1fr 1fr 80px 40px', 
+                      gridTemplateColumns: '2fr 1fr 1fr 1fr 40px', 
                       gap: '12px', 
-                      alignItems: 'end',
+                      alignItems: 'stretch',
                       background: 'var(--surface-light)',
-                      padding: '12px',
+                      padding: '16px',
                       borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--divider)'
+                      border: '1px solid var(--divider)',
+                      position: 'relative'
                     }}>
                       <div className="form-group">
                         <label className="form-label">Produk</label>
-                        <Select
-                          options={allProducts.map(p => ({ 
-                            value: p.id, 
-                            label: p.name,
-                            image: p.images?.[0] || null,
-                            stock: p.stockQty
-                          }))}
-                          value={allProducts
-                            .filter(p => p.id === item.productId)
-                            .map(p => ({ 
-                              value: p.id, 
-                              label: p.name,
-                              image: p.images?.[0] || null,
-                              stock: p.stockQty
-                            }))[0]}
-                          onChange={(val: any) => updateItem(idx, 'productId', val.value)}
-                          styles={selectStyles}
-                          placeholder="Pilih Produk"
-                          menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-                          components={{
-                            Option: CustomOption
+                        <AsyncProductSelect
+                          placeholder="Cari produk..."
+                          value={formProductOptions[idx] || []}
+                          onChange={(val: any) => {
+                            updateItem(idx, 'productId', val?.value || '');
+                            setFormProductOptions(prev => ({ ...prev, [idx]: val ? [val] : [] }));
                           }}
                         />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Harga Flash (Rp)</label>
+                        <label className="form-label">Harga Flash</label>
                         <input className="form-input" type="number" value={item.flashPrice} onChange={e => updateItem(idx, 'flashPrice', e.target.value)} />
                       </div>
                       <div className="form-group">
@@ -365,14 +366,27 @@ export default function FlashSalesPage() {
                         <input className="form-input" type="number" value={item.flashStock} onChange={e => updateItem(idx, 'flashStock', e.target.value)} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Limit</label>
+                        <label className="form-label">Limit User</label>
                         <input className="form-input" type="number" value={item.limitPerUser} onChange={e => updateItem(idx, 'limitPerUser', e.target.value)} />
                       </div>
-                      <button className="btn btn-icon" style={{ color: 'var(--error)', paddingBottom: '8px' }} onClick={() => removeItem(idx)}>
-                        <span className="material-symbols-outlined">delete</span>
-                      </button>
+                      <div className="form-group">
+                        <label className="form-label">&nbsp;</label>
+                        <button type="button" className="btn btn-outline btn-icon" style={{ color: 'var(--error)', height: '40px', width: '40px', flexShrink: 0 }} onClick={() => removeItem(idx)}>
+                          <span className="material-symbols-outlined">delete</span>
+                        </button>
+                      </div>
                     </div>
                   ))}
+                  {formItems.length > 0 && (
+                    <button 
+                      type="button" 
+                      className="btn btn-outline" 
+                      style={{ marginTop: 12, width: '100%', borderStyle: 'dashed', background: 'var(--primary-surface)', color: 'var(--primary-dark)', borderColor: 'var(--primary-light)' }} 
+                      onClick={addItem}
+                    >
+                      <span className="material-symbols-outlined">add</span> Tambah Produk Lagi
+                    </button>
+                  )}
                   {formItems.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-hint)', background: 'var(--surface-light)', borderRadius: 'var(--radius-md)', border: '2px dashed var(--divider)' }}>
                       Belum ada produk yang ditambahkan.

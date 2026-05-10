@@ -102,13 +102,42 @@ class _RecipeDetailContent extends ConsumerWidget {
                     const Icon(Icons.restaurant_menu,
                         size: 16, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
-                    Text('${recipe.steps.length} Langkah Memasak',
+                    Text(
+                        '${recipe.steps.length} Langkah · ${recipe.ingredients.length} Bahan',
                         style: AppTypography.bodySmall),
                   ],
                 ),
                 const SizedBox(height: 24),
+                const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 24),
+
+                 if (recipe.ingredients.isNotEmpty) ...[
+                  Text('Bahan-bahan', style: AppTypography.h4),
+                  const SizedBox(height: 12),
+                  ...recipe.ingredients
+                      .map((ing) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Icon(Icons.circle,
+                                      size: 6, color: AppColors.primary),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                    child: Text(ing,
+                                        style: AppTypography.bodyMedium)),
+                              ],
+                            ),
+                          ))
+                      .toList(),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 24),
+                ],
 
                 // Bahan Masakan Section
                 Text('Bahan Masakan', style: AppTypography.h4),
@@ -178,60 +207,100 @@ class _RecipeProductRow extends ConsumerWidget {
     final cartIdx = cart.indexWhere((item) => item.productId == product.id);
     final currentQty = cartIdx >= 0 ? cart[cartIdx].qty : 0;
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          // Image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: CachedNetworkImage(
-              imageUrl: AppConfig.fixImageUrl(product.images.firstOrNull),
-              width: 60,
-              height: 60,
-              fit: BoxFit.cover,
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final isOutOfStock = !product.isUnlimitedStock && product.stockQty <= 0;
+
+    return Opacity(
+      opacity: isOutOfStock ? 0.6 : 1.0,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            // Image
+            Stack(
               children: [
-                Text(
-                  product.name,
-                  style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CachedNetworkImage(
+                    imageUrl: AppConfig.fixImageUrl(product.images.firstOrNull),
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                Text(
-                  '${CurrencyFormatter.format(product.price)} / ${product.unit}',
-                  style: AppTypography.caption.copyWith(color: AppColors.primary),
-                ),
+                if (isOutOfStock)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'HABIS',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
-          ),
-          // Add button
-          if (currentQty == 0)
-            IconButton(
-              icon: const Icon(Icons.add_circle, color: AppColors.primary),
-              onPressed: () {
-                ref.read(cartProvider.notifier).addItem(product);
-                DgSnackbar.showSuccess(context, message: '${product.name} ditambah');
-              },
-            )
-          else
-            DgQuantitySelector(
-              quantity: currentQty,
-              compact: true,
-              onChanged: (qty) => ref.read(cartProvider.notifier).updateQuantity(product.id, qty),
+            const SizedBox(width: 12),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '${CurrencyFormatter.format(product.price)} / ${product.unit}',
+                    style: AppTypography.caption.copyWith(color: AppColors.primary),
+                  ),
+                ],
+              ),
             ),
-        ],
+            // Action
+            if (isOutOfStock)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Stok Habis',
+                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                ),
+              )
+            else if (currentQty == 0)
+              IconButton(
+                icon: const Icon(Icons.add_circle, color: AppColors.primary),
+                onPressed: () {
+                  ref.read(cartProvider.notifier).addItem(product);
+                  DgSnackbar.showSuccess(context, message: '${product.name} ditambah');
+                },
+              )
+            else
+              DgQuantitySelector(
+                quantity: currentQty,
+                compact: true,
+                onChanged: (qty) => ref.read(cartProvider.notifier).updateQuantity(product.id, qty),
+              ),
+          ],
+        ),
       ),
     );
   }

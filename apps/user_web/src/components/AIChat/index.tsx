@@ -221,21 +221,37 @@ export default function AIChat() {
                 
                 {m.recommendations && (
                   <div className={styles.cardList}>
-                    {m.recommendations.products.map(p => (
-                      <div key={p.id} className={styles.productCard}>
-                        <img src={p.images[0]} alt={p.name} className={styles.cardImg} />
-                        <div className={styles.cardContent}>
-                          <p className={styles.cardName}>{p.name}</p>
-                          <p className={styles.cardCategory}>{p.category?.name || 'Produk'}</p>
-                          <div className={styles.cardInfo}>
-                            <span className={styles.cardPrice}>Rp {formatRp(p.discountPrice || p.price)}</span>
-                            <Link href={`/product/${p.slug}`} style={{ textDecoration: 'none' }}>
-                              <button className={styles.viewBtn}>Lihat</button>
-                            </Link>
+                    {m.recommendations.products.map(p => {
+                      const flashItem = p.flashSaleItems?.[0];
+                      const isFlashSale = !!flashItem;
+                      const displayPrice = flashItem?.flashPrice ?? p.discountPrice ?? p.price;
+                      const originalPrice = isFlashSale ? p.price : (p.discountPrice ? p.price : null);
+
+                      return (
+                        <div key={p.id} className={styles.productCard}>
+                          <div className={styles.cardImgWrapper}>
+                            <img src={p.images[0]} alt={p.name} className={styles.cardImg} />
+                          </div>
+                          <div className={styles.cardContent}>
+                            <p className={styles.cardName}>{p.name}</p>
+                            <p className={styles.cardCategory}>{p.category?.name || 'Produk'}</p>
+                            <div className={styles.cardInfo}>
+                              <div className={styles.priceStack}>
+                                <span className={`${styles.cardPrice} ${isFlashSale ? styles.flashPrice : ''}`}>
+                                  Rp {formatRp(displayPrice)}
+                                </span>
+                                {originalPrice && (
+                                  <span className={styles.originalPrice}>Rp {formatRp(originalPrice)}</span>
+                                )}
+                              </div>
+                              <Link href={`/product/${p.slug}`} className={styles.viewLink}>
+                                <button className={styles.viewBtn}>Lihat</button>
+                              </Link>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {m.recommendations.promos.map(pr => (
                       <div key={pr.code} style={{ background: '#fff9e6', padding: '10px', borderRadius: '12px', border: '1px dashed #f39c12', display: 'flex', alignItems: 'center', gap: '10px' }}>

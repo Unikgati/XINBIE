@@ -29,6 +29,7 @@ class DgProductCard extends StatelessWidget {
     this.onAddToCart,
     this.onQuantityChanged,
     this.maxQuantity = 99,
+    this.flashPrice,
   });
 
   final String name;
@@ -36,6 +37,7 @@ class DgProductCard extends StatelessWidget {
   final String unit;
   final String? imageUrl;
   final int? discountPrice;
+  final int? flashPrice;
   final int? discountPercent;
   final int quantity;
   final bool isOutOfStock;
@@ -47,8 +49,8 @@ class DgProductCard extends StatelessWidget {
   final ValueChanged<int>? onQuantityChanged;
   final int maxQuantity;
 
-  int get _displayPrice => discountPrice ?? price;
-  bool get _hasDiscount => discountPrice != null && discountPrice! < price;
+  int get _displayPrice => flashPrice ?? discountPrice ?? price;
+  bool get _hasDiscount => (discountPrice != null && discountPrice! < price) || flashPrice != null;
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +174,7 @@ class DgProductCard extends StatelessWidget {
                             Text(
                               'Rp ${_formatNumber(_displayPrice)}',
                               style: AppTypography.labelLarge.copyWith(
-                                color: AppColors.primaryDark,
+                                color: flashPrice != null ? AppColors.warning : AppColors.primaryDark,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                               ),
@@ -250,7 +252,7 @@ class DgProductCard extends StatelessWidget {
             Positioned(
               top: 12,
               left: -6,
-              child: tags.contains('Flash Sale')
+              child: (flashPrice != null || tags.contains('Flash Sale'))
                   ? const DgFlashSaleBadge()
                   : (_hasDiscount && discountPercent != null
                       ? DgDiscountBadge(discountPercent: discountPercent!)

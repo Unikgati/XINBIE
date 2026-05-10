@@ -11,6 +11,7 @@ abstract class Recipe with _$Recipe {
     required String title,
     required String slug,
     String? heroImage,
+    @Default([]) List<String> ingredients,
     @Default([]) List<String> relatedProductIds,
     @Default([]) List<RecipeStep> steps,
     @Default([]) List<Product> products,

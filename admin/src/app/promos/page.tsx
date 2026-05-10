@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { TableSkeleton } from '@/components/Skeleton';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
+import AsyncProductSelect from '@/components/AsyncProductSelect';
 
 interface Promo {
   id: string;
@@ -24,6 +25,8 @@ interface Promo {
   endAt?: string;
   allowCod: boolean;
   allowedPaymentMethods: string[];
+  products?: any[];
+  categories?: any[];
 }
 
 const PAYMENT_METHODS = [
@@ -55,7 +58,7 @@ const selectStyles = {
 export default function PromosPage() {
   const [promos, setPromos] = useState<Promo[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [formProductOptions, setFormProductOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [promoType, setPromoType] = useState('PERCENT');
@@ -79,14 +82,12 @@ export default function PromosPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [pRes, cRes, prRes] = await Promise.all([
+      const [pRes, cRes] = await Promise.all([
         apiGet<Promo[]>('/promos'),
         apiGet<any[]>('/categories'),
-        apiGet<any>('/products?limit=100'),
       ]);
       setPromos(Array.isArray(pRes) ? pRes : []);
       setCategories(Array.isArray(cRes) ? cRes : []);
-      setAllProducts(Array.isArray(prRes?.data) ? prRes.data : []);
     } catch (err: any) {
       toast.error(err.message || 'Gagal memuat data');
     } finally {
@@ -102,10 +103,11 @@ export default function PromosPage() {
     setFormPerUserLimit('1'); setFormStartAt(''); setFormEndAt(''); setFormAllowCod(true);
     setFormAllowedPayments([]);
     setFormCategoryIds([]); setFormProductIds([]);
+    setFormProductOptions([]);
     setShowModal(true);
   };
 
-  const openEdit = (p: Promo) => {
+  const openEdit = async (p: Promo) => {
     setEditingId(p.id);
     setFormCode(p.code); setPromoType(p.type); setFormValue(p.value.toString()); 
     setFormMinOrder(p.minOrder.toString()); setFormMaxDiscount(p.maxDiscount?.toString() || ''); 
@@ -115,7 +117,27 @@ export default function PromosPage() {
     setFormAllowCod(p.allowCod);
     setFormAllowedPayments(p.allowedPaymentMethods || []);
     setFormCategoryIds(p.categories?.map((c: any) => c.id) || []);
-    setFormProductIds(p.products?.map((pr: any) => pr.id) || []);
+    
+    const pIds = p.products?.map((pr: any) => pr.id) || [];
+    setFormProductIds(pIds);
+    
+    // Fetch product details for options
+    if (pIds.length > 0) {
+      try {
+        const res = await apiGet<any>(`/products?ids=${pIds.join(',')}`);
+        const products = res.data || (Array.isArray(res) ? res : []);
+        setFormProductOptions(products.map((pr: any) => ({
+          value: pr.id,
+          label: pr.name,
+          image: pr.images?.[0] || null
+        })));
+      } catch (err) {
+        console.error('Failed to fetch product details', err);
+      }
+    } else {
+      setFormProductOptions([]);
+    }
+    
     setShowModal(true);
   };
 
@@ -253,7 +275,7 @@ export default function PromosPage() {
                 <div className="form-group"><label className="form-label">Maks. Potongan (Rp)</label><input className="form-input" type="number" placeholder="Opsional" value={formMaxDiscount} onChange={e => setFormMaxDiscount(e.target.value)} /></div>
               </div>
 
-              <div style={{ pt: 16, mt: 8 }}>
+              <div style={{ paddingTop: 16, marginTop: 8 }}>
                 <h4 style={{ marginBottom: '12px', fontSize: '14px', color: '#666' }}>Batas & Validitas</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div className="form-group"><label className="form-label">Total Kuota (0=∞)</label><input className="form-input" type="number" placeholder="0" value={formLimit} onChange={e => setFormLimit(e.target.value)} /></div>
@@ -300,17 +322,16 @@ export default function PromosPage() {
                   
                   <div className="form-group" style={{ marginTop: '12px' }}>
                     <label className="form-label">Batasi ke Produk</label>
-                    <Select
+                    <AsyncProductSelect
                       isMulti
-                      options={allProducts.map(p => ({ value: p.id, label: p.name }))}
-                      value={allProducts.filter(p => formProductIds.includes(p.id)).map(p => ({ value: p.id, label: p.name }))}
-                      onChange={(selected) => setFormProductIds((selected || []).map((s: any) => s.value))}
-                      placeholder="Semua Produk (Pilih untuk membatasi)"
-                      noOptionsMessage={() => 'Produk tidak ditemukan'}
-                      menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-                      styles={selectStyles}
+                      placeholder="Cari produk untuk dibatasi..."
+                      value={formProductOptions}
+                      onChange={(selected: any) => {
+                        const options = selected || [];
+                        setFormProductOptions(options);
+                        setFormProductIds(options.map((o: any) => o.value));
+                      }}
                     />
-                    <p style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>*Hanya menampilkan 100 produk terbaru</p>
                   </div>
                 </div>
               </div>

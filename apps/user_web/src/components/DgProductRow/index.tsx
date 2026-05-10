@@ -60,8 +60,10 @@ export default function DgProductRow({
 
   const formatRp = (n: number) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
+  const isOutOfStock = !isUnlimitedStock && stockQty <= 0;
+
   return (
-    <div className={styles.row}>
+    <div className={`${styles.row} ${isOutOfStock ? styles.outOfStock : ''}`}>
       {/* Badge Pita Lipat (Ditempatkan di sini agar tidak terpotong) */}
       {isFlashSale ? (
         <div className={styles.flashSaleBadgeContainer}>
@@ -76,7 +78,7 @@ export default function DgProductRow({
         </div>
       )}
 
-      <Link href={`/product/${slug || id}`} className={styles.imageLink}>
+      <Link href={isOutOfStock ? '#' : `/product/${slug || id}`} className={styles.imageLink}>
         <div className={styles.imageWrapper}>
           <Image 
             src={imageUrl || '/placeholder.jpg'} 
@@ -85,11 +87,16 @@ export default function DgProductRow({
             style={{ objectFit: 'cover' }} 
             unoptimized
           />
+          {isOutOfStock && (
+            <div className={styles.stockOverlay}>
+              <span>HABIS</span>
+            </div>
+          )}
         </div>
       </Link>
       
       <div className={styles.info}>
-        <Link href={`/product/${slug || id}`} className={styles.name}>{name}</Link>
+        <Link href={isOutOfStock ? '#' : `/product/${slug || id}`} className={styles.name}>{name}</Link>
         <div className={styles.priceRow}>
           <span className={styles.price}>Rp {formatRp(displayPrice)}</span>
           {hasDiscount && <span className={styles.oldPrice}>Rp {formatRp(price)}</span>}
@@ -98,7 +105,9 @@ export default function DgProductRow({
       </div>
 
       <div className={styles.action}>
-        {mounted && qty > 0 ? (
+        {isOutOfStock ? (
+          <span className={styles.outOfStockLabel}>Habis</span>
+        ) : mounted && qty > 0 ? (
           <DgQuantitySelector 
             quantity={qty} 
             onChanged={handleQtyChange} 

@@ -161,6 +161,10 @@
   color: var(--color-price-active);
 }
 
+.flashPrice {
+  color: #F57C00 !important;
+}
+
 .strikethroughPrice {
   font-size: 11px;
   color: var(--color-price-strikethrough);

@@ -53,7 +53,19 @@ router.post('/message', optionalAuth, async (req: AuthRequest, res) => {
         where: { id: { in: productIds }, isActive: true },
         select: { 
           id: true, name: true, price: true, discountPrice: true, images: true, slug: true,
-          category: { select: { name: true } }
+          category: { select: { name: true } },
+          flashSaleItems: {
+            where: {
+              flashSale: {
+                isActive: true,
+                startAt: { lte: new Date() },
+                endAt: { gte: new Date() }
+              }
+            },
+            select: {
+              flashPrice: true
+            }
+          }
         }
       });
     }
