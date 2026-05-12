@@ -76,11 +76,9 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
       if (fsItem) {
         // Validation 1: Promo Stock
         const remainingFsStock = fsItem.flashStock - fsItem.soldQty;
-        if (remainingFsStock < item.qty) {
-          throw new AppError(`Stok Flash Sale untuk ${product.name} tidak cukup (Tersedia: ${remainingFsStock})`, 400);
-        }
-
+        
         // Validation 2: User Limit
+        let userCanBuyFs = true;
         if (fsItem.limitPerUser > 0) {
           const userBoughtQty = await prisma.orderItem.aggregate({
             where: {
@@ -96,12 +94,15 @@ export async function createOrder(req: AuthRequest, res: Response, next: NextFun
           
           const currentBought = userBoughtQty._sum.qty || 0;
           if (currentBought + item.qty > fsItem.limitPerUser) {
-            throw new AppError(`Anda sudah mencapai batas pembelian Flash Sale untuk ${product.name} (Batas: ${fsItem.limitPerUser})`, 400);
+            userCanBuyFs = false;
           }
         }
 
-        unitPrice = fsItem.flashPrice;
-        isFlashSale = true;
+        // Only apply Flash Sale if stock is enough AND user limit not reached
+        if (remainingFsStock >= item.qty && userCanBuyFs) {
+          unitPrice = fsItem.flashPrice;
+          isFlashSale = true;
+        }
       }
 
       // Stock check: Always respect main product stockQty

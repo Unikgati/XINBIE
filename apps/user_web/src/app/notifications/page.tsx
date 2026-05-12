@@ -10,11 +10,12 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import DgEmptyState from '@/components/DgEmptyState';
 
 export default function NotificationsPage() {
-  const { notifications, loading, markAsRead, markAllAsRead, fetchNotifications } = useNotificationStore();
+  const { notifications, loading, markAsRead, markAllAsRead, fetchNotifications, initSocket } = useNotificationStore();
 
   useEffect(() => {
     fetchNotifications();
-  }, [fetchNotifications]);
+    initSocket();
+  }, [fetchNotifications, initSocket]);
 
   const getIcon = (type: string) => {
     switch (type) {

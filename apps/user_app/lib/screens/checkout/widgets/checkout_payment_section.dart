@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ui_kit/ui_kit.dart';
+import 'payment_bottom_sheet.dart';
 
-class CheckoutPaymentSection extends StatefulWidget {
+class CheckoutPaymentSection extends StatelessWidget {
   final String? selectedMethod;
   final ValueChanged<String> onSelected;
 
@@ -10,13 +11,6 @@ class CheckoutPaymentSection extends StatefulWidget {
     required this.selectedMethod,
     required this.onSelected,
   });
-
-  @override
-  State<CheckoutPaymentSection> createState() => _CheckoutPaymentSectionState();
-}
-
-class _CheckoutPaymentSectionState extends State<CheckoutPaymentSection> {
-  String? _expandedGroup;
 
   String _getPaymentMethodName(String code) {
     switch (code) {
@@ -34,14 +28,6 @@ class _CheckoutPaymentSectionState extends State<CheckoutPaymentSection> {
       case 'COD': return 'Bayar di Tempat (COD)';
       default: return code;
     }
-  }
-
-  IconData _getPaymentMethodIcon(String code) {
-    if (code.startsWith('VA_')) return Icons.account_balance;
-    if (code == 'COD') return Icons.inventory_2_outlined;
-    if (code == 'QRIS') return Icons.qr_code_2;
-    if (code == 'ALFAMART' || code == 'INDOMARET') return Icons.storefront;
-    return Icons.account_balance_wallet;
   }
 
   String? _getPaymentMethodImageUrl(String code) {
@@ -62,90 +48,117 @@ class _CheckoutPaymentSectionState extends State<CheckoutPaymentSection> {
     }
   }
 
-  Widget _buildAccordionGroup(String title, List<String> methods) {
-    final isExpanded = _expandedGroup == title;
-    final methodNames = methods.map((m) => _getPaymentMethodName(m)).toList();
-    String subtitle = methodNames.length <= 3 
-        ? methodNames.join(', ') 
-        : '${methodNames.take(3).join(', ')} +${methodNames.length - 3} lainnya';
-
-    return Column(
-      children: [
-        InkWell(
-          onTap: () {
-            setState(() {
-              _expandedGroup = isExpanded ? null : title;
-            });
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  color: AppColors.textSecondary,
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (isExpanded)
-          Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 8),
-            child: Column(
-              children: methods.map((method) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _SelectableCard(
-                  title: _getPaymentMethodName(method),
-                  iconData: _getPaymentMethodIcon(method),
-                  imageUrl: _getPaymentMethodImageUrl(method),
-                  isSelected: widget.selectedMethod == method,
-                  onTap: () => widget.onSelected(method),
-                ),
-              )).toList(),
-            ),
-          ),
-        const Divider(height: 1),
-      ],
+  Future<void> _showPicker(BuildContext context) async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PaymentBottomSheet(selectedMethod: selectedMethod),
     );
+
+    if (result != null) {
+      onSelected(result);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return _Section(
-      title: 'METODE PEMBAYARAN',
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: AppColors.shadow.withOpacity(0.05), blurRadius: 4)],
+        border: Border.all(color: AppColors.border),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAccordionGroup('E-Wallet', ['GOPAY', 'SHOPEEPAY', 'QRIS']),
-          _buildAccordionGroup('Transfer Bank (Virtual Account)', ['VA_BCA', 'VA_MANDIRI', 'VA_BNI', 'VA_BRI', 'VA_PERMATA', 'VA_CIMB']),
-          _buildAccordionGroup('Gerai Ritel', ['ALFAMART', 'INDOMARET']),
-          Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 8),
-            child: _SelectableCard(
-              title: _getPaymentMethodName('COD'),
-              iconData: _getPaymentMethodIcon('COD'),
-              imageUrl: _getPaymentMethodImageUrl('COD'),
-              isSelected: widget.selectedMethod == 'COD',
-              onTap: () => widget.onSelected('COD'),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'METODE PEMBAYARAN',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              TextButton(
+                onPressed: () => _showPicker(context),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  selectedMethod == null ? 'Pilih' : 'Ganti',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const Divider(height: 1),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () => _showPicker(context),
+            child: selectedMethod == null
+                ? Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Mohon pilih metode pembayaran',
+                          style: AppTypography.bodySmall.copyWith(color: Colors.red[800], fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 32,
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.border.withOpacity(0.5)),
+                        ),
+                        child: _getPaymentMethodImageUrl(selectedMethod!) != null
+                            ? Image.asset(_getPaymentMethodImageUrl(selectedMethod!)!, fit: BoxFit.contain)
+                            : const Icon(Icons.payments, color: AppColors.primary, size: 20),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _getPaymentMethodName(selectedMethod!),
+                              style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Metode terpilih',
+                              style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                    ],
+                  ),
+          ),
         ],
       ),
     );

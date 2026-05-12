@@ -16,9 +16,11 @@ import CheckoutOrderItems from './components/CheckoutOrderItems';
 import PaymentMethodSelector from './components/PaymentMethodSelector';
 import CheckoutSchedule from './components/CheckoutSchedule';
 import ScheduleModal from './components/ScheduleModal';
+import PaymentModal from './components/PaymentModal';
 import WhatsAppModal from './components/WhatsAppModal';
 import VoucherModal from './components/VoucherModal';
 import { useAuthStore } from '@/store/authStore';
+import { useCheckoutStore } from '@/store/checkoutStore';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -26,8 +28,21 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   
-  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const { 
+    paymentMethod, setPaymentMethod, 
+    scheduledDate: storedDate, setScheduledDate,
+    deliverySlot, setDeliverySlot,
+    clearCheckout
+  } = useCheckoutStore();
+
+  const scheduledDate = storedDate ? new Date(storedDate) : (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 2);
+    return d;
+  })();
+
   const [showWaModal, setShowWaModal] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // Promo states
   const [promoInput, setPromoInput] = useState('');
@@ -37,12 +52,6 @@ export default function CheckoutPage() {
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
 
   // Schedule states
-  const [scheduledDate, setScheduledDate] = useState<Date>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 2); // Default H+2
-    return d;
-  });
-  const [deliverySlot, setDeliverySlot] = useState<any>(null);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   
   const user = useAuthStore((s) => s.user);
@@ -72,15 +81,18 @@ export default function CheckoutPage() {
     }
   };
 
+  const validateCart = useCartStore((s) => s.validateCart);
+
   useEffect(() => {
     setMounted(true);
     // Don't redirect if we are currently processing an order or successfully placed one
     if (cartItems.length === 0 && !loading && !isSuccess) {
       router.replace('/cart');
     } else if (cartItems.length > 0 && !isSuccess) {
+      validateCart(); // Final price check before checkout
       fetchAddress();
     }
-  }, [cartItems.length, router, loading, isSuccess]);
+  }, [cartItems.length, router, loading, isSuccess, validateCart]);
   
   // Re-validate promo if payment method changes
   useEffect(() => {
@@ -179,6 +191,7 @@ export default function CheckoutPage() {
         // Mark as success BEFORE clearing cart to prevent redirect loop
         setIsSuccess(true);
         clearCart();
+        clearCheckout();
         
         if (paymentMethod === 'COD') {
           snackbar.show('Pesanan berhasil dibuat! 🎉', 'success');
@@ -243,7 +256,10 @@ export default function CheckoutPage() {
 
           <CheckoutOrderItems items={cartItems} totalQty={totalQty} />
 
-          <PaymentMethodSelector selectedMethod={paymentMethod} onSelect={setPaymentMethod} />
+          <PaymentMethodSelector 
+            selectedMethod={paymentMethod} 
+            onTap={() => setIsPaymentModalOpen(true)} 
+          />
 
         </div>
 
@@ -373,6 +389,13 @@ export default function CheckoutPage() {
           setPromoInput(code);
           handleApplyPromo(code);
         }}
+      />
+
+      <PaymentModal 
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        selectedMethod={paymentMethod}
+        onSelect={setPaymentMethod}
       />
     </div>
   );

@@ -42,14 +42,21 @@ export default function CheckoutSchedule({ scheduledDate, deliverySlot, onTap }:
 
       <div className={styles.sectionContent}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <p style={{ 
-            margin: 0, 
-            fontSize: '16px', 
-            fontWeight: 600, 
-            color: '#4CAF50' 
-          }}>
-            {deliverySlot ? scheduleDisplay : 'Belum diatur'}
-          </p>
+          {deliverySlot ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '16px', fontWeight: 600, color: '#4CAF50' }}>
+                {formatDate(scheduledDate)}
+              </span>
+              <span style={{ color: '#4CAF50', opacity: 0.6, fontSize: '10px' }}>●</span>
+              <span style={{ fontSize: '15px', fontWeight: 500, color: '#4CAF50' }}>
+                {deliverySlot.label}
+              </span>
+            </div>
+          ) : (
+            <p style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#9E9E9E' }}>
+              Belum diatur
+            </p>
+          )}
           <p style={{ margin: 0, fontSize: '12px', color: '#9E9E9E' }}>
             {deliverySlot ? 'Jadwal Pilihan' : 'Default H+2'}
           </p>

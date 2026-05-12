@@ -118,8 +118,11 @@ export const useCartStore = create<CartState>()(
             return { items: updated };
           }
 
-          return state; // item not found, no-op
+          return state;
         });
+        
+        // Trigger validation to ensure price is correct after qty change
+        get().validateCart();
       },
 
       removeItem: (productId, variantId) => {
@@ -149,48 +152,59 @@ export const useCartStore = create<CartState>()(
         const { items } = get();
         if (items.length === 0) return [];
 
-        const removedNames: string[] = [];
-        const validItems: CartItem[] = [];
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+          const authState = (await import('./authStore')).useAuthStore.getState();
+          const token = authState.accessToken;
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+          const res = await fetch(`${apiUrl}/cart/validate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({
+              items: items.map(i => ({
+                productId: i.productId,
+                variantId: i.variantId,
+                qty: i.quantity,
+                unitPrice: i.price, // Send current price to check for changes
+              })),
+            }),
+          });
 
-        for (const item of items) {
-          try {
-            const res = await fetch(`${apiUrl}/products/${item.productId}`);
-            if (!res.ok) {
+          if (!res.ok) return [];
+
+          const data = await res.json();
+          const validatedItems = data.items; // [{ productId, variantId, isAvailable, unitPrice, isFlashSale, priceChanged, ... }]
+
+          const removedNames: string[] = [];
+          const updatedItems: CartItem[] = [];
+
+          for (const item of items) {
+            const v = validatedItems.find((vi: any) => 
+              vi.productId === item.productId && (vi.variantId || null) === (item.variantId || null)
+            );
+
+            if (!v || !v.isAvailable) {
               removedNames.push(item.name);
               continue;
             }
-            const product = await res.json();
-            // Check if product is still active and in stock
-            if (!product.isActive) {
-              removedNames.push(item.name);
-              continue;
-            }
-            if (product.stockQty <= 0) {
-              removedNames.push(item.name);
-              continue;
-            }
-            // Update price if changed
-            validItems.push({
+
+            updatedItems.push({
               ...item,
-              price: product.discountPrice || product.price,
-              originalPrice: product.price,
-              imageUrl: product.images?.[0] || item.imageUrl,
-              stockQty: product.stockQty,
-              isUnlimitedStock: product.isUnlimitedStock,
+              price: v.unitPrice,
+              stockQty: v.stockQty || item.stockQty,
+              imageUrl: v.productImage || item.imageUrl,
             });
-          } catch {
-            // Network error — keep item, don't remove
-            validItems.push(item);
           }
-        }
 
-        if (removedNames.length > 0) {
-          set({ items: validItems });
+          set({ items: updatedItems });
+          return removedNames;
+        } catch (err) {
+          console.error('Validate cart failed:', err);
+          return [];
         }
-
-        return removedNames;
       },
     }),
     {

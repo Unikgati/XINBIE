@@ -220,13 +220,33 @@ export class AiChatService {
     const orderMatch = query.match(/\b(ORD|DG)-[A-Z0-9-]+\b/i);
     let orderInfo = null;
     if (orderMatch) {
-      orderInfo = await prisma.order.findUnique({
+      const order = await prisma.order.findUnique({
         where: { code: orderMatch[0].toUpperCase() },
         select: {
           code: true, orderStatus: true, paymentStatus: true,
           grandTotal: true, createdAt: true, scheduledDate: true, deliveryType: true,
         }
       });
+
+      if (order) {
+        const statusMap: Record<string, string> = {
+          'WAITING_PAYMENT': 'Menunggu Pembayaran',
+          'RECEIVED': 'Pesanan Diterima (Sudah masuk sistem)',
+          'PROCESSING': 'Sedang Disiapkan (Sedang dipacking)',
+          'WAITING_DRIVER': 'Menunggu Kurir (Barang siap, menunggu jemputan)',
+          'SHIPPING': 'Dalam Pengiriman (Sudah dibawa kurir)',
+          'IN_DELIVERY': 'Dalam Pengiriman (Sudah dibawa kurir)',
+          'DELIVERED': 'Sudah Sampai',
+          'COMPLETED': 'Selesai',
+          'CANCELLED': 'Dibatalkan',
+          'PROBLEM': 'Ada Kendala'
+        };
+
+        orderInfo = {
+          ...order,
+          humanStatus: statusMap[order.orderStatus] || order.orderStatus
+        };
+      }
     }
 
     return { products, promos, categories, orderInfo, isNutritionQuery, nutritionTerms: extractedNutritionTerms };
@@ -296,16 +316,11 @@ TUTORIAL BELANJA SINGKAT:
 4. Klik 'Bayar Sekarang'.
 5. Jika COD: Tunggu barang sampai baru bayar. Jika non-COD: Selesaikan pembayaran sesuai instruksi.
 
-ATURAN PESANAN:
-- Jika ada "Data Pesanan" di atas, bantu user cek statusnya.
-- **WAJIB TERJEMAHKAN** status teknis menjadi bahasa Indonesia yang ramah:
-  * WAITING_PAYMENT: "Menunggu Pembayaran"
-  * RECEIVED/PROCESSING: "Sedang Disiapkan"
-  * SHIPPING/WAITING_DRIVER/IN_DELIVERY: "Dalam Pengiriman"
-  * DELIVERED/COMPLETED: "Sudah Sampai/Selesai"
-  * CANCELLED: "Dibatalkan"
-- **DILARANG KERAS** menggunakan istilah teknis seperti "WAITING_PAYMENT", "PROCESSING", atau "SHIPPING" dalam jawaban Anda ke user. Jawablah dengan istilah Indonesia di atas.
-- Jika user bertanya status tapi tidak ada "Data Pesanan" yang terdeteksi, minta user memberikan Kode Pesanan (contoh: DG-260506-9606 atau ORD-12345).
+- **ATURAN STATUS PESANAN**:
+  * Jika ada "Data Pesanan" di atas (dalam format JSON), Anda **WAJIB** menggunakan field \`humanStatus\` sebagai status yang valid untuk diinformasikan ke user.
+  * **WAJIB** sebutkan status tersebut persis seperti yang tertulis di \`humanStatus\`.
+  * DILARANG KERAS menggunakan istilah teknis seperti "WAITING_PAYMENT", "RECEIVED", "PROCESSING", "WAITING_DRIVER", "SHIPPING", atau "IN_DELIVERY" dalam jawaban Anda.
+- Jika user bertanya status tapi tidak ada "Data Pesanan" yang terdeteksi, minta user memberikan Kode Pesanan.
 - JANGAN PERNAH mengarang status pesanan jika datanya tidak ada.
 - **ATURAN SATUAN & KUANTITAS**: Perhatikan kolom unit pada Context. Jika unit adalah "kg", "gram", "ons", atau "liter", maka user **HANYA BOLEH** membeli dalam satuan tersebut. DILARANG KERAS menyarankan atau mengizinkan pembelian dalam satuan "biji", "buah", atau "ekor" jika satuannya adalah berat/volume. Selalu gunakan satuan yang tertulis di Context.
 

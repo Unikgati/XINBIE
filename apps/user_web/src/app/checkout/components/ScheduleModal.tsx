@@ -46,6 +46,13 @@ export default function ScheduleModal({
 
   useEffect(() => {
     if (isOpen) {
+      setSelectedDate(initialDate);
+      setSelectedSlot(initialSlot);
+    }
+  }, [isOpen, initialDate, initialSlot]);
+
+  useEffect(() => {
+    if (isOpen) {
       fetchSlots(selectedDate);
     }
   }, [isOpen, selectedDate]);
@@ -53,7 +60,12 @@ export default function ScheduleModal({
   const fetchSlots = async (date: Date) => {
     try {
       setLoadingSlots(true);
-      const dateStr = date.toISOString().split('T')[0];
+      // Use local date string instead of ISO to avoid timezone shifts
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+      
       const res = await api.get<any>(`/delivery/slots?date=${dateStr}`);
       
       const isToday = date.toDateString() === new Date().toDateString();

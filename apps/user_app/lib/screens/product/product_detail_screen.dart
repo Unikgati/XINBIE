@@ -65,7 +65,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           
           // Determine active price based on variant or product
           final activeFlash = product.activeFlashSaleItem;
+          
+          // User eligibility check
+          final bool isUserEligibleForFs = activeFlash != null && 
+              (activeFlash.limitPerUser == 0 || product.userFlashSaleUsage < activeFlash.limitPerUser);
+          
           final isInFlash = activeFlash != null;
+          final bool showFsPrice = isUserEligibleForFs;
           
           // Real-time stock override
           FlashSaleStockUpdate? fsUpdate;
@@ -79,12 +85,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           int totalVariantStock = hasVariants ? product.variants!.fold(0, (sum, v) => sum + v.stockQty) : product.stockQty;
           
           int activePrice = product.price;
-          int? activeDiscount = isInFlash ? activeFlash.flashPrice : product.discountPrice;
+          int? activeDiscount = showFsPrice ? activeFlash.flashPrice : product.discountPrice;
           int activeStock = isInFlash 
               ? (displayStockQty - displaySoldQty) 
               : (_selectedVariant?.stockQty ?? (hasVariants ? totalVariantStock : product.stockQty));
 
-          if (_selectedVariant != null && !isInFlash) {
+          if (_selectedVariant != null && !showFsPrice) {
             activePrice = _selectedVariant!.price;
             activeDiscount = _selectedVariant!.discountPrice;
             activeStock = _selectedVariant!.stockQty;
@@ -189,7 +195,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             Text(
                               formatRp.format(sellPrice),
                               style: AppTypography.priceActive.copyWith(
-                                color: isInFlash ? AppColors.error : AppColors.priceActive,
+                                color: showFsPrice ? AppColors.error : AppColors.priceActive,
                                 fontSize: 26,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -200,13 +206,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: AppColors.error,
+                                    color: showFsPrice ? AppColors.error : AppColors.textHint,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    isInFlash 
+                                    showFsPrice 
                                       ? '${((1 - (activeFlash.flashPrice / activePrice)) * 100).toStringAsFixed(0)}% OFF'
-                                      : '${product.discountPercent}% OFF',
+                                      : (isInFlash ? 'LIMIT TERCAPAI' : '${product.discountPercent}% OFF'),
                                     style: AppTypography.caption.copyWith(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
@@ -226,6 +232,21 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             ],
                           ],
                         ),
+                        if (isInFlash && activeFlash.limitPerUser > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              product.userFlashSaleUsage >= activeFlash.limitPerUser
+                                ? '* Anda sudah membeli ${product.userFlashSaleUsage} item (Limit tercapai)'
+                                : '* Terbatas ${activeFlash.limitPerUser} per pelanggan (Sudah beli ${product.userFlashSaleUsage})',
+                              style: AppTypography.caption.copyWith(
+                                color: product.userFlashSaleUsage >= activeFlash.limitPerUser 
+                                  ? AppColors.textHint 
+                                  : AppColors.error,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 12),
 
                         // Tags as outlined pills

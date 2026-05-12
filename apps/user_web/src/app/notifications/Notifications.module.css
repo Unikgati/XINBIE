@@ -6,8 +6,8 @@
 }
 
 .contentWrapper {
-  max-width: 800px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
 }
 
 .header {
@@ -110,12 +110,59 @@
   right: 16px;
 }
 
-@media (max-width: 899px) {
+@media (max-width: 768px) {
   .container {
-    padding: 24px 16px 120px;
+    padding: 20px 16px 100px;
   }
   
-  .contentWrapper {
-    max-width: 100%;
+  .header {
+    margin-bottom: 16px;
+  }
+
+  .item {
+    padding: 12px;
+    gap: 12px;
+    border-radius: 12px;
+  }
+
+  .iconWrapper {
+    width: 40px;
+    height: 40px;
+  }
+
+  .iconWrapper span {
+    font-size: 20px;
+  }
+
+  .title {
+    font-size: 15px;
+  }
+
+  .body {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  .date {
+    font-size: 11px;
+  }
+
+  .unreadDot {
+    top: 12px;
+    right: 12px;
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* For ultra-small screens */
+@media (max-width: 380px) {
+  .item {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .iconWrapper {
+    display: none; /* Hide icon on tiny screens to save space */
   }
 }

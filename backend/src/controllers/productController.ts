@@ -172,12 +172,31 @@ export async function getProduct(req: Request, res: Response, next: NextFunction
       populatedSimilar = [...populatedSimilar, ...fallback.map(toPopulated)];
     }
 
+    // If user is logged in, check their flash sale usage for this specific flash sale item
+    let userFlashSaleUsage = 0;
+    if ((req as AuthRequest).userId && product.flashSaleItems && product.flashSaleItems.length > 0) {
+      const fsItem = product.flashSaleItems[0];
+      const usage = await prisma.orderItem.aggregate({
+        where: {
+          productId: product.id,
+          order: {
+            userId: (req as AuthRequest).userId,
+            createdAt: { gte: fsItem.flashSale.startAt, lte: fsItem.flashSale.endAt },
+            orderStatus: { notIn: ['CANCELLED', 'PROBLEM'] }
+          }
+        },
+        _sum: { qty: true }
+      });
+      userFlashSaleUsage = usage._sum.qty || 0;
+    }
+
     res.json({
       ...product,
       categoryName: product.category?.name ?? '',
       category: undefined,
       populatedRelatedProducts: populatedRelated,
       populatedSimilarProducts: populatedSimilar,
+      userFlashSaleUsage,
     });
   } catch (err) { next(err); }
 }
@@ -193,7 +212,7 @@ export async function validateCart(req: AuthRequest, res: Response, next: NextFu
       include: { variants: true },
     });
 
-    const validated = items.map((item: any) => {
+    const validated = await Promise.all(items.map(async (item: any) => {
       const product = products.find((p) => p.id === item.productId);
       if (!product || !product.isActive) {
         return { ...item, isAvailable: false, reason: 'Produk tidak tersedia' };
@@ -203,9 +222,56 @@ export async function validateCart(req: AuthRequest, res: Response, next: NextFu
         ? product.variants.find((v) => v.id === item.variantId)
         : null;
 
-      const unitPrice = product.discountPrice || product.price;
-      const variantAdd = variant?.priceAddition || 0;
+      // 1. Identify Flash Sale
+      const fsItem = await prisma.flashSaleItem.findFirst({
+        where: {
+          productId: product.id,
+          flashSale: {
+            isActive: true,
+            startAt: { lte: new Date() },
+            endAt: { gte: new Date() }
+          }
+        },
+        include: { flashSale: true }
+      });
 
+      let unitPrice = product.discountPrice || product.price;
+      let isFlashSale = false;
+
+      if (fsItem) {
+        const remainingFsStock = fsItem.flashStock - fsItem.soldQty;
+        
+        let userFsUsage = 0;
+        if ((req as AuthRequest).userId) {
+          const usage = await prisma.orderItem.aggregate({
+            where: {
+              productId: product.id,
+              order: {
+                userId: (req as AuthRequest).userId,
+                createdAt: { gte: fsItem.flashSale.startAt, lte: fsItem.flashSale.endAt },
+                orderStatus: { notIn: ['CANCELLED', 'PROBLEM'] }
+              }
+            },
+            _sum: { qty: true }
+          });
+          userFsUsage = usage._sum.qty || 0;
+        }
+
+        const userRemainingLimit = fsItem.limitPerUser === 0 ? 999999 : Math.max(0, fsItem.limitPerUser - userFsUsage);
+        const availableFsQty = Math.min(item.qty, remainingFsStock, userRemainingLimit);
+
+        if (availableFsQty > 0) {
+          const flashPrice = fsItem.flashPrice;
+          const normalPrice = product.discountPrice || product.price;
+          
+          // Calculate blended unit price: (qtyAtFlash * flashPrice + qtyAtNormal * normalPrice) / totalQty
+          const totalLinePrice = (availableFsQty * flashPrice) + ((item.qty - availableFsQty) * normalPrice);
+          unitPrice = totalLinePrice / item.qty;
+          isFlashSale = true;
+        }
+      }
+
+      const variantAdd = variant?.priceAddition || 0;
       const outOfStock = !product.isUnlimitedStock && product.stockQty < item.qty;
 
       return {
@@ -215,13 +281,14 @@ export async function validateCart(req: AuthRequest, res: Response, next: NextFu
         productName: product.name,
         productImage: product.images[0] || null,
         unit: product.unit,
-        unitPrice: unitPrice + variantAdd,
+        unitPrice: Math.round(unitPrice + variantAdd),
+        isFlashSale,
         variantName: variant?.name || null,
         isAvailable: !outOfStock,
-        priceChanged: false,
+        priceChanged: Math.abs((unitPrice + variantAdd) - item.unitPrice) > 1,
         reason: outOfStock ? `Stok tersisa ${product.stockQty}` : null,
       };
-    });
+    }));
 
     res.json({ items: validated });
   } catch (err) { next(err); }

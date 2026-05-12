@@ -96,7 +96,14 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
 
   // Flash Sale Price Override
   const activeFlashSale = product.flashSaleItems && product.flashSaleItems.length > 0 ? product.flashSaleItems[0] : null;
+  const userFsUsage = (product as any).userFlashSaleUsage || 0;
+  
+  // A user is eligible for FS price ONLY if:
+  // 1. Flash sale is active
+  // 2. User has NOT reached their per-user limit
+  const isUserEligibleForFs = activeFlashSale && (activeFlashSale.limitPerUser === 0 || userFsUsage < activeFlashSale.limitPerUser);
   const isFlashSaleActive = !!activeFlashSale;
+  const showFsPrice = isUserEligibleForFs;
 
   // Real-time stock state
   const initialSold = activeFlashSale?.soldQty || 0;
@@ -124,11 +131,11 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
     };
   }, [isFlashSaleActive, activeFlashSale]);
   
-  if (isFlashSaleActive) {
+  if (showFsPrice) {
     finalPrice = activeFlashSale.flashPrice;
   }
 
-  if (selectedVariant && selectedVariant.price && selectedVariant.price > 0 && !isFlashSaleActive) {
+  if (selectedVariant && selectedVariant.price && selectedVariant.price > 0 && !showFsPrice) {
     basePrice = selectedVariant.price;
     finalPrice = selectedVariant.discountPrice && selectedVariant.discountPrice > 0 ? selectedVariant.discountPrice : basePrice;
   }
@@ -301,11 +308,18 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
               <span className={styles.activePrice}>Rp {formatRp(displayPrice)}</span>
               
               <div className={styles.discountBox}>
-                {isFlashSaleActive ? (
+                {showFsPrice ? (
                   <>
                     {hasDiscount && (
                       <span className={styles.discountBadge}>{calculatedDiscountPercent}% OFF</span>
                     )}
+                    {hasDiscount && (
+                      <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
+                    )}
+                  </>
+                ) : isFlashSaleActive ? (
+                  <>
+                    <span className={styles.discountBadge} style={{ background: '#666' }}>Limit Tercapai</span>
                     {hasDiscount && (
                       <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
                     )}
@@ -321,8 +335,10 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
               </div>
 
               {isFlashSaleActive && activeFlashSale.limitPerUser > 0 && (
-                <div style={{ color: '#E65100', fontSize: '12px', fontWeight: 'bold', width: '100%', marginTop: '4px' }}>
-                  * Terbatas {activeFlashSale.limitPerUser} per pelanggan
+                <div style={{ color: userFsUsage >= activeFlashSale.limitPerUser ? '#666' : '#E65100', fontSize: '12px', fontWeight: 'bold', width: '100%', marginTop: '4px' }}>
+                  {userFsUsage >= activeFlashSale.limitPerUser 
+                    ? `* Anda sudah membeli ${userFsUsage} item (Limit tercapai)` 
+                    : `* Terbatas ${activeFlashSale.limitPerUser} per pelanggan (Sudah beli ${userFsUsage})`}
                 </div>
               )}
             </div>

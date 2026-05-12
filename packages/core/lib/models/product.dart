@@ -37,6 +37,7 @@ abstract class Product with _$Product {
     @Default([]) List<Product> populatedRelatedProducts,
     @Default([]) List<Product> populatedSimilarProducts,
     List<FlashSaleItem>? flashSaleItems,
+    @Default(0) int userFlashSaleUsage,
   }) = _Product;
 
   factory Product.fromJson(Map<String, dynamic> json) =>
