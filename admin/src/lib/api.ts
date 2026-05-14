@@ -2,14 +2,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export function getAuthToken(): string | null {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('dapurgizi_admin_token');
+    return localStorage.getItem('xinbie_admin_token');
   }
   return null;
 }
 
 export function setAuthToken(token: string) {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('dapurgizi_admin_token', token);
+    localStorage.setItem('xinbie_admin_token', token);
     // Sync to cookie for middleware auth check
     document.cookie = `admin_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   }
@@ -17,7 +17,7 @@ export function setAuthToken(token: string) {
 
 export function clearAuthToken() {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('dapurgizi_admin_token');
+    localStorage.removeItem('xinbie_admin_token');
     // Remove cookie
     document.cookie = 'admin_token=; path=/; max-age=0';
   }

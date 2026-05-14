@@ -32,7 +32,7 @@ export const useCheckoutStore = create<CheckoutState>()(
       clearCheckout: () => set({ paymentMethod: null, scheduledDate: null, deliverySlot: null }),
     }),
     {
-      name: 'dapurgizi-checkout',
+      name: 'xinbie-checkout',
     }
   )
 );

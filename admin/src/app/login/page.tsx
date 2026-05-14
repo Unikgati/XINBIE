@@ -344,18 +344,18 @@ export default function LoginPage() {
             </form>
 
             <div className="login-footer">
-              © {new Date().getFullYear()} Dapurgizi
+              © {new Date().getFullYear()} XINBIE
             </div>
           </div>
 
           {/* Right: Mascot + Logo */}
           <div className="login-right">
             <div className="login-brand-top">
-              <img src="/logo-full.svg" alt="Dapurgizi" />
+              <img src="/XINBIE.svg" alt="XINBIE" />
             </div>
             <img
               src="/mascot-admin.webp"
-              alt="Dapurgizi Mascot"
+              alt="XINBIE Mascot"
               className="login-mascot"
               width={340}
               height={451}

@@ -94,6 +94,7 @@ model Product {
   relatedProductIds String[]         @default([]) @map("related_product_ids")
   slug              String           @unique
   tags              String[]         @default([])
+  sizes             String[]         @default([])
   shopeeUrl         String?          @map("shopee_url")
   viewCount         Int              @default(0) @map("view_count")
   ratingAvg         Float            @default(4.8) @map("rating_avg")

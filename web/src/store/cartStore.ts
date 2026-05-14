@@ -208,7 +208,7 @@ export const useCartStore = create<CartState>()(
       },
     }),
     {
-      name: 'dapurgizi-cart',
+      name: 'xinbie-cart',
     }
   )
 );

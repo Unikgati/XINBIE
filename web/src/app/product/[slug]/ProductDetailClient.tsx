@@ -37,6 +37,7 @@ interface Product {
   isUnlimitedStock: boolean;
   stockQty: number;
   tags?: string[];
+  sizes?: string[];
   variants: Variant[];
   cookingVideos?: CookingVideo[];
   shopeeUrl?: string;
@@ -181,7 +182,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
 
           {product.variants && product.variants.length > 0 && (
             <div className={styles.variantsSection}>
-              <h3 className={styles.sectionTitle}>Pilih Varian:</h3>
+              <h3 className={styles.sectionTitle}>Varian Tersedia:</h3>
               <div className={styles.variantsGrid}>
                 {product.variants.map(v => {
                   const isDiscounted = v.discountPrice != null && v.price != null && v.discountPrice > 0 && v.discountPrice < v.price;
@@ -205,6 +206,19 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {product.sizes && product.sizes.length > 0 && (
+            <div className={styles.sizesSection}>
+              <h3 className={styles.sectionTitle}>Ukuran Tersedia:</h3>
+              <div className={styles.sizesGrid}>
+                {product.sizes.map(size => (
+                  <div key={size} className={styles.sizeBadge}>
+                    {size}
+                  </div>
+                ))}
               </div>
             </div>
           )}

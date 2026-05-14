@@ -106,7 +106,8 @@ const parseProductData = (body: any) => {
   const allowedFields = [
     'name', 'description', 'categoryId', 'price', 'costPrice', 
     'discountPrice', 'unit', 'weightGram', 'isUnlimitedStock', 
-    'isActive', 'isFeatured', 'sortOrder', 'shopeeUrl', 'ratingAvg'
+    'isActive', 'isFeatured', 'sortOrder', 'shopeeUrl', 'ratingAvg',
+    'tags', 'sizes'
   ];
 
   allowedFields.forEach(field => {
@@ -127,7 +128,7 @@ const parseProductData = (body: any) => {
   if (data.costPrice !== undefined) data.costPrice = parseInt(data.costPrice) || 0;
   if (data.discountPrice !== undefined) {
     const parsed = parseInt(data.discountPrice);
-    data.discountPrice = isNaN(parsed) ? null : parsed;
+    data.discountPrice = isNaN(parsed) || parsed < 0 ? null : parsed;
   }
   if (data.weightGram !== undefined) {
     const parsed = parseInt(data.weightGram);
@@ -141,8 +142,24 @@ const parseProductData = (body: any) => {
   if (data.isFeatured !== undefined) data.isFeatured = String(data.isFeatured) === 'true';
   if (data.isUnlimitedStock !== undefined) data.isUnlimitedStock = String(data.isUnlimitedStock) === 'true';
 
+  // Handle arrays from FormData and split by comma if needed
+  if (body.tags !== undefined) {
+    let rawTags = Array.isArray(body.tags) ? body.tags : [body.tags];
+    data.tags = rawTags.flatMap(t => String(t).split(',')).map(t => t.trim()).filter(Boolean);
+  }
+  if (body.sizes !== undefined) {
+    let rawSizes = Array.isArray(body.sizes) ? body.sizes : [body.sizes];
+    data.sizes = rawSizes.flatMap(s => String(s).split(',')).map(s => s.trim()).filter(Boolean);
+  }
+
+  // Handle category relation
+  if (data.categoryId) {
+    data.category = { connect: { id: data.categoryId } };
+    delete data.categoryId;
+  }
+
   // Auto-calculate discountPercent
-  if (data.price && data.price > 0 && data.discountPrice && data.discountPrice < data.price) {
+  if (data.price && data.price > 0 && data.discountPrice !== null && data.discountPrice > 0 && data.discountPrice < data.price) {
     data.discountPercent = Math.round(((data.price - data.discountPrice) / data.price) * 100);
   } else {
     data.discountPercent = null;

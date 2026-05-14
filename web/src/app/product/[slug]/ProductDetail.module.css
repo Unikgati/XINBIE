@@ -434,6 +434,34 @@
   line-height: 1;
 }
 
+.sizesSection {
+  margin-top: 16px;
+  padding-bottom: 16px;
+}
+
+.sizesGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sizeBadge {
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  transition: all 0.2s ease;
+}
+
 .actionSection {
   display: flex;
   align-items: center;

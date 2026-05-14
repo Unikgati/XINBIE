@@ -79,24 +79,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 /** Fetch unread counts from backend */
 async function fetchUnreadCount(): Promise<{ orders: number; drivers: number }> {
-  const token = getAuthToken();
-  if (!token) return { orders: 0, drivers: 0 };
-  try {
-    const res = await fetch(`${API_URL}/admin/orders/unread-count`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    return {
-      orders: typeof data.unreadCount === 'number' ? data.unreadCount : 0,
-      drivers: typeof data.pendingDriversCount === 'number' ? data.pendingDriversCount : 0,
-    };
-  } catch {
-    return { orders: 0, drivers: 0 };
-  }
+  // Legacy feature disabled for XINBIE
+  return { orders: 0, drivers: 0 };
 }
 
 // BroadcastChannel for cross-tab sync (graceful fallback if unsupported)
-const CHANNEL_NAME = 'dapurgizi_unread_sync';
+const CHANNEL_NAME = 'xinbie_unread_sync';
 
 function getBroadcastChannel(): BroadcastChannel | null {
   if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return null;

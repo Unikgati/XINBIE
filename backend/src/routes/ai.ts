@@ -10,23 +10,24 @@ router.post('/generate-desc', async (req, res) => {
       return res.status(400).json({ message: 'productName is required' });
     }
 
-    const prompt = `Buat deskripsi produk untuk marketplace bahan dapur (Dapurgizi).
+    const prompt = `Buat deskripsi produk untuk marketplace (XINBIE).
 
 Nama Produk: ${productName}
-Kategori: ${categoryName || 'Bahan Makanan'}
+Kategori: ${categoryName || 'Produk'}
 
 Aturan Penulisan (WAJIB DIIKUTI):
 - Maksimal 2 paragraf, dengan total hanya 2–3 kalimat saja (singkat dan padat).
-- Fokus pada: kandungan nutrisi atau karakteristik fisik produk (harus berdasarkan fakta umum).
-- Gunakan fakta umum secara akurat. Bedakan antara "Tinggi" (jika sangat menonjol, misal: Jeruk Tinggi Vitamin C) dan "Sumber" (jika hanya mengandung secara umum, misal: Apel Sumber Serat).
+- Fokus pada: kandungan nutrisi, spesifikasi, atau karakteristik fisik produk (harus berdasarkan fakta umum).
+- Gunakan fakta umum secara akurat.
 - JANGAN berikan klaim medis/obat.
 - Bahasa sederhana, natural, tidak berlebihan, dan tidak puitis.
 - Hindari pengulangan fungsi produk atau kata-kata yang tidak perlu.
-- TIDAK BOLEH menyebutkan nama brand/merek apapun termasuk "Dapurgizi".
+- TIDAK BOLEH menyebutkan nama brand/merek apapun termasuk "XINBIE" atau "Dapurgizi".
 - TIDAK BOLEH menggunakan bullet point (<ul> atau <li>).
-- Format deskripsi harus teks biasa (PLAIN TEXT), dilarang menggunakan tag HTML apapun (seperti <p>, <b>, dsb). Gunakan newline (\n) untuk pemisah paragraf jika diperlukan.
+- Format deskripsi harus teks biasa (PLAIN TEXT), dilarang menggunakan tag HTML apapun. Gunakan newline (\n) untuk pemisah paragraf jika diperlukan.
+- PENTING: JANGAN menambahkan informasi operasional seperti jam buka toko, jadwal pengiriman (Senin-Sabtu), atau kebijakan retur. Fokuslah hanya pada deskripsi produk itu sendiri.
 
-Kemudian, pikirkan 3-5 jenis bahan masakan riil lain yang sangat cocok dimasak bersama bahan ini (sebagai barang rekomendasi cross-selling).
+Kemudian, pikirkan 3-5 jenis bahan masakan atau produk riil lain yang sangat cocok digunakan bersama produk ini (sebagai barang rekomendasi cross-selling).
 
 PENTING: KEMBALIKAN OUTPUT HANYA DALAM BENTUK JSON murni (TANPA markdown \`\`\`json) dengan format persis seperti ini:
 {

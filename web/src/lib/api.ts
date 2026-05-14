@@ -12,7 +12,7 @@ export class ApiException extends Error {
 function getTokens(): { accessToken: string | null; refreshToken: string | null } {
   if (typeof window === 'undefined') return { accessToken: null, refreshToken: null };
   try {
-    const stored = localStorage.getItem('dapurgizi-auth');
+    const stored = localStorage.getItem('xinbie-auth');
     if (!stored) return { accessToken: null, refreshToken: null };
     const parsed = JSON.parse(stored);
     return {
@@ -27,24 +27,24 @@ function getTokens(): { accessToken: string | null; refreshToken: string | null 
 function setTokens(accessToken: string, refreshToken: string) {
   if (typeof window === 'undefined') return;
   try {
-    const stored = localStorage.getItem('dapurgizi-auth');
+    const stored = localStorage.getItem('xinbie-auth');
     const parsed = stored ? JSON.parse(stored) : { state: {} };
     parsed.state.accessToken = accessToken;
     parsed.state.refreshToken = refreshToken;
-    localStorage.setItem('dapurgizi-auth', JSON.stringify(parsed));
+    localStorage.setItem('xinbie-auth', JSON.stringify(parsed));
   } catch { /* ignore */ }
 }
 
 function clearTokens() {
   if (typeof window === 'undefined') return;
   try {
-    const stored = localStorage.getItem('dapurgizi-auth');
+    const stored = localStorage.getItem('xinbie-auth');
     if (stored) {
       const parsed = JSON.parse(stored);
       parsed.state.accessToken = null;
       parsed.state.refreshToken = null;
       parsed.state.user = null;
-      localStorage.setItem('dapurgizi-auth', JSON.stringify(parsed));
+      localStorage.setItem('xinbie-auth', JSON.stringify(parsed));
     }
   } catch { /* ignore */ }
 }

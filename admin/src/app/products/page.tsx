@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Select, { components } from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 import ActionMenu from '@/components/ActionMenu';
 import CustomSelect from '@/components/CustomSelect';
 import { useToast } from '@/components/Toast';
@@ -44,6 +45,7 @@ interface Product {
   variants: Variant[];
   shopeeUrl?: string;
   ratingAvg?: number;
+  sizes?: string[];
 }
 
 
@@ -125,6 +127,81 @@ interface FormVariant {
   file?: File;
 }
 
+const TagInput = ({ tags, setTags, placeholder }: { tags: string[], setTags: (t: string[]) => void, placeholder: string }) => {
+  const [input, setInput] = useState('');
+
+  const addTag = () => {
+    const val = input.trim();
+    if (val && !tags.includes(val)) {
+      setTags([...tags, val]);
+      setInput('');
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    setTags(tags.filter(t => t !== tag));
+  };
+
+  return (
+    <div className="form-input" style={{ 
+      display: 'flex', 
+      flexWrap: 'wrap', 
+      gap: 6, 
+      minHeight: '42px', 
+      height: 'auto', 
+      padding: '8px 12px',
+      alignItems: 'center'
+    }}>
+      {tags.map((tag, i) => (
+        <span key={i} className="badge" style={{ 
+          background: 'var(--primary-surface)', 
+          color: 'var(--primary-dark)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '2px 8px',
+          borderRadius: 4,
+          fontSize: 12,
+          fontWeight: 600
+        }}>
+          {tag}
+          <span 
+            className="material-symbols-outlined" 
+            style={{ fontSize: 14, cursor: 'pointer', opacity: 0.7 }}
+            onClick={() => removeTag(tag)}
+          >
+            close
+          </span>
+        </span>
+      ))}
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            addTag();
+          } else if (e.key === 'Backspace' && !input && tags.length > 0) {
+            removeTag(tags[tags.length - 1]);
+          }
+        }}
+        onBlur={addTag}
+        placeholder={tags.length === 0 ? placeholder : ''}
+        style={{ 
+          border: 'none', 
+          outline: 'none', 
+          background: 'transparent', 
+          flex: 1,
+          minWidth: 60,
+          fontSize: 14,
+          color: 'var(--text-primary)'
+        }}
+      />
+    </div>
+  );
+};
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -153,6 +230,18 @@ export default function ProductsPage() {
 
   const [formShopeeUrl, setFormShopeeUrl] = useState('');
   const [formRating, setFormRating] = useState('4.8');
+  const [formTags, setFormTags] = useState<string[]>([]);
+  const [formSizes, setFormSizes] = useState<string[]>([]);
+
+  const sizeOptions = [
+    { value: 'S', label: 'S' },
+    { value: 'M', label: 'M' },
+    { value: 'L', label: 'L' },
+    { value: 'XL', label: 'XL' },
+    { value: 'XXL', label: 'XXL' },
+    { value: 'XXXL', label: 'XXXL' },
+    { value: 'All Size', label: 'All Size' },
+  ];
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -233,6 +322,8 @@ export default function ProductsPage() {
     setFormImages([]); setExistingImages([]);
     setFormShopeeUrl('');
     setFormRating('4.8');
+    setFormTags([]);
+    setFormSizes([]);
     setProductCategory(categories[0]?.id || '');
   };
 
@@ -265,6 +356,8 @@ export default function ProductsPage() {
 
     setFormShopeeUrl(p.shopeeUrl || '');
     setFormRating(String(p.ratingAvg || '4.8'));
+    setFormTags(p.tags || []);
+    setFormSizes(p.sizes || []);
     setFormImages([]);
     setFormVariants(p.variants ? p.variants.map(v => ({
       tempId: v.id,
@@ -293,6 +386,8 @@ export default function ProductsPage() {
 
       formData.append('shopeeUrl', formShopeeUrl || '');
       formData.append('ratingAvg', formRating || '4.8');
+      formTags.forEach(t => formData.append('tags', t));
+      formSizes.forEach(s => formData.append('sizes', s));
       formImages.forEach(file => formData.append('images', file));
       
       let prodId = editingId;
@@ -539,9 +634,10 @@ export default function ProductsPage() {
                         </td>
                       </tr>
                       {hasVariants && isExpanded && p.variants.map(v => {
-                        const vSellPrice = v.discountPrice || v.price;
-                        const vMargin = calcMargin(vSellPrice, v.costPrice);
-                        const vProfit = vSellPrice - v.costPrice;
+                        const vSellPrice = v.discountPrice || v.price || sellPrice;
+                        const vCostPrice = v.costPrice || p.costPrice || 0;
+                        const vMargin = calcMargin(vSellPrice, vCostPrice);
+                        const vProfit = vSellPrice - vCostPrice;
                         return (
                           <tr key={v.id} style={{ background: 'var(--primary-surface)' }}>
                             <td style={{ paddingLeft: hasVariants ? 72 : 48 }}>
@@ -732,6 +828,25 @@ export default function ProductsPage() {
                 />
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+                <div className="form-group">
+                  <label className="form-label">Tags</label>
+                  <TagInput tags={formTags} setTags={setFormTags} placeholder="Enter tag..." />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Ukuran (Size)</label>
+                  <CreatableSelect
+                    isMulti
+                    options={sizeOptions}
+                    value={formSizes.map(s => ({ value: s, label: s }))}
+                    onChange={(val) => setFormSizes(val ? val.map((v: any) => v.value) : [])}
+                    placeholder="Pilih atau ketik..."
+                    className="react-select-container"
+                    classNamePrefix="react-select"
+                  />
+                </div>
+              </div>
+
               <div style={formVariants.length > 0 ? { opacity: 0.5, pointerEvents: 'none', marginTop: 12 } : { marginTop: 12 }}>
                 {formVariants.length > 0 && (
                   <div style={{ fontSize: 12, color: 'var(--warning)', marginTop: 4, marginBottom: 12 }}>* Harga utama diabaikan karena produk memiliki varian.</div>
@@ -847,14 +962,26 @@ export default function ProductsPage() {
                               <input className="form-input" placeholder="cth: Besar, 1kg, 500ml" value={v.name} onChange={e => updateFormVariant(v.tempId, 'name', e.target.value)} />
                             </div>
                             
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
                               <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label" style={{ fontSize: 11 }}>Harga Beli</label>
-                                <input className="form-input" type="number" placeholder="0" value={v.costPrice} onChange={e => updateFormVariant(v.tempId, 'costPrice', e.target.value)} />
+                                <input 
+                                  className="form-input" 
+                                  type="number" 
+                                  placeholder={formCostPrice || "Ikuti Utama"} 
+                                  value={v.costPrice} 
+                                  onChange={e => updateFormVariant(v.tempId, 'costPrice', e.target.value)} 
+                                />
                               </div>
                               <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label" style={{ fontSize: 11 }}>Harga Jual</label>
-                                <input className="form-input" type="number" placeholder="0" value={v.price} onChange={e => updateFormVariant(v.tempId, 'price', e.target.value)} />
+                                <input 
+                                  className="form-input" 
+                                  type="number" 
+                                  placeholder={formPrice || "Ikuti Utama"} 
+                                  value={v.price} 
+                                  onChange={e => updateFormVariant(v.tempId, 'price', e.target.value)} 
+                                />
                               </div>
                               <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label" style={{ fontSize: 11 }}>Diskon</label>
@@ -863,6 +990,20 @@ export default function ProductsPage() {
                               <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label" style={{ fontSize: 11 }}>Stok</label>
                                 <input className="form-input" type="number" placeholder="0" value={v.stockQty} onChange={e => updateFormVariant(v.tempId, 'stockQty', e.target.value)} />
+                              </div>
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label" style={{ fontSize: 11 }}>Margin</label>
+                                <div style={{ height: 38, display: 'flex', alignItems: 'center' }}>
+                                  <span className={`badge ${marginColor(calcMargin(
+                                    parseInt(v.discountPrice) || parseInt(v.price) || parseInt(formPrice) || 0,
+                                    parseInt(v.costPrice) || parseInt(formCostPrice) || 0
+                                  ))}`}>
+                                    {calcMargin(
+                                      parseInt(v.discountPrice) || parseInt(v.price) || parseInt(formPrice) || 0,
+                                      parseInt(v.costPrice) || parseInt(formCostPrice) || 0
+                                    )}%
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>

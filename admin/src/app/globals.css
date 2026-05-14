@@ -898,7 +898,7 @@ textarea.form-input:focus {
 
 /* ==========================================
 /* ==========================================
-   File Upload — DapurGizi Design System
+   File Upload — XINBIE Design System
    ========================================== */
 .file-upload {
   border: 2px dashed var(--border);
@@ -1207,7 +1207,7 @@ html[data-sidebar="collapsed"] .main-content {
 }
 
 /* ==========================================
-   Toast Notifications — DapurGizi Design System
+   Toast Notifications — XINBIE Design System
    ========================================== */
 .toast-container {
   position: fixed;
@@ -1495,4 +1495,77 @@ html[data-sidebar="collapsed"] .main-content {
   background-clip: text;
   color: transparent;
   display: inline-block;
+}
+
+/* React Select Customization */
+.react-select-container .react-select__control {
+  min-height: 48px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--divider);
+  box-shadow: none;
+  background-color: var(--card);
+  transition: all 0.2s ease;
+}
+
+.react-select-container .react-select__control:hover {
+  border-color: var(--primary-light);
+}
+
+.react-select-container .react-select__control--is-focused {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px var(--primary-surface) !important;
+}
+
+.react-select-container .react-select__placeholder {
+  color: var(--text-hint);
+  font-size: 14px;
+}
+
+.react-select-container .react-select__multi-value {
+  background-color: var(--primary-surface);
+  border-radius: 6px;
+  margin: 3px;
+  border: 1px solid var(--primary-light);
+}
+
+.react-select-container .react-select__multi-value__label {
+  color: var(--primary-dark);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 4px 8px;
+}
+
+.react-select-container .react-select__multi-value__remove {
+  color: var(--primary-dark);
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.react-select-container .react-select__multi-value__remove:hover {
+  background-color: var(--error);
+  color: #fff;
+}
+
+.react-select-container .react-select__menu {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--divider);
+  z-index: 100;
+}
+
+.react-select-container .react-select__option {
+  font-size: 14px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.react-select-container .react-select__option--is-focused {
+  background-color: var(--primary-surface);
+  color: var(--primary-dark);
+}
+
+.react-select-container .react-select__option--is-selected {
+  background-color: var(--primary);
+  color: #fff;
 }
