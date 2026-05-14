@@ -1,11 +1,11 @@
-# DapurGizi
+# XINBIE
 
 Platform belanja bahan dapur segar — Admin Panel + User Web + Backend API.
 
 ## 🏗️ Arsitektur
 
 ```
-DapurGizi/
+XINBIE/
 ├── admin/              # Next.js 16 — Panel admin
 ├── web/                # Next.js 16 — User web store
 ├── backend/            # Node.js + TypeScript + Prisma 7
@@ -70,4 +70,4 @@ Home • Search • Categories • Product Detail • Cart • Checkout • Orde
 | Real-time | Socket.IO |
 
 ## 📄 License
-Private — Dapur Gizi
+Private — XINBIE

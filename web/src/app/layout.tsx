@@ -21,12 +21,12 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Dapurgizi - Belanja Sayur & Kebutuhan Dapur Segar",
-    template: "%s | Dapurgizi"
+    default: "XINBIE - Belanja Sayur & Kebutuhan Dapur Segar",
+    template: "%s | XINBIE"
   },
   description: "Aplikasi belanja kebutuhan dapur segar, sayur, buah, dan daging dengan pengiriman cepat dan kualitas terjamin.",
-  keywords: ["belanja sayur", "sayur online", "kebutuhan dapur", "sayur segar", "dapurgizi"],
-  authors: [{ name: "Dapurgizi Team" }],
+  keywords: ["belanja sayur", "sayur online", "kebutuhan dapur", "sayur segar", "xinbie"],
+  authors: [{ name: "XINBIE Team" }],
   robots: "index, follow",
 };
 

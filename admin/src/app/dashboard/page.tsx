@@ -9,16 +9,11 @@ import { apiGet } from '@/lib/api';
 
 interface DashboardData {
   stats: {
-    totalUsers: number;
-    totalDrivers: number;
-    totalProducts: number;
     todayOrders: number;
     monthOrders: number;
     monthRevenue: number;
-    monthCogs: number;
     grossProfit: number;
     marginPercent: number;
-    pendingDrivers: number;
     activeOrders: number;
   };
   recentOrders: {
@@ -93,7 +88,7 @@ export default function DashboardPage() {
     return (
       <>
         <div className="page-header">
-          <div><h1 className="page-title">Dashboard</h1><p className="page-subtitle">Overview bisnis Dapur Gizi</p></div>
+          <div><h1 className="page-title">Dashboard</h1><p className="page-subtitle">Overview bisnis XINBIE</p></div>
         </div>
         <div className="page-body">
           <div className="stat-grid">
@@ -119,7 +114,7 @@ export default function DashboardPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">Overview bisnis Dapur Gizi</p>
+          <p className="page-subtitle">Overview bisnis XINBIE</p>
         </div>
       </div>
       <div className="page-body">
@@ -148,22 +143,7 @@ export default function DashboardPage() {
               <div className="stat-change">{stats.activeOrders} sedang aktif</div>
             </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-icon green"><span className="material-symbols-outlined">group</span></div>
-            <div>
-              <div className="stat-label">Pelanggan</div>
-              <div className="stat-value">{stats.totalUsers}</div>
-              <div className="stat-change">{stats.totalDrivers} driver • {stats.totalProducts} produk</div>
-            </div>
-          </div>
-        </div>
 
-        {stats.pendingDrivers > 0 && (
-          <div className="alert info" style={{ marginTop: 16 }}>
-            <span className="material-symbols-outlined">person_add</span>
-            {stats.pendingDrivers} driver menunggu verifikasi
-          </div>
-        )}
 
         <div className="data-card" style={{ marginTop: 16 }}>
           <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">receipt_long</span> Pesanan Terbaru</h3></div>

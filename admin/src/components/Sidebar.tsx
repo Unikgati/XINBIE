@@ -11,13 +11,7 @@ const navItems = [
     { href: '/orders', icon: 'shopping_bag', label: 'Pesanan' },
   ]},
   { section: 'Katalog', items: [
-    { href: '/categories', icon: 'category', label: 'Kategori' },
     { href: '/products', icon: 'inventory_2', label: 'Produk' },
-    { href: '/cooking-videos', icon: 'movie', label: 'Inspirasi Masak' },
-    { href: '/recipes', icon: 'menu_book', label: 'Inspirasi Resep' },
-  ]},
-  { section: 'Pengguna', items: [
-    { href: '/users', icon: 'group', label: 'Pelanggan' },
   ]},
   { section: 'Marketing', items: [
     { href: '/banners', icon: 'photo_library', label: 'Banner' },
@@ -25,7 +19,6 @@ const navItems = [
     { href: '/flash-sales', icon: 'bolt', label: 'Flash Sale' },
   ]},
   { section: 'Sistem', items: [
-    { href: '/delivery-slots', icon: 'event', label: 'Jadwal Pengiriman' },
     { href: '/settings', icon: 'settings', label: 'Pengaturan' },
   ]},
 ];
@@ -62,7 +55,7 @@ export default function Sidebar() {
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo" style={{ position: 'relative' }}>
-          <img src="/logo-icon.svg" alt="Dapur Gizi Logo" style={{ width: 24, height: 24, objectFit: 'contain' }} />
+          <img src="/logo-icon.svg" alt="XINBIE Logo" style={{ width: 24, height: 24, objectFit: 'contain' }} />
           <span
             title={dot.title}
             style={{
@@ -75,7 +68,7 @@ export default function Sidebar() {
         </div>
         {!collapsed && (
           <div>
-            <div className="sidebar-title">Dapur Gizi</div>
+            <div className="sidebar-title">XINBIE</div>
             <div className="sidebar-subtitle">Admin Panel</div>
           </div>
         )}
@@ -162,7 +155,7 @@ export default function Sidebar() {
             <div className="avatar-circle">AD</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 600 }}>Admin</div>
-              <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>admin@dapurgizi.store</div>
+              <div style={{ fontSize: 12, color: 'var(--text-hint)' }}>admin@xinbie.com</div>
             </div>
             <span 
               className="material-symbols-outlined" 

@@ -28,7 +28,7 @@ import promoRoutes from './routes/promo';
 import aiRoutes from './routes/ai';
 import chatRoutes from './routes/chat';
 import flashSaleRoutes from './routes/flashSale';
-import recipeRoutes from './routes/recipe';
+
 
 const app = express();
 const server = createServer(app);
@@ -81,7 +81,7 @@ app.use('/api/promos', promoRoutes);
 app.use('/api/admin/ai', aiRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api', flashSaleRoutes);
-app.use('/api', recipeRoutes);
+
 
 // 404
 app.use((req, res) => {

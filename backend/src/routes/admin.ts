@@ -23,11 +23,6 @@ router.post('/products/:productId/variants', upload.single('image'), admin.admin
 router.put('/variants/:id', upload.single('image'), admin.adminUpdateVariant);
 router.delete('/variants/:id', admin.adminDeleteVariant);
 
-// Categories
-router.get('/categories', admin.adminGetCategories);
-router.post('/categories', upload.single('icon'), admin.adminCreateCategory);
-router.put('/categories/reorder', admin.adminReorderCategories);
-router.put('/categories/:id', upload.single('icon'), admin.adminUpdateCategory);
 
 // Orders
 router.get('/orders/unread-count', admin.adminGetUnreadCount);
@@ -37,10 +32,6 @@ router.put('/orders/:id/status', admin.adminUpdateOrderStatus);
 router.put('/orders/:id/read', admin.adminMarkOrderAsRead);
 
 
-// Users
-router.get('/users', admin.adminGetUsers);
-router.get('/users/:id', admin.adminGetUserDetail);
-router.put('/users/:id/toggle', admin.adminToggleUser);
 
 // Banners
 router.get('/banners', admin.adminGetBanners);
@@ -66,18 +57,6 @@ router.delete('/flash-sales/:id', flashSale.deleteFlashSale);
 router.get('/settings', admin.adminGetSettings);
 router.put('/settings', admin.adminUpdateSettings);
 
-// Delivery Slots
-router.get('/delivery-slots', admin.adminGetDeliverySlots);
-router.post('/delivery-slots', admin.adminCreateDeliverySlot);
-router.put('/delivery-slots/day/:day', admin.adminUpdateDeliverySlotsByDay);
-router.put('/delivery-slots/:id', admin.adminUpdateDeliverySlot);
-router.delete('/delivery-slots/:id', admin.adminDeleteDeliverySlot);
 
-
-// Cooking Videos
-router.get('/cooking-videos', admin.adminGetCookingVideos);
-router.post('/cooking-videos', admin.adminCreateCookingVideo);
-router.put('/cooking-videos/:id', admin.adminUpdateCookingVideo);
-router.delete('/cooking-videos/:id', admin.adminDeleteCookingVideo);
 
 export default router;

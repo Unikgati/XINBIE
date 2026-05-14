@@ -10,8 +10,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Dapur Gizi Admin',
-  description: 'Panel admin untuk manajemen Dapur Gizi',
+  title: 'XINBIE Admin',
+  description: 'Panel admin untuk manajemen XINBIE',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

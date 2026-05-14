@@ -1,7 +1,7 @@
 {
-  "name": "dapurgizi-backend",
+  "name": "xinbie-backend",
   "version": "1.0.0",
-  "description": "Dapur Gizi Backend API",
+  "description": "XINBIE Backend API",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -18,7 +18,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
-  "author": "DapurGizi",
+  "author": "XINBIE",
   "license": "ISC",
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",

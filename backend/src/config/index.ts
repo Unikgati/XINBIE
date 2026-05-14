@@ -3,7 +3,7 @@ dotenv.config();
 
 export const config = {
   port: parseInt(process.env.API_PORT || '3001'),
-  appName: process.env.APP_NAME || 'Dapurgizi',
+  appName: process.env.APP_NAME || 'XINBIE',
   apiUrl: process.env.API_URL || 'http://localhost:3001',
   adminUrl: process.env.ADMIN_URL || 'http://localhost:3000',
   adminWa: process.env.ADMIN_WA || '',
@@ -19,7 +19,7 @@ export const config = {
     port: parseInt(process.env.MINIO_PORT || '9000'),
     accessKey: process.env.MINIO_ACCESS_KEY || '',
     secretKey: process.env.MINIO_SECRET_KEY || '',
-    bucket: process.env.MINIO_BUCKET || 'dapurgizi',
+    bucket: process.env.MINIO_BUCKET || 'xinbie',
     useSSL: process.env.MINIO_USE_SSL === 'true',
   },
 
@@ -38,7 +38,7 @@ export const config = {
     port: parseInt(process.env.SMTP_PORT || '587'),
     user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',
-    from: process.env.SMTP_FROM || 'noreply@dapurgizi.com',
+    from: process.env.SMTP_FROM || 'noreply@xinbie.com',
   },
 
   osrm: {
