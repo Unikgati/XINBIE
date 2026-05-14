@@ -143,7 +143,7 @@ export default function DashboardPage() {
               <div className="stat-change">{stats.activeOrders} sedang aktif</div>
             </div>
           </div>
-
+        </div>
 
         <div className="data-card" style={{ marginTop: 16 }}>
           <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">receipt_long</span> Pesanan Terbaru</h3></div>
