@@ -1,18 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import styles from './ProductDetail.module.css';
-import DgQuantitySelector from '@/components/DgQuantitySelector';
 import DgProductCard from '@/components/DgProductCard';
-import { useCartStore } from '@/store/cartStore';
-import { useSnackbarStore } from '@/store/snackbarStore';
 import ProductImageGallery from './ProductImageGallery';
 import CookingVideoSection from './CookingVideoSection';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import { getSocket } from '@/lib/socket';
 
 interface Variant {
   id: string;
@@ -45,8 +39,7 @@ interface Product {
   tags?: string[];
   variants: Variant[];
   cookingVideos?: CookingVideo[];
-  flashSaleItems?: any[];
-  recipeIngredients?: { recipe: { id: string; title: string; slug: string; heroImage?: string } }[];
+  shopeeUrl?: string;
 }
 
 interface ProductDetailClientProps {
@@ -57,8 +50,6 @@ interface ProductDetailClientProps {
 
 export default function ProductDetailClient({ product, relatedProducts, similarProducts }: ProductDetailClientProps) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
-  const router = useRouter();
-  const snackbar = useSnackbarStore();
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isCollapsible, setIsCollapsible] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
@@ -71,20 +62,6 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
     }
   }, [product.description]);
 
-  // Cart store
-  const cartQty = useCartStore((s) => s.getQuantity(product.id, selectedVariant?.id));
-  const addItem = useCartStore((s) => s.addItem);
-  const updateQuantity = useCartStore((s) => s.updateQuantity);
-
-  // SSR-safe: start at 1, sync from cart after mount
-  const [mounted, setMounted] = useState(false);
-  const [quantity, setQuantity] = useState(1);
-
-  useEffect(() => {
-    setMounted(true);
-    if (cartQty > 0) setQuantity(cartQty);
-  }, [cartQty]);
-
   const formatRp = (n: number) => {
     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
@@ -94,48 +71,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
   let basePrice = product.price;
   let finalPrice = product.discountPrice && product.discountPrice > 0 ? product.discountPrice : basePrice;
 
-  // Flash Sale Price Override
-  const activeFlashSale = product.flashSaleItems && product.flashSaleItems.length > 0 ? product.flashSaleItems[0] : null;
-  const userFsUsage = (product as any).userFlashSaleUsage || 0;
-  
-  // A user is eligible for FS price ONLY if:
-  // 1. Flash sale is active
-  // 2. User has NOT reached their per-user limit
-  const isUserEligibleForFs = activeFlashSale && (activeFlashSale.limitPerUser === 0 || userFsUsage < activeFlashSale.limitPerUser);
-  const isFlashSaleActive = !!activeFlashSale;
-  const showFsPrice = isUserEligibleForFs;
-
-  // Real-time stock state
-  const initialSold = activeFlashSale?.soldQty || 0;
-  const initialTotal = activeFlashSale?.flashStock || 0;
-  const [realTimeStock, setRealTimeStock] = useState<number>(initialTotal - initialSold);
-  const [realTimeSold, setRealTimeSold] = useState<number>(initialSold);
-
-  useEffect(() => {
-    if (!isFlashSaleActive || !activeFlashSale) return;
-
-    const socket = getSocket();
-    if (!socket) return;
-
-    const handleStockUpdate = (data: { flashSaleItemId: string, soldQty: number, stockQty: number }) => {
-      if (data.flashSaleItemId === activeFlashSale.id) {
-        setRealTimeStock(data.stockQty - data.soldQty);
-        setRealTimeSold(data.soldQty);
-      }
-    };
-
-    socket.on('flash_sale:stock', handleStockUpdate);
-
-    return () => {
-      socket.off('flash_sale:stock', handleStockUpdate);
-    };
-  }, [isFlashSaleActive, activeFlashSale]);
-  
-  if (showFsPrice) {
-    finalPrice = activeFlashSale.flashPrice;
-  }
-
-  if (selectedVariant && selectedVariant.price && selectedVariant.price > 0 && !showFsPrice) {
+  if (selectedVariant && selectedVariant.price && selectedVariant.price > 0) {
     basePrice = selectedVariant.price;
     finalPrice = selectedVariant.discountPrice && selectedVariant.discountPrice > 0 ? selectedVariant.discountPrice : basePrice;
   }
@@ -144,110 +80,29 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
   const displayPrice = finalPrice;
   const calculatedDiscountPercent = hasDiscount ? Math.round(((basePrice - finalPrice) / basePrice) * 100) : 0;
 
-  // Calculate total stock from all variants for the master display
-  const totalVariantStock = product.variants?.reduce((sum, v) => sum + (v.stockQty || 0), 0) || 0;
-  
-  const isLongDescription = product.description && product.description.length > 200;
-
   const handleShare = async () => {
     const url = window.location.href;
     const title = product.name;
-    const text = `Cek produk segar ${product.name} di DapurGizi!`;
+    const text = `Cek produk ${product.name} di XINBIE!`;
     
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: title,
-          text: text,
-          url: url,
-        });
+        await navigator.share({ title, text, url });
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           console.error('Error sharing:', err);
         }
       }
     } else {
-      // Fallback for browsers that don't support native share
       navigator.clipboard.writeText(url);
-      snackbar.show('Link berhasil disalin', 'success');
     }
   };
 
-  // Effective stock and price based on selection
-  const effectiveStock = selectedVariant ? selectedVariant.stockQty : (product.variants?.length > 0 ? totalVariantStock : product.stockQty);
-  const isOutOfStock = effectiveStock <= 0;
-  const isSelectionMissing = product.variants?.length > 0 && !selectedVariant;
-
-  const handleAddToCart = (): boolean => {
-    if (isOutOfStock) return false;
-
-    if (product.variants?.length > 0 && !selectedVariant) {
-      snackbar.show('Silakan pilih varian terlebih dahulu', 'warning');
-      return false;
-    }
-
-    if (cartQty > 0) {
-      updateQuantity(product.id, quantity, selectedVariant?.id);
-    } else {
-      addItem({
-        productId: product.id,
-        variantId: selectedVariant?.id || null,
-        name: product.name + (selectedVariant ? ` (${selectedVariant.name})` : ''),
-        price: displayPrice,
-        originalPrice: basePrice,
-        unit: product.unit,
-        imageUrl: images[0],
-        stockQty: effectiveStock,
-        isUnlimitedStock: product.isUnlimitedStock,
-      }, quantity);
-    }
-    
-    snackbar.show('Berhasil ditambahkan ke keranjang', 'success');
-    return true;
-  };
-
-  const handleBuyNow = () => {
-    const success = handleAddToCart();
-    if (success) {
-      router.push('/cart');
+  const handleBuyOnShopee = () => {
+    if (product.shopeeUrl) {
+      window.open(product.shopeeUrl, '_blank', 'noopener,noreferrer');
     }
   };
-
-  // Timer logic for Flash Sale
-  const [timeLeft, setTimeLeft] = useState<number>(0);
-
-  useEffect(() => {
-    if (!isFlashSaleActive || !activeFlashSale.flashSale?.endAt) return;
-
-    const calculateTimeLeft = () => {
-      const end = new Date(activeFlashSale.flashSale.endAt).getTime();
-      const now = new Date().getTime();
-      return Math.max(0, Math.floor((end - now) / 1000));
-    };
-
-    setTimeLeft(calculateTimeLeft());
-
-    const timer = setInterval(() => {
-      const remaining = calculateTimeLeft();
-      setTimeLeft(remaining);
-      if (remaining <= 0) clearInterval(timer);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isFlashSaleActive, activeFlashSale]);
-
-  const formatDuration = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
-  };
-
-  // Progress calculation
-  const currentStock = realTimeStock;
-  const currentSold = realTimeSold;
-  const fsTotalStock = currentStock + currentSold;
-  const fsProgress = fsTotalStock > 0 ? (currentSold / fsTotalStock) * 100 : 0;
 
   return (
     <div className={styles.container}>
@@ -269,78 +124,47 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
 
         {/* Right: Info */}
         <div className={styles.infoSection}>
-          {isFlashSaleActive && (
-            <div className={styles.flashSaleBanner}>
-              <div className={styles.fsMainCol}>
-                <div className={styles.fsTitleRow}>
-                  <span className="material-symbols-outlined">bolt</span>
-                  <span className={styles.fsTitleText}>FLASH SALE</span>
-                </div>
-                <div className={styles.fsProgressWrapper}>
-                  <div className={styles.fsProgressBar}>
-                    <div 
-                      className={styles.fsProgressFill} 
-                      style={{ width: `${fsProgress}%` }}
-                    />
-                  </div>
-                  <div className={styles.fsStockText}>Tersisa {currentStock} item</div>
-                </div>
-              </div>
-              <div className={styles.fsTimerCol}>
-                <span className={styles.fsTimerLabel}>Berakhir dalam</span>
-                <div className={styles.fsTimerBox}>{formatDuration(timeLeft)}</div>
-              </div>
-            </div>
-          )}
-
           <div className={styles.headerGroup}>
             <div className={styles.categoryBadge}>{product.categoryName || 'Produk'}</div>
             <div className={styles.titleWrapper}>
-            <h1 className={styles.title}>{product.name}</h1>
+            <h1 className={styles.title}>
+              <img src="/images/mall_ori.webp" alt="Mall Ori" className={styles.mallBadge} />
+              {product.name}
+            </h1>
             <div className={styles.shareActions}>
               <button onClick={handleShare} className={styles.shareBtn} title="Bagikan Produk">
                 <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>share</span>
               </button>
             </div>
           </div>
+
+          <div className={styles.ratingGroup}>
+            <div className={styles.ratingItem}>
+              <span className={styles.ratingValue}>{product.ratingAvg?.toFixed(1) || '4.8'}</span>
+              <div className={styles.stars}>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <span key={i} className="material-symbols-outlined" style={{ 
+                    fontSize: 18, 
+                    color: i <= Math.round(product.ratingAvg || 4.8) ? '#f59e0b' : '#e5e7eb',
+                    fontVariationSettings: "'FILL' 1"
+                  }}>star</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
             
             <div className={styles.priceContainer}>
               <span className={styles.activePrice}>Rp {formatRp(displayPrice)}</span>
               
               <div className={styles.discountBox}>
-                {showFsPrice ? (
+                {hasDiscount && (
                   <>
-                    {hasDiscount && (
-                      <span className={styles.discountBadge}>{calculatedDiscountPercent}% OFF</span>
-                    )}
-                    {hasDiscount && (
-                      <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
-                    )}
+                    <span className={styles.discountBadge}>{calculatedDiscountPercent}% OFF</span>
+                    <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
                   </>
-                ) : isFlashSaleActive ? (
-                  <>
-                    <span className={styles.discountBadge} style={{ background: '#666' }}>Limit Tercapai</span>
-                    {hasDiscount && (
-                      <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
-                    )}
-                  </>
-                ) : (
-                  hasDiscount && (
-                    <>
-                      <span className={styles.discountBadge}>{calculatedDiscountPercent}% OFF</span>
-                      <span className={styles.strikethroughPrice}>Rp {formatRp(basePrice)}</span>
-                    </>
-                  )
                 )}
               </div>
-
-              {isFlashSaleActive && activeFlashSale.limitPerUser > 0 && (
-                <div style={{ color: userFsUsage >= activeFlashSale.limitPerUser ? '#666' : '#E65100', fontSize: '12px', fontWeight: 'bold', width: '100%', marginTop: '4px' }}>
-                  {userFsUsage >= activeFlashSale.limitPerUser 
-                    ? `* Anda sudah membeli ${userFsUsage} item (Limit tercapai)` 
-                    : `* Terbatas ${activeFlashSale.limitPerUser} per pelanggan (Sudah beli ${userFsUsage})`}
-                </div>
-              )}
             </div>
 
             {product.tags && product.tags.length > 0 && (
@@ -352,23 +176,6 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
                 ))}
               </div>
             )}
-          </div>
-
-          <div className={styles.divider} />
-
-          <div className={styles.metaInfo}>
-            <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>Satuan</span>
-              <span className={styles.metaValue}>1 {product.unit}</span>
-            </div>
-            <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>Stok</span>
-              <span className={styles.metaValue} style={{ color: isOutOfStock ? 'var(--color-error)' : 'var(--color-success)' }}>
-                {isOutOfStock ? 'Habis' : `Sisa ${effectiveStock} ${product.unit || ''}`}
-                {selectedVariant && <span style={{ fontSize: '12px', opacity: 0.7, marginLeft: '4px' }}>(Varian dipilih)</span>}
-              </span>
-            </div>
-          </div>
 
           <div className={styles.divider} />
 
@@ -403,33 +210,25 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
           )}
 
           <div className={styles.actionSection}>
-            <DgQuantitySelector 
-              quantity={quantity} 
-              onChanged={setQuantity} 
-              min={1} 
-              max={effectiveStock}
-              large
-              editable
-            />
             <div className={styles.actionButtonsRow}>
-              <button 
-                className={styles.addToCartBtn} 
-                disabled={isOutOfStock} 
-                onClick={handleAddToCart}
-                style={{ opacity: isSelectionMissing ? 0.7 : 1 }}
-              >
-                {!isOutOfStock && <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>}
-                {isOutOfStock ? 'Stok Habis' : 'Keranjang'}
-              </button>
-              <button 
-                className={styles.buyNowBtn} 
-                disabled={isOutOfStock} 
-                onClick={handleBuyNow}
-                style={{ opacity: isSelectionMissing ? 0.7 : 1 }}
-              >
-                {!isOutOfStock && <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>shopping_bag</span>}
-                {isOutOfStock ? 'Stok Habis' : 'Beli Langsung'}
-              </button>
+              {product.shopeeUrl ? (
+                <button 
+                  className={styles.buyNowBtn} 
+                  onClick={handleBuyOnShopee}
+                  style={{ width: '100%', background: '#EE4D2D', borderColor: '#EE4D2D' }}
+                >
+                  <img src="/images/shopee_logo.svg" alt="Shopee" className={styles.shopeeIconWhite} />
+                  Beli di Shopee
+                </button>
+              ) : (
+                <button 
+                  className={styles.buyNowBtn} 
+                  disabled
+                  style={{ width: '100%', opacity: 0.5 }}
+                >
+                  Link Shopee belum tersedia
+                </button>
+              )}
             </div>
           </div>
 
@@ -481,7 +280,6 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
                 imageUrl={p.images && p.images.length > 0 ? p.images[0] : undefined}
                 discountPrice={p.discountPrice}
                 discountPercent={p.discountPercent}
-                isOutOfStock={p.stockQty <= 0}
                 variantCount={p.variants ? p.variants.length : 0}
                 tags={p.tags}
               />
@@ -507,7 +305,6 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
                 imageUrl={p.images && p.images.length > 0 ? p.images[0] : undefined}
                 discountPrice={p.discountPrice}
                 discountPercent={p.discountPercent}
-                isOutOfStock={p.stockQty <= 0}
                 variantCount={p.variants ? p.variants.length : 0}
                 tags={p.tags}
               />
@@ -516,71 +313,24 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
         </section>
       )}
 
-      {/* Recipes Using This Product Section */}
-      {product.recipeIngredients && product.recipeIngredients.length > 0 && (
-        <section className={styles.relatedSection} style={{ background: '#f0f7f0', padding: '40px 0', margin: '40px -20px 0', borderRadius: 0 }}>
-          <div className="main-content" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
-            <h2 className={styles.relatedTitle} style={{ textAlign: 'center', marginBottom: '30px' }}>
-              🍳 Inspirasi Resep Terkait
-            </h2>
-            <div className={styles.relatedGrid}>
-              {product.recipeIngredients.map((ri: any) => (
-                <Link key={ri.recipe.id} href={`/resep/${ri.recipe.slug}`} className={styles.recipeCard}>
-                  <div className={styles.recipeImageWrapper}>
-                    <img src={ri.recipe.heroImage} alt={ri.recipe.title} className={styles.recipeImage} />
-                  </div>
-                  <div className={styles.recipeContent}>
-                    <h3 className={styles.recipeTitle}>{ri.recipe.title}</h3>
-                    <div className={styles.recipeLink}>
-                      Lihat Cara Memasak
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Cooking Videos Section */}
       <CookingVideoSection videos={product.cookingVideos || []} />
 
       {/* Mobile Sticky Footer */}
-      <div className={styles.mobileStickyFooter}>
-        <div className={styles.stickyTopRow}>
-          <div className={styles.stickyPriceCol}>
-            <span className={styles.stickyPriceLabel}>Sub total:</span>
-            <span className={styles.stickyPriceValue}>Rp {formatRp(displayPrice * quantity)}</span>
+      {product.shopeeUrl && (
+        <div className={styles.mobileStickyFooter}>
+          <div className={styles.stickyBottomRow}>
+            <button 
+              className={styles.stickyBuyNowBtn} 
+              onClick={handleBuyOnShopee}
+              style={{ width: '100%', background: '#EE4D2D', borderColor: '#EE4D2D' }}
+            >
+                <img src="/images/shopee_logo.svg" alt="Shopee" className={styles.shopeeIconWhite} />
+                Beli di Shopee
+            </button>
           </div>
-          <DgQuantitySelector 
-            quantity={quantity} 
-            onChanged={setQuantity} 
-            min={1} 
-            max={product.stockQty}
-            large
-          />
         </div>
-        <div className={styles.stickyBottomRow}>
-          <button 
-            className={styles.stickyAddToCartBtn} 
-            disabled={isOutOfStock} 
-            onClick={handleAddToCart}
-            style={{ opacity: isSelectionMissing ? 0.7 : 1 }}
-          >
-            {!isOutOfStock && <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>}
-            {isOutOfStock ? 'Stok Habis' : 'Keranjang'}
-          </button>
-          <button 
-            className={styles.stickyBuyNowBtn} 
-            disabled={isOutOfStock} 
-            onClick={handleBuyNow}
-            style={{ opacity: isSelectionMissing ? 0.7 : 1 }}
-          >
-            {isOutOfStock ? 'Stok Habis' : 'Beli Langsung'}
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

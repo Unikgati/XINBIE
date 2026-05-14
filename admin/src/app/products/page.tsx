@@ -11,37 +11,7 @@ import { Pagination } from '@/components/Pagination';
 import RichTextEditor from '@/components/RichTextEditor';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 
-const NUTRITION_TAGS = [
-  // Vitamin (Tinggi vs Sumber)
-  'Tinggi Vitamin A', 'Sumber Vitamin A',
-  'Tinggi Vitamin B Kompleks', 'Sumber Vitamin B Kompleks', 'Sumber Vitamin B6', 'Mengandung Folat',
-  'Tinggi Vitamin C', 'Sumber Vitamin C',
-  'Tinggi Vitamin D', 'Sumber Vitamin D',
-  'Tinggi Vitamin E', 'Sumber Vitamin E',
-  'Tinggi Vitamin K', 'Sumber Vitamin K',
-  'Sumber Beta Karoten',
-  // Mineral
-  'Tinggi Kalsium', 'Sumber Kalsium',
-  'Tinggi Zat Besi', 'Sumber Zat Besi',
-  'Tinggi Kalium', 'Sumber Kalium', 'Mengandung Kalium',
-  'Tinggi Magnesium', 'Sumber Magnesium',
-  // Makronutrien
-  'Tinggi Serat', 'Sumber Serat',
-  'Tinggi Protein', 'Sumber Protein',
-  'Karbohidrat Kompleks',
-  // Klaim Gizi
-  'Rendah Gula', 'Rendah Kalori', 'Kaya Antioksidan', 'Sumber Antioksidan', 'Mengandung Likopen',
-  'Bebas Kolesterol', 'Lemak Sehat (Omega-3)',
-  // Gaya Hidup
-  'Organik', 'Bebas Gluten', 'Bebas Pengawet', 'Tanpa Pemanis Buatan',
-  'Vegan / Plant-based', '100% Alami',
-  // Karakter Produk
-  'Pedas', 'Penguat Rasa Alami',
-  // Non-makanan
-  'Anti Bakteri', 'Ramah Lingkungan', 'Lembut di Tangan', 'Food Grade',
-];
 
-const TAG_OPTIONS = NUTRITION_TAGS.map(t => ({ value: t, label: t }));
 
 interface Variant {
   id: string;
@@ -72,13 +42,10 @@ interface Product {
   categoryId?: string;
   category: { id: string; name: string };
   variants: Variant[];
-  cookingVideos?: { id: string; title: string }[];
+  shopeeUrl?: string;
+  ratingAvg?: number;
 }
 
-interface CookingVideo {
-  id: string;
-  title: string;
-}
 
 interface Category {
   id: string;
@@ -87,12 +54,6 @@ interface Category {
 
 const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
-const KITCHEN_UNITS = [
-  'pcs', 'kg', 'gram', 'ikat', 'bungkus', 'pack', 'liter', 'ml', 
-  'botol', 'renceng', 'butir', 'tray', 'siung', 'kotak', 'dus', 'sisir',
-  'lembar', 'kaleng', 'box', 'papan', 'karton', 'cup',
-  'gelas', 'galon', 'toples', 'pouch', 'jar', 'jerigen', 'karung'
-];
 
 function calcMargin(sell: number, cost: number) {
   if (cost <= 0 || sell <= 0) return 0;
@@ -167,7 +128,7 @@ interface FormVariant {
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [cookingVideos, setCookingVideos] = useState<CookingVideo[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -183,15 +144,15 @@ export default function ProductsPage() {
   const [formCostPrice, setFormCostPrice] = useState('');
   const [formDiscountPrice, setFormDiscountPrice] = useState('');
   const [formStock, setFormStock] = useState('');
-  const [formUnit, setFormUnit] = useState('');
+
   const [formDesc, setFormDesc] = useState('');
   const [generatingDesc, setGeneratingDesc] = useState(false);
   const [generateSuccess, setGenerateSuccess] = useState(false);
   const [formImages, setFormImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
-  const [formTags, setFormTags] = useState<string[]>([]);
-  const [formRelatedProductIds, setFormRelatedProductIds] = useState<string[]>([]);
-  const [formCookingVideoIds, setFormCookingVideoIds] = useState<string[]>([]);
+
+  const [formShopeeUrl, setFormShopeeUrl] = useState('');
+  const [formRating, setFormRating] = useState('4.8');
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -199,15 +160,13 @@ export default function ProductsPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [prodRes, catRes, vidRes] = await Promise.all([
+      const [prodRes, catRes] = await Promise.all([
         apiGet<any>(`/products?limit=20&page=${page}`),
         apiGet<Category[]>('/categories'),
-        apiGet<CookingVideo[]>('/cooking-videos'),
       ]);
       setProducts(prodRes?.data ? prodRes.data : Array.isArray(prodRes) ? prodRes : []);
       setTotalPages(prodRes?.meta?.totalPages || 1);
       setCategories(Array.isArray(catRes) ? catRes : []);
-      setCookingVideos(Array.isArray(vidRes) ? vidRes : []);
     } catch (err: any) {
       toast.error(err.message || 'Gagal memuat data');
     } finally {
@@ -253,20 +212,7 @@ export default function ProductsPage() {
       const res = await apiPost<any>('/ai/generate-desc', { productName: formName, categoryName: catName });
       if (res && res.description) {
         setFormDesc(res.description);
-        
-        // Auto match AI suggested keywords to actual products
-        if (res.relatedKeywords && res.relatedKeywords.length > 0) {
-          const matches = products.filter(p => {
-             const lowerName = p.name.toLowerCase();
-             return res.relatedKeywords.some((kw: string) => lowerName.includes(kw.toLowerCase()));
-          });
-          if (matches.length > 0) {
-            const newIds = matches.map(m => m.id);
-            // Append without duplicating
-            setFormRelatedProductIds(prev => Array.from(new Set([...prev, ...newIds])));
-            toast.success(`Berhasil menemukan ${matches.length} produk pelengkap otomatis!`);
-          }
-        }
+
         
         toast.success('Deskripsi berhasil di-generate!');
         setGenerateSuccess(true);
@@ -282,10 +228,11 @@ export default function ProductsPage() {
   const resetForm = () => {
     setEditingId(null);
     setFormName(''); setFormPrice(''); setFormCostPrice(''); setFormDiscountPrice('');
-    setFormStock(''); setFormUnit(''); setFormDesc(''); setFormVariants([]);
+    setFormStock(''); setFormDesc(''); setFormVariants([]);
     setDeletedVariants([]);
-    setFormImages([]); setExistingImages([]); setFormTags([]); setFormRelatedProductIds([]);
-    setFormCookingVideoIds([]);
+    setFormImages([]); setExistingImages([]);
+    setFormShopeeUrl('');
+    setFormRating('4.8');
     setProductCategory(categories[0]?.id || '');
   };
 
@@ -312,12 +259,12 @@ export default function ProductsPage() {
     setFormCostPrice(String(p.costPrice));
     setFormDiscountPrice(p.discountPrice ? String(p.discountPrice) : '');
     setFormStock(String(p.stockQty || 0));
-    setFormUnit(p.unit || 'pcs');
+
     setFormDesc(p.description || '');
     setExistingImages(p.images || []);
-    setFormTags(p.tags || []);
-    setFormRelatedProductIds(p.relatedProductIds || []);
-    setFormCookingVideoIds(p.cookingVideos ? p.cookingVideos.map(v => v.id) : []);
+
+    setFormShopeeUrl(p.shopeeUrl || '');
+    setFormRating(String(p.ratingAvg || '4.8'));
     setFormImages([]);
     setFormVariants(p.variants ? p.variants.map(v => ({
       tempId: v.id,
@@ -341,11 +288,11 @@ export default function ProductsPage() {
       formData.append('costPrice', formCostPrice || '0');
       if (formDiscountPrice) formData.append('discountPrice', formDiscountPrice);
       formData.append('stock', formStock || '0');
-      formData.append('unit', formUnit || 'pcs');
+
       formData.append('description', formDesc);
-      formData.append('tags', JSON.stringify(formTags));
-      formData.append('relatedProductIds', JSON.stringify(formRelatedProductIds));
-      formData.append('cookingVideoIds', JSON.stringify(formCookingVideoIds));
+
+      formData.append('shopeeUrl', formShopeeUrl || '');
+      formData.append('ratingAvg', formRating || '4.8');
       formImages.forEach(file => formData.append('images', file));
       
       let prodId = editingId;
@@ -489,7 +436,7 @@ export default function ProductsPage() {
           ) : (
             <div className="table-responsive">
             <table className="data-table">
-              <thead><tr><th>Produk</th><th>Kategori</th><th>Harga Jual</th><th>Harga Beli</th><th>Margin</th><th>Stok</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
+              <thead><tr><th>Produk</th><th>Kategori</th><th>Margin</th><th>Stok</th><th>Status</th><th style={{ width: 48 }}></th></tr></thead>
               <tbody>
                 {filtered.map(p => {
                   const sellPrice = p.discountPrice || p.price;
@@ -520,33 +467,46 @@ export default function ProductsPage() {
                                 </div>
                               )}
                             </div>
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ 
+                                fontWeight: 600, 
+                                whiteSpace: 'nowrap', 
+                                overflow: 'hidden', 
+                                textOverflow: 'ellipsis',
+                                maxWidth: 320
+                              }} title={p.name}>
+                                {p.name}
+                              </div>
                               <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
                                 {p.isFeatured && <span className="badge green" style={{ fontSize: 10, padding: '2px 6px' }}><span className="material-symbols-outlined" style={{ fontSize: 12 }}>star</span> Pilihan</span>}
                                 {hasVariants && <span className="badge blue" style={{ fontSize: 10, padding: '2px 6px' }}><span className="material-symbols-outlined" style={{ fontSize: 12 }}>tune</span> {p.variants.length} varian</span>}
+                                {p.shopeeUrl && (
+                                  <span className="badge orange" style={{ fontSize: 10, padding: '2px 6px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <img src="/images/shopee_logo.svg" alt="Shopee" style={{ width: 12, height: 12 }} />
+                                    Shopee
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td><span className="badge gray">{p.category?.name || '-'}</span></td>
                         <td>
-                          {p.discountPrice ? (
-                            <div>
-                              <div style={{ textDecoration: 'line-through', color: 'var(--text-hint)', fontSize: 12 }}>{fmt(p.price)}</div>
-                              <div style={{ fontWeight: 700, color: 'var(--primary-dark)' }}>{fmt(p.discountPrice)}</div>
-                            </div>
-                          ) : hasVariants ? (
-                            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                              {fmt(Math.min(...p.variants.map(v => v.price)))} — {fmt(Math.max(...p.variants.map(v => v.price)))}
-                            </div>
-                          ) : <div style={{ fontWeight: 600 }}>{fmt(p.price)}</div>}
+                          <span 
+                            className="badge gray" 
+                            style={{ 
+                              maxWidth: 120, 
+                              display: 'inline-block', 
+                              overflow: 'hidden', 
+                              textOverflow: 'ellipsis', 
+                              whiteSpace: 'nowrap',
+                              verticalAlign: 'middle'
+                            }} 
+                            title={p.category?.name}
+                          >
+                            {p.category?.name || '-'}
+                          </span>
                         </td>
-                        <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                          {hasVariants ? (
-                            <span>{fmt(Math.min(...p.variants.map(v => v.costPrice)))} — {fmt(Math.max(...p.variants.map(v => v.costPrice)))}</span>
-                          ) : fmt(p.costPrice || 0)}
-                        </td>
+
                         <td>
                           {hasVariants ? (
                             <span className="badge gray">Bervariasi</span>
@@ -587,19 +547,19 @@ export default function ProductsPage() {
                             <td style={{ paddingLeft: hasVariants ? 72 : 48 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-hint)' }}>subdirectory_arrow_right</span>
-                                <span style={{ fontWeight: 500 }}>{v.name}</span>
+                                <span style={{ 
+                                  fontWeight: 500, 
+                                  whiteSpace: 'nowrap', 
+                                  overflow: 'hidden', 
+                                  textOverflow: 'ellipsis',
+                                  maxWidth: 240
+                                }} title={v.name}>
+                                  {v.name}
+                                </span>
                               </div>
                             </td>
                             <td></td>
-                            <td>
-                              {v.discountPrice ? (
-                                <div>
-                                  <div style={{ textDecoration: 'line-through', color: 'var(--text-hint)', fontSize: 12 }}>{fmt(v.price)}</div>
-                                  <div style={{ fontWeight: 600, color: 'var(--primary-dark)' }}>{fmt(v.discountPrice)}</div>
-                                </div>
-                              ) : <div style={{ fontWeight: 600 }}>{fmt(v.price)}</div>}
-                            </td>
-                            <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{fmt(v.costPrice)}</td>
+
                             <td>
                               <span className={`badge ${marginColor(vMargin)}`}>{vMargin}%</span>
                               <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 2 }}>+{fmt(vProfit)}</div>
@@ -715,23 +675,20 @@ export default function ProductsPage() {
                     />
                   </div>
                 </div>
-                
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label">Stok</label>
                     <input className="form-input" type="number" placeholder="0" value={formStock} onChange={e => setFormStock(e.target.value)} />
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Satuan</label>
-                    <CustomSelect
-                      value={formUnit}
-                      onChange={setFormUnit}
-                      options={[
-                        ...KITCHEN_UNITS.map(u => ({ value: u, label: u })),
-                        ...(formUnit && !KITCHEN_UNITS.includes(formUnit) ? [{ value: formUnit, label: formUnit }] : [])
-                      ]}
-                      placeholder="Pilih satuan"
-                    />
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      ⭐ Rating Bintang (Mock)
+                      <div className="tooltip-wrapper">
+                        <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--text-hint)', cursor: 'help' }}>info</span>
+                        <span className="tooltip-text">Rating yang akan ditampilkan di halaman produk.</span>
+                      </div>
+                    </label>
+                    <input className="form-input" type="number" step="0.1" max="5" placeholder="4.8" value={formRating} onChange={e => setFormRating(e.target.value)} />
                   </div>
                 </div>
 
@@ -755,6 +712,24 @@ export default function ProductsPage() {
                     <input className="form-input" type="number" placeholder="Opsional" value={formDiscountPrice} onChange={e => setFormDiscountPrice(e.target.value)} />
                   </div>
                 </div>
+              </div>
+
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <img src="/images/shopee_logo.svg" alt="Shopee" style={{ width: 16, height: 16, display: 'inline-block', verticalAlign: 'middle', marginRight: 6, filter: 'brightness(0) contrast(0)' }} />
+                  Link Shopee
+                  <div className="tooltip-wrapper">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--text-hint)', cursor: 'help' }}>info</span>
+                    <span className="tooltip-text">Link produk di Shopee. Tombol "Beli di Shopee" akan muncul di halaman produk.</span>
+                  </div>
+                </label>
+                <input 
+                  className="form-input" 
+                  placeholder="https://shopee.co.id/product/..." 
+                  value={formShopeeUrl} 
+                  onChange={e => setFormShopeeUrl(e.target.value)}
+                  style={{ fontFamily: 'monospace', fontSize: 13 }}
+                />
               </div>
 
               <div style={formVariants.length > 0 ? { opacity: 0.5, pointerEvents: 'none', marginTop: 12 } : { marginTop: 12 }}>
@@ -790,89 +765,7 @@ export default function ProductsPage() {
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Tag Nutrisi / Atribut</label>
-                <Select
-                  isMulti
-                  options={TAG_OPTIONS}
-                  value={formTags.map(t => ({ value: t, label: t }))}
-                  onChange={(selected) => setFormTags((selected || []).map((s: any) => s.value))}
-                  placeholder="Cari tag... (misal: Tinggi Vitamin C)"
-                  noOptionsMessage={() => 'Tag tidak ditemukan'}
-                  menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-                  styles={{
-                    control: (base: any) => ({ ...base, background: 'var(--surface)', borderColor: 'var(--divider)', borderRadius: 'var(--radius-md)', minHeight: 40, fontSize: 14 }),
-                    menu: (base: any) => ({ ...base, background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 'var(--radius-md)' }),
-                    menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
-                    option: (base: any, state: any) => ({ ...base, background: state.isFocused ? 'var(--primary-surface)' : 'transparent', color: 'var(--text-primary)', fontSize: 13 }),
-                    multiValue: (base: any) => ({ ...base, background: 'var(--primary-surface)', borderRadius: 12 }),
-                    multiValueLabel: (base: any) => ({ ...base, color: 'var(--primary-dark)', fontSize: 12, fontWeight: 500, padding: '2px 6px' }),
-                    multiValueRemove: (base: any) => ({ ...base, color: 'var(--primary)', borderRadius: '0 12px 12px 0', ':hover': { background: 'var(--primary-light)', color: '#fff' } }),
-                    input: (base: any) => ({ ...base, color: 'var(--text-primary)' }),
-                    placeholder: (base: any) => ({ ...base, color: 'var(--text-hint)', fontSize: 13 }),
-                  }}
-                />
-              </div>
 
-              <div className="form-group">
-                <label className="form-label">Produk Pelengkap (Cross-Selling)</label>
-                <Select
-                  isMulti
-                  options={products.filter(p => p.id !== editingId).map(p => ({ 
-                    value: p.id, 
-                    label: p.name,
-                    image: p.images?.[0] || null
-                  }))}
-                  value={products.filter(p => formRelatedProductIds.includes(p.id)).map(p => ({ 
-                    value: p.id, 
-                    label: p.name,
-                    image: p.images?.[0] || null
-                  }))}
-                  onChange={(selected) => setFormRelatedProductIds((selected || []).map((s: any) => s.value))}
-                  placeholder="Cari produk pelengkap (misal: Mentega, Keju)"
-                  noOptionsMessage={() => 'Produk tidak ditemukan'}
-                  menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-                  styles={{
-                    control: (base: any) => ({ ...base, background: 'var(--surface)', borderColor: 'var(--divider)', borderRadius: 'var(--radius-md)', minHeight: 40, fontSize: 14 }),
-                    menu: (base: any) => ({ ...base, background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 'var(--radius-md)' }),
-                    menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
-                    option: (base: any, state: any) => ({ ...base, background: state.isFocused ? 'var(--primary-surface)' : 'transparent', color: 'var(--text-primary)', fontSize: 13 }),
-                    multiValue: (base: any) => ({ ...base, background: 'var(--primary-surface)', borderRadius: 12 }),
-                    multiValueLabel: (base: any) => ({ ...base, color: 'var(--primary-dark)', fontSize: 12, fontWeight: 500, padding: '2px 6px' }),
-                    multiValueRemove: (base: any) => ({ ...base, color: 'var(--primary)', borderRadius: '0 12px 12px 0', ':hover': { background: 'var(--primary-light)', color: '#fff' } }),
-                    input: (base: any) => ({ ...base, color: 'var(--text-primary)' }),
-                    placeholder: (base: any) => ({ ...base, color: 'var(--text-hint)', fontSize: 13 }),
-                  }}
-                  components={{
-                    Option: CustomOption,
-                    MultiValueLabel: CustomMultiValueLabel,
-                  }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Video Inspirasi Memasak</label>
-                <Select
-                  isMulti
-                  options={cookingVideos.map(v => ({ value: v.id, label: v.title }))}
-                  value={cookingVideos.filter(v => formCookingVideoIds.includes(v.id)).map(v => ({ value: v.id, label: v.title }))}
-                  onChange={(selected) => setFormCookingVideoIds((selected || []).map((s: any) => s.value))}
-                  placeholder="Pilih video inspirasi... (cth: Cara Tumis Bayam)"
-                  noOptionsMessage={() => 'Video tidak ditemukan. Tambahkan dulu di menu Inspirasi Masak.'}
-                  menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-                  styles={{
-                    control: (base: any) => ({ ...base, background: 'var(--surface)', borderColor: 'var(--divider)', borderRadius: 'var(--radius-md)', minHeight: 40, fontSize: 14 }),
-                    menu: (base: any) => ({ ...base, background: 'var(--surface)', border: '1px solid var(--divider)', borderRadius: 'var(--radius-md)' }),
-                    menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
-                    option: (base: any, state: any) => ({ ...base, background: state.isFocused ? 'var(--primary-surface)' : 'transparent', color: 'var(--text-primary)', fontSize: 13 }),
-                    multiValue: (base: any) => ({ ...base, background: 'var(--primary-surface)', borderRadius: 12 }),
-                    multiValueLabel: (base: any) => ({ ...base, color: 'var(--primary-dark)', fontSize: 12, fontWeight: 500, padding: '2px 6px' }),
-                    multiValueRemove: (base: any) => ({ ...base, color: 'var(--primary)', borderRadius: '0 12px 12px 0', ':hover': { background: 'var(--primary-light)', color: '#fff' } }),
-                    input: (base: any) => ({ ...base, color: 'var(--text-primary)' }),
-                    placeholder: (base: any) => ({ ...base, color: 'var(--text-hint)', fontSize: 13 }),
-                  }}
-                />
-              </div>
 
 
 

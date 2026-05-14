@@ -9,6 +9,6 @@ router.get('/products', product.getProducts);
 router.get('/products/:id', optionalAuth, product.getProduct);
 router.get('/banners', product.getBanners);
 router.get('/cooking-videos', product.getCookingVideos);
-router.post('/cart/validate', authenticate, product.validateCart);
+router.post('/visit', product.recordVisit);
 
 export default router;

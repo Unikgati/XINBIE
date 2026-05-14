@@ -53,14 +53,17 @@ export default function ProductImageGallery({ images, name, variantImage }: Prod
       <div className={styles.imageGalleryWrapper}>
         <div className={styles.mainImageWrapper}>
           {mainImage ? (
-            <Image 
-              src={mainImage} 
-              alt={name} 
-              fill 
-              style={{ objectFit: 'cover' }} 
-              unoptimized
-              priority
-            />
+            <>
+              <Image 
+                src={mainImage} 
+                alt={name} 
+                fill 
+                style={{ objectFit: 'cover' }} 
+                unoptimized
+                priority
+              />
+              <div className={styles.mainImageGradient} />
+            </>
           ) : (
             <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f5'}}>
               <svg viewBox="0 0 24 24" width="64" height="64" stroke="#bdbdbd" strokeWidth="1" fill="none">
@@ -93,27 +96,24 @@ export default function ProductImageGallery({ images, name, variantImage }: Prod
       </div>
       
       {images.length > 1 && (
-        <div className={styles.thumbnailGrid}>
-          {images.map((img, idx) => (
-            <div 
-              key={idx} 
-              className={`${styles.thumbnail} ${!showVariantImage && idx === activeImageIndex ? styles.thumbnailActive : ''}`}
-              onClick={() => handleThumbnailClick(idx)}
-            >
-              <Image src={img} alt={`Thumbnail ${idx}`} fill style={{ objectFit: 'cover' }} unoptimized />
-            </div>
-          ))}
+        <div className={styles.thumbnailContainer}>
+          <div className={styles.thumbnailGrid}>
+            {images.map((img, idx) => (
+              <div 
+                key={idx} 
+                className={`${styles.thumbnail} ${!showVariantImage && idx === activeImageIndex ? styles.thumbnailActive : ''}`}
+                onClick={() => handleThumbnailClick(idx)}
+              >
+                <Image src={img} alt={`Thumbnail ${idx}`} fill style={{ objectFit: 'cover' }} unoptimized />
+              </div>
+            ))}
+          </div>
+          <div className={styles.thumbnailFadeLeft} />
+          <div className={styles.thumbnailFadeRight} />
         </div>
       )}
 
-      {/* Promo Banner */}
-      <div className={styles.promoBanner}>
-        <div className={styles.promoTextContainer}>
-          <div className={styles.promoTitle}>Belanja Dapur Lebih Aman & Terpercaya</div>
-          <div className={styles.promoSubtitle}>Sayur, buah, dan bahan segar langsung dari sumber terbaik.</div>
-        </div>
-        <img src="/images/mascot_driver.png" alt="Mascot" className={styles.promoMascot} />
-      </div>
+
     </div>
   );
 }

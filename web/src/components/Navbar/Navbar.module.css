@@ -25,12 +25,13 @@
   align-items: center;
 }
 
-.logoText {
-  color: var(--color-text-primary);
+.logoImage {
+  object-fit: contain;
+  transition: transform 0.3s ease;
 }
 
-.logoHighlight {
-  color: var(--color-primary-dark);
+.logoImage:hover {
+  transform: scale(1.05);
 }
 
 .searchContainer {
@@ -63,18 +64,25 @@
   background-color: var(--color-primary);
   color: white;
   border-radius: 20px;
-  width: 40px;
-  height: 40px;
+  padding: 0 16px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+}
+
+.searchButtonText {
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .searchButton:hover {
   background-color: var(--color-primary-dark);
+  transform: translateX(2px);
 }
 
 .actionsContainer {
@@ -297,6 +305,15 @@
   
   .cartIconButton {
     display: none !important;
+  }
+
+  .searchButtonText {
+    display: none;
+  }
+
+  .searchButton {
+    padding: 0;
+    width: 36px;
   }
 
   .hideOnMobile {

@@ -94,18 +94,36 @@ model Product {
   relatedProductIds String[]         @default([]) @map("related_product_ids")
   slug              String           @unique
   tags              String[]         @default([])
+  shopeeUrl         String?          @map("shopee_url")
+  viewCount         Int              @default(0) @map("view_count")
+  ratingAvg         Float            @default(4.8) @map("rating_avg")
   flashSaleItems    FlashSaleItem[]
   orderItems        OrderItem[]
   variants          ProductVariant[]
   category          Category         @relation(fields: [categoryId], references: [id])
   cookingVideos     CookingVideo[]   @relation("ProductCookingVideos")
   promoCodes        PromoCode[]      @relation("ProductToPromoCode")
+  reviews           ProductReview[]
 
   @@index([categoryId, isActive])
   @@index([isFeatured, isActive])
   @@index([stockQty, isActive])
   @@index([createdAt, isActive])
   @@map("products")
+}
+
+model ProductReview {
+  id        String   @id @default(uuid())
+  productId String   @map("product_id")
+  userId    String?  @map("user_id")
+  userName  String   @map("user_name")
+  rating    Int
+  comment   String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_reviews")
 }
 
 model ProductVariant {
@@ -609,3 +627,45 @@ enum BannerActionType {
   PRODUCT
   URL
 }
+
+model SiteAnalytics {
+  id           String   @id @default(uuid())
+  date         DateTime @unique @db.Date
+  visitorCount Int      @default(0) @map("visitor_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("site_analytics")
+}
+
+model UniqueActivity {
+  id         String   @id @default(uuid())
+  ipAddress  String   @map("ip_address")
+  type       String   // "VISIT" or "PRODUCT_VIEW"
+  targetId   String?  @map("target_id")
+  city       String?
+  region     String?
+  country    String?
+  date       DateTime @db.Date
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([ipAddress, type, targetId, date])
+  @@index([date])
+  @@index([city])
+  @@index([region])
+  @@map("unique_activities")
+}
+
+model SiteAnalyticsLocation {
+  id        String   @id @default(uuid())
+  date      DateTime @db.Date
+  city      String
+  region    String
+  count     Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([date, city, region])
+  @@index([date])
+  @@map("site_analytics_locations")
+}
+

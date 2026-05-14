@@ -11,6 +11,7 @@ import Navbar from "@/components/Navbar/index";
 import BottomNav from "@/components/BottomNav/index";
 import ClientProviders from "@/components/ClientProviders/index";
 import AutoScrollToTop from "@/components/AutoScrollToTop";
+import VisitTracker from "@/components/VisitTracker";
 
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
 
@@ -21,17 +22,36 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "XINBIE - Belanja Sayur & Kebutuhan Dapur Segar",
+    default: "XINBIE - Kebutuhan Gaya Hidup & Produk Pilihan",
     template: "%s | XINBIE"
   },
-  description: "Aplikasi belanja kebutuhan dapur segar, sayur, buah, dan daging dengan pengiriman cepat dan kualitas terjamin.",
-  keywords: ["belanja sayur", "sayur online", "kebutuhan dapur", "sayur segar", "xinbie"],
+  description: "XINBIE menyediakan berbagai kebutuhan produk pilihan berkualitas tinggi, mulai dari perlengkapan kesehatan premium hingga kebutuhan harian lainnya dengan layanan pengiriman terbaik.",
+  keywords: ["belanja online", "produk premium", "perlengkapan kesehatan", "korset lutut", "xinbie indonesia"],
   authors: [{ name: "XINBIE Team" }],
   robots: "index, follow",
+  openGraph: {
+    type: "website",
+    locale: "id_ID",
+    url: "https://xinbie.com",
+    siteName: "XINBIE",
+    title: "XINBIE - Kebutuhan Gaya Hidup & Produk Pilihan",
+    description: "Temukan produk pilihan berkualitas tinggi dengan harga terbaik hanya di XINBIE. Pengiriman cepat ke seluruh Indonesia.",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "XINBIE Banner",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "XINBIE - Kebutuhan Gaya Hidup & Produk Pilihan",
+    description: "Belanja produk berkualitas tinggi dengan mudah dan aman di XINBIE.",
+    images: ["/og-image.jpg"],
+  },
 };
-
-import AIChat from "@/components/AIChat/index";
-import NotificationInit from "@/components/NotificationInit/index";
 
 export default function RootLayout({
   children,
@@ -46,14 +66,13 @@ export default function RootLayout({
       <body className={plusJakartaSans.variable}>
         <GlobalErrorBoundary>
           <ClientProviders>
+            <VisitTracker />
             <AutoScrollToTop />
-            <NotificationInit />
             <Navbar />
             <div className="app-container">
               {children}
               <BottomNav />
             </div>
-            <AIChat />
           </ClientProviders>
         </GlobalErrorBoundary>
       </body>

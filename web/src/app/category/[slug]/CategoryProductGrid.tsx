@@ -73,7 +73,7 @@ export default async function CategoryProductGrid({ slug }: { slug: string }) {
           imageUrl={product.images && product.images.length > 0 ? product.images[0] : undefined}
           discountPrice={product.discountPrice}
           discountPercent={product.discountPercent}
-          isOutOfStock={!product.isUnlimitedStock && product.stockQty <= 0}
+
           variantCount={product.variants ? product.variants.length : 0}
           tags={product.tags}
         />

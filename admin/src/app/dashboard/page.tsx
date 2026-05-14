@@ -1,59 +1,35 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/Toast';
-import { useRouter } from 'next/navigation';
-import { TableSkeleton, StatCardSkeleton } from '@/components/Skeleton';
-import { getSocket } from '@/lib/socket';
+import { StatCardSkeleton, TableSkeleton } from '@/components/Skeleton';
 import { apiGet } from '@/lib/api';
+import Link from 'next/link';
 
 interface DashboardData {
   stats: {
-    todayOrders: number;
-    monthOrders: number;
-    monthRevenue: number;
-    grossProfit: number;
-    marginPercent: number;
-    activeOrders: number;
+    totalProducts: number;
+    activeProducts: number;
+    totalCategories: number;
+    totalVisitors: number;
   };
-  recentOrders: {
+  topProducts: Array<{
     id: string;
-    code: string;
-    userName: string;
-    grandTotal: number;
-    orderStatus: string;
-    isReadAdmin: boolean;
-    createdAt: string;
-  }[];
+    name: string;
+    viewCount: number;
+    images: string[];
+    stockQty: number;
+  }>;
 }
-
-const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
-
-const statusMap: Record<string, { label: string; badge: string }> = {
-  WAITING_PAYMENT: { label: 'Menunggu Bayar', badge: 'orange' },
-  RECEIVED: { label: 'Diterima', badge: 'blue' },
-  PROCESSING: { label: 'Diproses', badge: 'purple' },
-  WAITING_DRIVER: { label: 'Tunggu Driver', badge: 'orange' },
-  IN_DELIVERY: { label: 'Dikirim', badge: 'green' },
-  DELIVERED: { label: 'Diantar', badge: 'green' },
-  COMPLETED: { label: 'Selesai', badge: 'green' },
-  CANCELLED: { label: 'Batal', badge: 'red' },
-  PROBLEM: { label: 'Masalah', badge: 'orange' },
-};
-
-import { useNotification } from '@/components/NotificationProvider';
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
   const toast = useToast();
-  const { socketStatus } = useNotification();
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchData = useCallback(async (showLoading = true) => {
+  const fetchData = useCallback(async () => {
     try {
-      if (showLoading) setLoading(true);
+      setLoading(true);
       const res = await apiGet<DashboardData>('/dashboard');
       setData(res);
     } catch (err: any) {
@@ -65,41 +41,21 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Auto-refresh when order changes via WebSocket (debounced)
-  useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
-
-    const debouncedRefresh = () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => fetchData(false), 500);
-    };
-
-    socket.on('order:new', debouncedRefresh);
-    socket.on('order:statusUpdate', debouncedRefresh);
-    return () => {
-      socket.off('order:new', debouncedRefresh);
-      socket.off('order:statusUpdate', debouncedRefresh);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [fetchData, socketStatus]);
-
   if (loading) {
     return (
       <>
         <div className="page-header">
-          <div><h1 className="page-title">Dashboard</h1><p className="page-subtitle">Overview bisnis XINBIE</p></div>
+          <div><h1 className="page-title">Dashboard</h1><p className="page-subtitle">Overview XINBIE</p></div>
         </div>
         <div className="page-body">
           <div className="stat-grid">
             <StatCardSkeleton />
             <StatCardSkeleton />
             <StatCardSkeleton />
-            <StatCardSkeleton />
           </div>
-          <div className="data-card" style={{ marginTop: 16 }}>
-            <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">receipt_long</span> Pesanan Terbaru</h3></div>
-            <TableSkeleton rows={5} columns={5} />
+          <div className="data-card" style={{ marginTop: 24, padding: 24 }}>
+            <div className="skeleton" style={{ height: 20, width: '200px', marginBottom: 24, borderRadius: 4 }} />
+            <TableSkeleton rows={5} columns={3} />
           </div>
         </div>
       </>
@@ -107,72 +63,98 @@ export default function DashboardPage() {
   }
   if (!data) return null;
 
-  const { stats, recentOrders } = data;
+  const { stats, topProducts } = data;
 
   return (
     <>
       <div className="page-header">
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">Overview bisnis XINBIE</p>
+          <p className="page-subtitle">Overview XINBIE</p>
         </div>
       </div>
       <div className="page-body">
         <div className="stat-grid">
-          <div className="stat-card">
-            <div className="stat-icon green"><span className="material-symbols-outlined">payments</span></div>
+          <Link href="/analytics" className="stat-card clickable-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="stat-icon purple"><span className="material-symbols-outlined">visibility</span></div>
             <div>
-              <div className="stat-label">Revenue Bulan Ini</div>
-              <div className="stat-value">{fmt(stats.monthRevenue)}</div>
-              <div className="stat-change up">{stats.monthOrders} pesanan bulan ini</div>
+              <div className="stat-label">Total Pengunjung</div>
+              <div className="stat-value">{stats.totalVisitors}</div>
             </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon green"><span className="material-symbols-outlined">trending_up</span></div>
+          </Link>
+          <Link href="/products" className="stat-card clickable-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="stat-icon green"><span className="material-symbols-outlined">inventory_2</span></div>
             <div>
-              <div className="stat-label">Gross Profit</div>
-              <div className="stat-value">{fmt(stats.grossProfit)}</div>
-              <div className="stat-change up">Margin {stats.marginPercent}%</div>
+              <div className="stat-label">Total Produk</div>
+              <div className="stat-value">{stats.totalProducts}</div>
+              <div className="stat-change">{stats.activeProducts} produk aktif</div>
             </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon green"><span className="material-symbols-outlined">shopping_cart</span></div>
+          </Link>
+          <Link href="/categories" className="stat-card clickable-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="stat-icon blue"><span className="material-symbols-outlined">category</span></div>
             <div>
-              <div className="stat-label">Pesanan Hari Ini</div>
-              <div className="stat-value">{stats.todayOrders}</div>
-              <div className="stat-change">{stats.activeOrders} sedang aktif</div>
+              <div className="stat-label">Kategori</div>
+              <div className="stat-value">{stats.totalCategories}</div>
             </div>
-          </div>
+          </Link>
         </div>
 
-        <div className="data-card" style={{ marginTop: 16 }}>
-          <div className="data-card-header"><h3 className="data-card-title"><span className="material-symbols-outlined">receipt_long</span> Pesanan Terbaru</h3></div>
-          {recentOrders.length === 0 ? (
-            <div className="empty-state"><span className="material-symbols-outlined">receipt_long</span>Belum ada pesanan</div>
-          ) : (
+        <div className="data-card" style={{ marginTop: 24 }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--divider)' }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Produk Paling Banyak Dilihat</h3>
+          </div>
+          <div className="table-responsive">
             <table className="data-table">
-              <thead><tr><th>Kode</th><th>Pelanggan</th><th>Total</th><th>Status</th><th>Waktu</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Produk</th>
+                  <th>Stok</th>
+                  <th style={{ textAlign: 'right' }}>Total Dilihat</th>
+                </tr>
+              </thead>
               <tbody>
-                {recentOrders.map(o => {
-                  const sm = statusMap[o.orderStatus] || { label: o.orderStatus, badge: 'gray' };
-                  return (
-                    <tr key={o.id} onClick={() => router.push(`/orders/${o.id}`)} style={{ cursor: 'pointer', fontWeight: o.isReadAdmin === false ? 600 : 'normal', background: o.isReadAdmin === false ? 'var(--primary-surface, #f0f7ff)' : undefined }} title="Klik untuk lihat detail">
-                      <td style={{ fontWeight: 600 }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          {o.isReadAdmin === false && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary, #2563eb)', display: 'inline-block', flexShrink: 0 }} />}
-                          {o.code}
-                        </span>
+                {topProducts && topProducts.length > 0 ? (
+                  topProducts.map((p) => (
+                    <tr key={p.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{ 
+                            width: 48, height: 48, borderRadius: 'var(--radius-sm)', 
+                            overflow: 'hidden', background: 'var(--divider)',
+                            boxShadow: 'var(--shadow-sm)', flexShrink: 0
+                          }}>
+                            {p.images && p.images.length > 0 ? (
+                              <img src={p.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                <span className="material-symbols-outlined" style={{ color: 'var(--text-hint)', fontSize: 20 }}>image</span>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ fontWeight: 600 }}>{p.name}</div>
+                        </div>
                       </td>
-                      <td>{o.userName}</td>
-                      <td style={{ fontWeight: 600 }}>{fmt(o.grandTotal)}</td>
-                      <td><span className={`badge ${sm.badge}`}>{sm.label}</span></td>
-                      <td style={{ fontSize: 13 }}>{new Date(o.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                      <td><span className="badge blue">{p.stockQty} pcs</span></td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--primary-dark)', fontSize: 15 }}>
+                          {p.viewCount.toLocaleString('id-ID')} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>x</span>
+                        </div>
+                      </td>
                     </tr>
-                  );
-                })}
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: 'center', padding: '40px 20px' }}>
+                      <div className="empty-state" style={{ padding: 0 }}>
+                        <span className="material-symbols-outlined">visibility_off</span>
+                        Belum ada data traffic produk
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
-          )}
+          </div>
         </div>
       </div>
     </>

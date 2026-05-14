@@ -8,15 +8,11 @@ import { useNotification } from './NotificationProvider';
 const navItems = [
   { section: 'Utama', items: [
     { href: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
-    { href: '/orders', icon: 'shopping_bag', label: 'Pesanan' },
   ]},
   { section: 'Katalog', items: [
+    { href: '/categories', icon: 'category', label: 'Kategori' },
     { href: '/products', icon: 'inventory_2', label: 'Produk' },
-  ]},
-  { section: 'Marketing', items: [
     { href: '/banners', icon: 'photo_library', label: 'Banner' },
-    { href: '/promos', icon: 'sell', label: 'Promo' },
-    { href: '/flash-sales', icon: 'bolt', label: 'Flash Sale' },
   ]},
   { section: 'Sistem', items: [
     { href: '/settings', icon: 'settings', label: 'Pengaturan' },
@@ -79,9 +75,6 @@ export default function Sidebar() {
           <div key={section.section} className="nav-section">
             {!collapsed && <div className="nav-section-label">{section.section}</div>}
             {section.items.map((item) => {
-              let count = 0;
-              if (item.href === '/orders') count = pendingCount;
-
               return (
                 <Link
                   key={item.href}
@@ -92,28 +85,6 @@ export default function Sidebar() {
                 >
                   <span className="material-symbols-outlined">{item.icon}</span>
                   {!collapsed && <span className="nav-label">{item.label}</span>}
-                  {count > 0 && (
-                    <span style={{
-                      position: 'absolute',
-                      top: 6,
-                      right: collapsed ? 4 : 12,
-                      background: '#F44336',
-                      color: '#fff',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      minWidth: 18,
-                      height: 18,
-                      borderRadius: 9,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0 5px',
-                      lineHeight: 1,
-                      boxShadow: '0 1px 3px rgba(244,67,54,0.4)',
-                    }}>
-                      {count > 99 ? '99+' : count}
-                    </span>
-                  )}
                 </Link>
               );
             })}

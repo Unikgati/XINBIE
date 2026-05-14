@@ -105,22 +105,24 @@ export default function DgBannerCarousel({ banners }: Props) {
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </button>
-            
-            <div className={styles.dotsContainer}>
-              {safeBanners.map((_, index) => (
-                <div 
-                  key={index}
-                  className={`${styles.dot} ${currentIndex === index ? styles.activeDot : ''}`}
-                  onClick={() => {
-                    setCurrentIndex(index);
-                    scrollToIndex(index);
-                  }}
-                />
-              ))}
-            </div>
           </>
         )}
       </div>
+      
+      {safeBanners.length > 1 && (
+        <div className={styles.dotsContainer}>
+          {safeBanners.map((_, index) => (
+            <div 
+              key={index}
+              className={`${styles.dot} ${currentIndex === index ? styles.activeDot : ''}`}
+              onClick={() => {
+                setCurrentIndex(index);
+                scrollToIndex(index);
+              }}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

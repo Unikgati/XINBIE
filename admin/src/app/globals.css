@@ -5,48 +5,48 @@
    ========================================== */
 
 :root {
-  /* Primary Green — from design assets */
-  --primary: #4CAF50;
-  --primary-dark: #2E7D32;
-  --primary-darker: #1B5E20;
-  --primary-light: #81C784;
-  --primary-action: #9ECE67;
-  --primary-surface: #E8F5E9;
-  --primary-surface-hover: #C8E6C9;
+  /* Primary Blue — from branding */
+  --primary: #044bd7;
+  --primary-dark: #0339a3;
+  --primary-darker: #022b7d;
+  --primary-light: #17a1fb;
+  --primary-action: #044bd7;
+  --primary-surface: #e6edfb;
+  --primary-surface-hover: #d1dffd;
 
-  /* Gradients — from hero banner */
-  --gradient-hero: linear-gradient(135deg, #9ECE67 0%, #2D6739 100%);
-  --gradient-primary: linear-gradient(135deg, #9ECE67 0%, #2D6739 100%);
-  --gradient-card: linear-gradient(135deg, #E8F5E9, #F1F8E9);
+  /* Gradients — XINBIE Style */
+  --gradient-hero: linear-gradient(135deg, #044bd7 0%, #17a1fb 100%);
+  --gradient-primary: linear-gradient(135deg, #044bd7 0%, #17a1fb 100%);
+  --gradient-card: linear-gradient(135deg, #e6edfb, #f0f4ff);
 
   /* Surfaces — clean white */
   --surface: #FFFFFF;
-  --background: #F5F5F5;
+  --background: #F8FAFC;
   --card: #FFFFFF;
 
   /* Text */
-  --text-primary: #212121;
-  --text-secondary: #757575;
-  --text-hint: #BDBDBD;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-hint: #94A3B8;
   --text-on-primary: #FFFFFF;
-  --text-greeting: #488044;
+  --text-greeting: #044bd7;
 
   /* Status */
-  --error: #F44336;
+  --error: #EF4444;
   --error-surface: #FEF2F2;
-  --warning: #FF9800;
+  --warning: #F59E0B;
   --warning-surface: #FFFBEB;
-  --success: #4CAF50;
-  --success-surface: #E8F5E9;
-  --info: #2196F3;
-  --info-surface: #EFF6FF;
+  --success: #10B981;
+  --success-surface: #ECFDF5;
+  --info: #044bd7;
+  --info-surface: #e6edfb;
 
   /* Borders */
-  --border: #E0E0E0;
-  --divider: #F0F0F0;
+  --border: #E2E8F0;
+  --divider: #F1F5F9;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.10);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
 
   /* Layout */
   --sidebar-width: 264px;

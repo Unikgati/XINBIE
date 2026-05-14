@@ -36,11 +36,11 @@ export default async function PromoProducts() {
             imageUrl={product.images && product.images.length > 0 ? product.images[0] : undefined}
             discountPrice={product.discountPrice}
             discountPercent={product.discountPercent}
-            isOutOfStock={product.stockQty <= 0}
-            stockQty={product.stockQty}
-            isUnlimitedStock={product.isUnlimitedStock}
+
+
             variantCount={product.variants ? product.variants.length : 0}
             tags={product.tags}
+            ratingAvg={product.ratingAvg}
           />
         ))}
       </div>

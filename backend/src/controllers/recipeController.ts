@@ -48,7 +48,7 @@ export async function getRecipes(req: Request, res: Response, next: NextFunction
 
 export async function getRecipeBySlug(req: Request, res: Response, next: NextFunction) {
   try {
-    const { id: slug } = req.params;
+    const slug = req.params.id as string;
     const recipe = await prisma.recipe.findUnique({
       where: { slug },
       include: {

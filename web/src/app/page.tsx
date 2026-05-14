@@ -8,9 +8,6 @@ import CategoryList from "@/components/sections/CategoryList";
 import FeaturedProducts from "@/components/sections/FeaturedProducts";
 import PromoProducts from "@/components/sections/PromoProducts";
 import AllProductsList from "@/components/sections/AllProductsList";
-import FlashSaleSection from "@/components/sections/FlashSaleSection";
-
-import PromoSection from "./components/home/PromoSection";
 
 // Skeletons
 import { 
@@ -33,15 +30,9 @@ export default function Home() {
           <HeroBanners />
         </Suspense>
 
-        <Suspense fallback={<ProductGridSkeleton />}>
-          <FlashSaleSection />
-        </Suspense>
-
         <Suspense fallback={<CategorySkeleton />}>
           <CategoryList />
         </Suspense>
-
-        <PromoSection />
 
         <Suspense fallback={<ProductGridSkeleton />}>
           <FeaturedProducts />

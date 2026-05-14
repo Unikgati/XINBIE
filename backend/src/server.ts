@@ -12,22 +12,16 @@ import { ensureBucket } from './config/minio';
 import { errorHandler } from './middleware/errorHandler';
 import { initWebSocket } from './websocket';
 import { initFirebase } from './utils/firebase';
+import { initCron } from './utils/cron';
 import prisma from './config/database';
 
 // Routes
 import authRoutes from './routes/auth';
 import productRoutes from './routes/product';
-import addressRoutes from './routes/address';
 import regionRoutes from './routes/region';
-import deliveryRoutes from './routes/delivery';
-import orderRoutes from './routes/order';
-import notificationRoutes from './routes/notification';
 import adminRoutes from './routes/admin';
-import paymentRoutes from './routes/payment';
-import promoRoutes from './routes/promo';
 import aiRoutes from './routes/ai';
 import chatRoutes from './routes/chat';
-import flashSaleRoutes from './routes/flashSale';
 
 
 const app = express();
@@ -70,17 +64,11 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api', productRoutes);
-app.use('/api/addresses', addressRoutes);
 app.use('/api/regions', regionRoutes);
-app.use('/api', deliveryRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/promos', promoRoutes);
 app.use('/api/admin/ai', aiRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api', flashSaleRoutes);
+
 
 
 // 404
@@ -99,6 +87,7 @@ async function start() {
   try {
     await ensureBucket();
     initFirebase();
+    initCron();
     server.listen(config.port, () => {
       console.log(`\n🚀 ${config.appName} API running on port ${config.port}`);
       console.log(`📍 ${config.apiUrl}`);

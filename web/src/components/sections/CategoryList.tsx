@@ -23,17 +23,10 @@ export default async function CategoryList() {
 
   return (
     <section className={styles.categoriesSection}>
-      <div className={styles.categoriesWrapper}>
-        {categories.slice(0, 8).map((cat: any) => (
-          <Link href={`/category/${cat.slug}`} key={cat.id} className={styles.categoryItem}>
-            <div className={styles.categoryIcon} style={{ backgroundColor: `${cat.bgColor}1A` }}>
-              {cat.iconUrl ? (
-                <Image src={cat.iconUrl} alt={cat.name} width={36} height={36} unoptimized />
-              ) : (
-                <span className={styles.fallbackIcon} style={{ color: cat.bgColor }}>★</span>
-              )}
-            </div>
-            <span className={styles.categoryName}>{cat.name}</span>
+      <div className={styles.categoriesBadges}>
+        {categories.map((cat: any) => (
+          <Link href={`/category/${cat.slug}`} key={cat.id} className={styles.categoryBadge}>
+            {cat.name}
           </Link>
         ))}
       </div>

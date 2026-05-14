@@ -2,6 +2,21 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { paginationQuerySchema } from '../utils/schema';
+import geoip from 'geoip-lite';
+
+function isBot(userAgent: string | undefined): boolean {
+  if (!userAgent) return false;
+  const bots = [
+    'googlebot', 'bingbot', 'yandexbot', 'duckduckbot', 'slurp', 
+    'baiduspider', 'ia_archiver', 'facebot', 'facebookexternalhit',
+    'twitterbot', 'rogerbot', 'linkedinbot', 'embedly', 'quora link preview',
+    'showyoubot', 'outbrain', 'pinterest/0.', 'developers.google.com/+/web/snippet',
+    'slackbot', 'vkShare', 'W3C_Validator', 'redditbot', 'Applebot', 'WhatsApp',
+    'TelegramBot', 'Discordbot'
+  ];
+  const ua = userAgent.toLowerCase();
+  return bots.some(bot => ua.includes(bot));
+}
 
 // GET /api/categories
 export async function getCategories(req: Request, res: Response, next: NextFunction) {
@@ -129,6 +144,42 @@ export async function getProduct(req: Request, res: Response, next: NextFunction
       return res.status(404).json({ message: 'Produk tidak ditemukan' });
     }
 
+    // Increment viewCount if unique for this IP today
+    const userAgent = req.headers['user-agent'];
+    const isRequesterBot = isBot(userAgent);
+
+    if (!isRequesterBot) {
+      const ipAddress = req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+      const geo = geoip.lookup(ipAddress);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      try {
+        await prisma.uniqueActivity.create({
+          data: {
+            ipAddress,
+            type: 'PRODUCT_VIEW',
+            targetId: product.id,
+            date: today,
+            city: geo?.city,
+            region: geo?.region,
+            country: geo?.country
+          }
+        });
+        
+        // If create succeeds, it's unique for today
+        await prisma.product.update({
+          where: { id: product.id },
+          data: { viewCount: { increment: 1 } }
+        });
+      } catch (err: any) {
+        // P2002 is Prisma unique constraint error, means already recorded today
+        if (err.code !== 'P2002') {
+          console.error('Failed to record unique product view:', err);
+        }
+      }
+    }
+
     const toPopulated = (r: any) => ({
       ...r,
       categoryName: r.category?.name ?? '',
@@ -201,98 +252,7 @@ export async function getProduct(req: Request, res: Response, next: NextFunction
   } catch (err) { next(err); }
 }
 
-// POST /api/cart/validate
-export async function validateCart(req: AuthRequest, res: Response, next: NextFunction) {
-  try {
-    const { items } = req.body; // [{ productId, variantId?, qty }]
 
-    const productIds = items.map((i: any) => i.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      include: { variants: true },
-    });
-
-    const validated = await Promise.all(items.map(async (item: any) => {
-      const product = products.find((p) => p.id === item.productId);
-      if (!product || !product.isActive) {
-        return { ...item, isAvailable: false, reason: 'Produk tidak tersedia' };
-      }
-
-      const variant = item.variantId
-        ? product.variants.find((v) => v.id === item.variantId)
-        : null;
-
-      // 1. Identify Flash Sale
-      const fsItem = await prisma.flashSaleItem.findFirst({
-        where: {
-          productId: product.id,
-          flashSale: {
-            isActive: true,
-            startAt: { lte: new Date() },
-            endAt: { gte: new Date() }
-          }
-        },
-        include: { flashSale: true }
-      });
-
-      let unitPrice = product.discountPrice || product.price;
-      let isFlashSale = false;
-
-      if (fsItem) {
-        const remainingFsStock = fsItem.flashStock - fsItem.soldQty;
-        
-        let userFsUsage = 0;
-        if ((req as AuthRequest).userId) {
-          const usage = await prisma.orderItem.aggregate({
-            where: {
-              productId: product.id,
-              order: {
-                userId: (req as AuthRequest).userId,
-                createdAt: { gte: fsItem.flashSale.startAt, lte: fsItem.flashSale.endAt },
-                orderStatus: { notIn: ['CANCELLED', 'PROBLEM'] }
-              }
-            },
-            _sum: { qty: true }
-          });
-          userFsUsage = usage._sum.qty || 0;
-        }
-
-        const userRemainingLimit = fsItem.limitPerUser === 0 ? 999999 : Math.max(0, fsItem.limitPerUser - userFsUsage);
-        const availableFsQty = Math.min(item.qty, remainingFsStock, userRemainingLimit);
-
-        if (availableFsQty > 0) {
-          const flashPrice = fsItem.flashPrice;
-          const normalPrice = product.discountPrice || product.price;
-          
-          // Calculate blended unit price: (qtyAtFlash * flashPrice + qtyAtNormal * normalPrice) / totalQty
-          const totalLinePrice = (availableFsQty * flashPrice) + ((item.qty - availableFsQty) * normalPrice);
-          unitPrice = totalLinePrice / item.qty;
-          isFlashSale = true;
-        }
-      }
-
-      const variantAdd = variant?.priceAddition || 0;
-      const outOfStock = !product.isUnlimitedStock && product.stockQty < item.qty;
-
-      return {
-        productId: item.productId,
-        variantId: item.variantId || null,
-        qty: item.qty,
-        productName: product.name,
-        productImage: product.images[0] || null,
-        unit: product.unit,
-        unitPrice: Math.round(unitPrice + variantAdd),
-        isFlashSale,
-        variantName: variant?.name || null,
-        isAvailable: !outOfStock,
-        priceChanged: Math.abs((unitPrice + variantAdd) - item.unitPrice) > 1,
-        reason: outOfStock ? `Stok tersisa ${product.stockQty}` : null,
-      };
-    }));
-
-    res.json({ items: validated });
-  } catch (err) { next(err); }
-}
 
 // GET /api/banners
 export async function getBanners(req: Request, res: Response, next: NextFunction) {
@@ -353,5 +313,66 @@ export async function getCookingVideos(req: Request, res: Response, next: NextFu
         totalPages: Math.ceil(total / limit),
       },
     });
+  } catch (err) { next(err); }
+}
+
+// POST /api/visit
+export async function recordVisit(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userAgent = req.headers['user-agent'];
+    if (isBot(userAgent)) {
+      return res.json({ success: true, message: 'Bot ignored' });
+    }
+
+    const ipAddress = req.ip || req.headers['x-forwarded-for']?.toString() || 'unknown';
+    const geo = geoip.lookup(ipAddress);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    try {
+      await prisma.uniqueActivity.create({
+        data: {
+          ipAddress,
+          type: 'VISIT',
+          date: today,
+          city: geo?.city,
+          region: geo?.region,
+          country: geo?.country
+        }
+      });
+
+      // If unique today, increment site analytics
+      await prisma.siteAnalytics.upsert({
+        where: { date: today },
+        update: { visitorCount: { increment: 1 } },
+        create: { date: today, visitorCount: 1 }
+      });
+
+      // Increment location aggregate
+      if (geo?.city && geo?.region) {
+        await prisma.siteAnalyticsLocation.upsert({
+          where: {
+            date_city_region: {
+              date: today,
+              city: geo.city,
+              region: geo.region
+            }
+          },
+          update: { count: { increment: 1 } },
+          create: {
+            date: today,
+            city: geo.city,
+            region: geo.region,
+            count: 1
+          }
+        });
+      }
+    } catch (err: any) {
+      if (err.code !== 'P2002') {
+        console.error('Failed to record unique site visit:', err);
+      }
+    }
+
+    res.json({ success: true });
   } catch (err) { next(err); }
 }

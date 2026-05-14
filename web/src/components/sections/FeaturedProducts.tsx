@@ -23,7 +23,7 @@ export default async function FeaturedProducts() {
 
   return (
     <section className={styles.productSection}>
-      <h2 className={styles.sectionTitle}>Pilihan Dapurgizi 🔥</h2>
+      <h2 className={styles.sectionTitle}>Pilihan XINBIE 🔥</h2>
       <div className={styles.productGrid}>
         {products.map((product: any) => (
           <DgProductCard
@@ -36,11 +36,11 @@ export default async function FeaturedProducts() {
             imageUrl={product.images && product.images.length > 0 ? product.images[0] : undefined}
             discountPrice={product.discountPrice}
             discountPercent={product.discountPercent}
-            isOutOfStock={product.stockQty <= 0}
-            stockQty={product.stockQty}
-            isUnlimitedStock={product.isUnlimitedStock}
+
+
             variantCount={product.variants ? product.variants.length : 0}
             tags={product.tags}
+            ratingAvg={product.ratingAvg}
           />
         ))}
       </div>

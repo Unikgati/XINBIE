@@ -17,62 +17,54 @@ import { sendPushToMultiple, sendPushNotification } from '../utils/firebase';
 
 export async function getDashboard(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    const [
-      totalUsers, totalDrivers, totalProducts,
-      todayOrders, monthOrders, monthRevenue,
-      pendingDrivers, activeOrders, recentOrders,
-      monthCogs,
-    ] = await Promise.all([
-      prisma.user.count({ where: { role: 'USER' } }),
-      prisma.driverProfile.count(),
+    const [totalProducts, activeProducts, totalCategories, topProducts, siteAnalytics] = await Promise.all([
+      prisma.product.count(),
       prisma.product.count({ where: { isActive: true } }),
-      prisma.order.count({ where: { createdAt: { gte: today } } }),
-      prisma.order.count({ where: { createdAt: { gte: thisMonth } } }),
-      prisma.order.aggregate({
-        where: { createdAt: { gte: thisMonth }, paymentStatus: 'PAID' },
-        _sum: { grandTotal: true },
+      prisma.category.count({ where: { isActive: true } }),
+      prisma.product.findMany({
+        orderBy: { viewCount: 'desc' },
+        take: 5,
+        select: { id: true, name: true, viewCount: true, images: true, stockQty: true }
       }),
-      prisma.driverProfile.count({ where: { verificationStatus: 'PENDING' } }),
-      prisma.order.count({ where: { orderStatus: { in: ['RECEIVED', 'PROCESSING', 'WAITING_DRIVER', 'IN_DELIVERY'] } } }),
-      prisma.order.findMany({
-        take: 10,
-        orderBy: { createdAt: 'desc' },
-        include: { user: { select: { name: true } } },
-      }),
-      // Calculate COGS: sum(orderItem.qty * product.costPrice) for paid orders this month
-      prisma.orderItem.findMany({
-        where: {
-          order: { createdAt: { gte: thisMonth }, paymentStatus: 'PAID' },
-          product: { isNot: null },
-        },
-        select: { qty: true, product: { select: { costPrice: true } } },
-      }),
+      prisma.siteAnalytics.aggregate({
+        _sum: { visitorCount: true }
+      })
     ]);
-
-    const revenue = monthRevenue._sum.grandTotal || 0;
-    const cogs = monthCogs.reduce((sum, item) => sum + (item.qty * (item.product?.costPrice || 0)), 0);
-    const grossProfit = revenue - cogs;
-    const marginPercent = revenue > 0 ? Math.round((grossProfit / revenue) * 100) : 0;
 
     res.json({
       stats: {
-        totalUsers, totalDrivers, totalProducts,
-        todayOrders, monthOrders,
-        monthRevenue: revenue,
-        monthCogs: cogs,
-        grossProfit,
-        marginPercent,
-        pendingDrivers, activeOrders,
+        totalProducts,
+        activeProducts,
+        totalCategories,
+        totalVisitors: siteAnalytics._sum.visitorCount || 0,
       },
-      recentOrders: recentOrders.map((o) => ({
-        id: o.id, code: o.code, userName: o.user.name,
-        grandTotal: o.grandTotal, orderStatus: o.orderStatus,
-        isReadAdmin: o.isReadAdmin,
-        createdAt: o.createdAt,
+      topProducts,
+    });
+  } catch (err) { next(err); }
+}
+
+export async function getDetailedAnalytics(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const [locations, dailyVisitors] = await Promise.all([
+      prisma.siteAnalyticsLocation.groupBy({
+        by: ['city', 'region'],
+        _sum: { count: true },
+        orderBy: { _sum: { count: 'desc' } },
+        take: 15
+      }),
+      prisma.siteAnalytics.findMany({
+        orderBy: { date: 'desc' },
+        take: 30
+      })
+    ]);
+
+    res.json({
+      locations: locations.map(l => ({
+        city: l.city,
+        region: l.region,
+        count: l._sum.count || 0
       })),
+      dailyVisitors: dailyVisitors.reverse()
     });
   } catch (err) { next(err); }
 }
@@ -108,82 +100,57 @@ export async function adminGetProducts(req: AuthRequest, res: Response, next: Ne
 }
 
 const parseProductData = (body: any) => {
-  const data = { ...body };
-  // Remap 'stock' to 'stockQty'
-  if (data.stock !== undefined) {
-    data.stockQty = parseInt(data.stock) || 0;
-    delete data.stock;
+  const data: any = {};
+  
+  // Whitelist of fields allowed in Prisma Product model
+  const allowedFields = [
+    'name', 'description', 'categoryId', 'price', 'costPrice', 
+    'discountPrice', 'unit', 'weightGram', 'isUnlimitedStock', 
+    'isActive', 'isFeatured', 'sortOrder', 'shopeeUrl', 'ratingAvg'
+  ];
+
+  allowedFields.forEach(field => {
+    if (body[field] !== undefined) {
+      data[field] = body[field];
+    }
+  });
+
+  // Remap 'stock' to 'stockQty' (compatibility with older frontend)
+  if (body.stock !== undefined) {
+    data.stockQty = parseInt(body.stock) || 0;
+  } else if (body.stockQty !== undefined) {
+    data.stockQty = parseInt(body.stockQty) || 0;
   }
-  // Convert numbers
+
+  // Convert numeric types
   if (data.price !== undefined) data.price = parseInt(data.price) || 0;
   if (data.costPrice !== undefined) data.costPrice = parseInt(data.costPrice) || 0;
-  if (data.discountPrice !== undefined) data.discountPrice = parseInt(data.discountPrice) || null;
-  if (data.weightGram !== undefined) data.weightGram = parseInt(data.weightGram) || null;
-  if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 1;
+  if (data.discountPrice !== undefined) {
+    const parsed = parseInt(data.discountPrice);
+    data.discountPrice = isNaN(parsed) ? null : parsed;
+  }
+  if (data.weightGram !== undefined) {
+    const parsed = parseInt(data.weightGram);
+    data.weightGram = isNaN(parsed) ? null : parsed;
+  }
+  if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 0;
+  if (data.ratingAvg !== undefined) data.ratingAvg = parseFloat(data.ratingAvg) || 4.8;
 
   // Convert booleans
   if (data.isActive !== undefined) data.isActive = String(data.isActive) === 'true';
   if (data.isFeatured !== undefined) data.isFeatured = String(data.isFeatured) === 'true';
   if (data.isUnlimitedStock !== undefined) data.isUnlimitedStock = String(data.isUnlimitedStock) === 'true';
 
-  // Auto-calculate discountPercent if discountPrice exists and is less than price
-  if (data.price > 0 && data.discountPrice && data.discountPrice < data.price) {
+  // Auto-calculate discountPercent
+  if (data.price && data.price > 0 && data.discountPrice && data.discountPrice < data.price) {
     data.discountPercent = Math.round(((data.price - data.discountPrice) / data.price) * 100);
   } else {
     data.discountPercent = null;
   }
 
-  // Clean up HTML description (replace &nbsp; with space to fix word wrapping issues in clients)
-  if (data.description) {
+  // Clean up description
+  if (typeof data.description === 'string') {
     data.description = data.description.replace(/&nbsp;/g, ' ');
-  }
-
-  // Parse tags
-  if (data.tags !== undefined) {
-    if (typeof data.tags === 'string') {
-      try {
-        data.tags = JSON.parse(data.tags);
-      } catch (e) {
-        data.tags = data.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
-      }
-    }
-    if (Array.isArray(data.tags)) {
-      data.tags = data.tags.filter(Boolean).map(String);
-    } else {
-      data.tags = [];
-    }
-  }
-
-  // Parse relatedProductIds
-  if (data.relatedProductIds !== undefined) {
-    if (typeof data.relatedProductIds === 'string') {
-      try {
-        data.relatedProductIds = JSON.parse(data.relatedProductIds);
-      } catch (e) {
-        data.relatedProductIds = data.relatedProductIds.split(',').map((t: string) => t.trim()).filter(Boolean);
-      }
-    }
-    if (Array.isArray(data.relatedProductIds)) {
-      data.relatedProductIds = data.relatedProductIds.filter(Boolean).map(String);
-    } else {
-      data.relatedProductIds = [];
-    }
-  }
-
-  // Parse cookingVideoIds
-  if (data.cookingVideoIds !== undefined) {
-    if (typeof data.cookingVideoIds === 'string') {
-      try {
-        data.cookingVideoIds = JSON.parse(data.cookingVideoIds);
-      } catch (e) {
-        data.cookingVideoIds = data.cookingVideoIds.split(',').map((t: string) => t.trim()).filter(Boolean);
-      }
-    }
-    if (Array.isArray(data.cookingVideoIds)) {
-      data.cookingVideoIds = data.cookingVideoIds.filter(Boolean).map(String);
-    } else {
-      data.cookingVideoIds = [];
-    }
   }
 
   return data;
@@ -214,15 +181,8 @@ export async function adminCreateProduct(req: AuthRequest, res: Response, next: 
     data.images = images;
     data.slug = await generateUniqueSlug(data.name);
 
-    const { cookingVideoIds, ...productData } = data;
-
     const product = await prisma.product.create({ 
-      data: {
-        ...productData,
-        cookingVideos: {
-          connect: cookingVideoIds?.map((id: string) => ({ id })) || [],
-        }
-      } 
+      data: data 
     });
 
     res.status(201).json(product);
@@ -242,16 +202,9 @@ export async function adminUpdateProduct(req: AuthRequest, res: Response, next: 
       data.slug = await generateUniqueSlug(data.name, req.params.id as string);
     }
 
-    const { cookingVideoIds, ...productData } = data;
-
     const product = await prisma.product.update({
       where: { id: req.params.id as string },
-      data: {
-        ...productData,
-        cookingVideos: {
-          set: cookingVideoIds?.map((id: string) => ({ id })) || [],
-        }
-      },
+      data: data,
     });
 
     res.json(product);
@@ -323,20 +276,21 @@ export async function adminCreateVariant(req: AuthRequest, res: Response, next: 
     let imageUrl: string | undefined;
     if (req.file) imageUrl = await processAndUploadImage(req.file, 'variants');
 
-    const variant = await prisma.productVariant.create({
-      data: {
-        productId,
-        name: req.body.name,
-        sku: req.body.sku || null,
-        price: parseInt(req.body.price) || 0,
-        costPrice: parseInt(req.body.costPrice) || 0,
-        discountPrice: req.body.discountPrice ? parseInt(req.body.discountPrice) : null,
-        priceAddition: parseInt(req.body.priceAddition) || 0,
-        stockQty: parseInt(req.body.stockQty) || 0,
-        imageUrl,
-        sortOrder: parseInt(req.body.sortOrder) || 0,
-      },
-    });
+    const data = {
+      productId,
+      name: req.body.name,
+      sku: req.body.sku || null,
+      price: parseInt(req.body.price) || 0,
+      costPrice: parseInt(req.body.costPrice) || 0,
+      discountPrice: req.body.discountPrice ? parseInt(req.body.discountPrice) : null,
+      priceAddition: parseInt(req.body.priceAddition) || 0,
+      stockQty: parseInt(req.body.stockQty) || 0,
+      imageUrl: imageUrl || null,
+      sortOrder: parseInt(req.body.sortOrder) || 0,
+      isActive: req.body.isActive === undefined ? true : String(req.body.isActive) === 'true',
+    };
+
+    const variant = await prisma.productVariant.create({ data });
     res.status(201).json(variant);
   } catch (err) { next(err); }
 }
@@ -344,14 +298,26 @@ export async function adminCreateVariant(req: AuthRequest, res: Response, next: 
 export async function adminUpdateVariant(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { id } = idParamSchema.parse(req.params);
-    const data: any = { ...req.body };
-    if (req.file) data.imageUrl = await processAndUploadImage(req.file, 'variants');
-    if (data.price) data.price = parseInt(data.price);
+    let imageUrl: string | undefined;
+    if (req.file) imageUrl = await processAndUploadImage(req.file, 'variants');
+
+    const data: any = {};
+    const allowed = ['name', 'sku', 'price', 'costPrice', 'discountPrice', 'priceAddition', 'stockQty', 'sortOrder', 'isActive'];
+    allowed.forEach(f => {
+      if (req.body[f] !== undefined) data[f] = req.body[f];
+    });
+
+    if (imageUrl) data.imageUrl = imageUrl;
+    if (data.price !== undefined) data.price = parseInt(data.price) || 0;
     if (data.costPrice !== undefined) data.costPrice = parseInt(data.costPrice) || 0;
-    if (data.discountPrice !== undefined) data.discountPrice = parseInt(data.discountPrice) || null;
+    if (data.discountPrice !== undefined) {
+      const parsed = parseInt(data.discountPrice);
+      data.discountPrice = isNaN(parsed) ? null : parsed;
+    }
     if (data.priceAddition !== undefined) data.priceAddition = parseInt(data.priceAddition) || 0;
     if (data.stockQty !== undefined) data.stockQty = parseInt(data.stockQty) || 0;
     if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 0;
+    if (data.isActive !== undefined) data.isActive = String(data.isActive) === 'true';
 
     const variant = await prisma.productVariant.update({
       where: { id },
@@ -394,11 +360,15 @@ export async function adminCreateCategory(req: AuthRequest, res: Response, next:
     let iconUrl: string | undefined;
     if (req.file) iconUrl = await processAndUploadImage(req.file, 'categories');
 
-    let slug = generateSlug(req.body.name);
+    const data = {
+      name: req.body.name,
+      slug: generateSlug(req.body.name),
+      iconUrl: iconUrl || null,
+      isActive: req.body.isActive === undefined ? true : String(req.body.isActive) === 'true',
+      sortOrder: parseInt(req.body.sortOrder) || (await prisma.category.count()) + 1,
+    };
 
-    const category = await prisma.category.create({
-      data: { ...req.body, iconUrl, slug },
-    });
+    const category = await prisma.category.create({ data });
     res.status(201).json(category);
   } catch (err) { next(err); }
 }
@@ -409,13 +379,21 @@ export async function adminUpdateCategory(req: AuthRequest, res: Response, next:
     let iconUrl: string | undefined;
     if (req.file) iconUrl = await processAndUploadImage(req.file, 'categories');
 
-    const data: any = { ...req.body };
-    if (iconUrl) data.iconUrl = iconUrl;
-    if (data.name) {
-      data.slug = generateSlug(data.name);
-    }
+    const data: any = {};
+    const allowed = ['name', 'isActive', 'sortOrder'];
+    allowed.forEach(f => {
+      if (req.body[f] !== undefined) data[f] = req.body[f];
+    });
 
-    const category = await prisma.category.update({ where: { id }, data });
+    if (iconUrl) data.iconUrl = iconUrl;
+    if (data.name) data.slug = generateSlug(data.name);
+    if (data.isActive !== undefined) data.isActive = String(data.isActive) === 'true';
+    if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 0;
+
+    const category = await prisma.category.update({
+      where: { id },
+      data: data,
+    });
     res.json(category);
   } catch (err) { next(err); }
 }
@@ -434,6 +412,21 @@ export async function adminReorderCategories(req: AuthRequest, res: Response, ne
     );
 
     res.json({ message: 'Urutan kategori diperbarui' });
+  } catch (err) { next(err); }
+}
+
+export async function adminDeleteCategory(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+
+    // Check if category has products
+    const productCount = await prisma.product.count({ where: { categoryId: id } });
+    if (productCount > 0) {
+      throw new AppError(`Kategori tidak bisa dihapus karena masih memiliki ${productCount} produk. Pindahkan produk ke kategori lain terlebih dahulu.`, 400);
+    }
+
+    await prisma.category.delete({ where: { id } });
+    res.json({ message: 'Kategori berhasil dihapus' });
   } catch (err) { next(err); }
 }
 
@@ -841,19 +834,37 @@ export async function adminCreateBanner(req: AuthRequest, res: Response, next: N
     if (!req.file) throw new AppError('Gambar banner wajib diupload', 400);
     const imageUrl = await processAndUploadImage(req.file, 'banners', 1200, 90);
 
-    const banner = await prisma.banner.create({
-      data: { ...req.body, imageUrl },
-    });
+    const data = {
+      title: req.body.title || 'Banner',
+      type: req.body.type || 'PROMO',
+      imageUrl,
+      linkUrl: req.body.linkUrl || null,
+      isActive: req.body.isActive === undefined ? true : String(req.body.isActive) === 'true',
+      sortOrder: parseInt(req.body.sortOrder) || (await prisma.banner.count()) + 1,
+    };
+
+    const banner = await prisma.banner.create({ data });
     res.status(201).json(banner);
   } catch (err) { next(err); }
 }
 
 export async function adminUpdateBanner(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const data: any = { ...req.body };
-    if (req.file) data.imageUrl = await processAndUploadImage(req.file, 'banners', 1200, 90);
+    const { id } = req.params;
+    let imageUrl: string | undefined;
+    if (req.file) imageUrl = await processAndUploadImage(req.file, 'banners', 1200, 90);
 
-    const banner = await prisma.banner.update({ where: { id: req.params.id as string }, data });
+    const data: any = {};
+    const allowed = ['title', 'type', 'linkUrl', 'isActive', 'sortOrder'];
+    allowed.forEach(f => {
+      if (req.body[f] !== undefined) data[f] = req.body[f];
+    });
+
+    if (imageUrl) data.imageUrl = imageUrl;
+    if (data.isActive !== undefined) data.isActive = String(data.isActive) === 'true';
+    if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 0;
+
+    const banner = await prisma.banner.update({ where: { id }, data });
     res.json(banner);
   } catch (err) { next(err); }
 }
