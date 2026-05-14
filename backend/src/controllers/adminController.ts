@@ -9,7 +9,7 @@ import { AppError } from '../middleware/errorHandler';
 import { processAndUploadImage, processAndUploadImages } from '../middleware/upload';
 import { emitToAdmins, broadcastOrderOffer } from '../websocket';
 import { NotificationService } from '../utils/notification';
-import { sendPushToMultiple, sendPushNotification } from '../utils/firebase';
+import { generateUniqueSlug } from '../utils/helpers';
 
 // ═══════════════════════════════════════
 // Dashboard
@@ -173,19 +173,6 @@ const parseProductData = (body: any) => {
   return data;
 };
 
-const generateUniqueSlug = async (name: string, excludeId?: string) => {
-  let baseSlug = slugify(name, { lower: true, strict: true });
-  let slug = baseSlug;
-  let counter = 1;
-
-  while (true) {
-    const existing = await prisma.product.findUnique({ where: { slug } });
-    if (!existing || existing.id === excludeId) break;
-    slug = `${baseSlug}-${counter}`;
-    counter++;
-  }
-  return slug;
-};
 
 export async function adminCreateProduct(req: AuthRequest, res: Response, next: NextFunction) {
   try {

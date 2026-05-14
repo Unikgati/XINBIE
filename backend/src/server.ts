@@ -22,6 +22,7 @@ import regionRoutes from './routes/region';
 import adminRoutes from './routes/admin';
 import aiRoutes from './routes/ai';
 import chatRoutes from './routes/chat';
+import syncRoutes from './routes/sync';
 
 
 const app = express();
@@ -68,6 +69,7 @@ app.use('/api/regions', regionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/ai', aiRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/sync', syncRoutes);
 
 
 
