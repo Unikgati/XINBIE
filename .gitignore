@@ -20,18 +20,6 @@ Thumbs.db
 .vscode/
 *.iml
 
-# --- Flutter / Dart ---
-**/build/
-**/.dart_tool/
-**/.packages
-**/.flutter-plugins
-**/.flutter-plugins-dependencies
-**/.pub-cache/
-**/pubspec.lock
-!packages/**/pubspec.lock
-*.g.dart
-*.freezed.dart
-
 # --- Node.js ---
 **/node_modules/
 **/dist/

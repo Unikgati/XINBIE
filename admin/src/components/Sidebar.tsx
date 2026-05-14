@@ -17,8 +17,6 @@ const navItems = [
     { href: '/recipes', icon: 'menu_book', label: 'Inspirasi Resep' },
   ]},
   { section: 'Pengguna', items: [
-    { href: '/drivers', icon: 'local_shipping', label: 'Driver' },
-    { href: '/withdrawals', icon: 'account_balance_wallet', label: 'Pencairan' },
     { href: '/users', icon: 'group', label: 'Pelanggan' },
   ]},
   { section: 'Marketing', items: [
@@ -35,7 +33,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { pendingCount, pendingDriversCount, socketStatus } = useNotification();
+  const { pendingCount, socketStatus } = useNotification();
 
   const statusDot: Record<string, { color: string; title: string; pulse?: boolean }> = {
     connected: { color: '#4CAF50', title: 'Terhubung' },
@@ -90,7 +88,6 @@ export default function Sidebar() {
             {section.items.map((item) => {
               let count = 0;
               if (item.href === '/orders') count = pendingCount;
-              if (item.href === '/drivers') count = pendingDriversCount;
 
               return (
                 <Link

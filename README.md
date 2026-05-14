@@ -1,22 +1,16 @@
 # DapurGizi
 
-Platform belanja bahan dapur segar — User App + Driver App + Admin Panel + Backend API.
+Platform belanja bahan dapur segar — Admin Panel + User Web + Backend API.
 
 ## 🏗️ Arsitektur
 
 ```
-Dapurgizi/
-├── apps/
-│   ├── user_app/          # Flutter — Aplikasi pelanggan
-│   └── driver_app/        # Flutter — Aplikasi driver
-├── packages/
-│   ├── core/              # Models, API client, auth, validators
-│   ├── ui_kit/            # Design system, widgets, theme
-│   └── map_kit/           # Peta, geocoding, GPS
-├── admin/                 # Next.js 15 — Panel admin
-├── backend/               # Node.js + TypeScript + Prisma 7
-├── docker-compose.yml     # PostgreSQL, Redis, MinIO
-└── melos.yaml             # Flutter monorepo workspace
+DapurGizi/
+├── admin/              # Next.js 16 — Panel admin
+├── web/                # Next.js 16 — User web store
+├── backend/            # Node.js + TypeScript + Prisma 7
+├── docker-compose.yml  # PostgreSQL, Redis, MinIO
+└── README.md
 ```
 
 ## 🚀 Quick Start
@@ -43,61 +37,36 @@ npm install
 npm run dev -- -p 3002      # http://localhost:3002
 ```
 
-### 4. Mobile Apps
+### 4. User Web
 ```bash
-# Di root project
-dart pub get
-cd apps/user_app && flutter run
-cd apps/driver_app && flutter run
+cd web
+npm install
+npm run dev                 # http://localhost:3000
 ```
 
-## 📱 User App (12 Screens)
-| Screen | Fitur |
-|--------|-------|
-| Splash | Animated logo |
-| Onboarding | 3-page intro |
-| Login/Register | Email + Google + OTP |
-| Home | Search, banner, categories, featured products |
-| Category | Filter chips + product grid |
-| Product Detail | SliverAppBar, nutrition, qty selector |
-| Cart | Inline quantity, checkout bar |
-| Checkout | Address, delivery, payment, promo |
-| Orders | Tabbed active/history |
-| Order Detail | Status timeline |
-| Profile | Menu, addresses, notifications |
+## 🖥️ Admin Panel
+Dashboard • Orders • Products • Categories • Users • Banners • Promos • Flash Sale • Cooking Videos • Recipes • Delivery Slots • Settings
 
-## 🚗 Driver App (10 Screens)
-| Screen | Fitur |
-|--------|-------|
-| Login | Email/password |
-| Registration | Steps → KTP upload → verification |
-| Home | Online toggle, stats, active orders |
-| Order Detail | Customer info, WhatsApp, navigation, problem report |
-| History | Order list with status |
-| Earnings | Monthly total, weekly stats, transactions |
-| Profile | Verified badge, stats, settings |
-
-## 🖥️ Admin Panel (10 Pages)
-Dashboard • Orders • Products • Categories • Drivers • Users • Banners • Promos • Settings • Broadcast
+## 🌐 User Web
+Home • Search • Categories • Product Detail • Cart • Checkout • Orders • Payment • Profile • Recipes • Notifications • Auth (Login/Register/OTP)
 
 ## 🔧 Backend API
 - **Auth**: Register, Login, Google OAuth, OTP, Password Reset, Token Rotation
 - **Products**: CRUD, Search, Filter, Categories
-- **Orders**: Create, Status, Cancel, Driver Assignment
-- **Drivers**: Register, KTP Upload, Online Toggle, GPS, Earnings
+- **Orders**: Create, Status, Cancel
 - **Admin**: Dashboard, Full CRUD, Broadcast
-- **WebSocket**: Real-time driver tracking, order notifications
+- **WebSocket**: Real-time order notifications
 - **File Upload**: multer → sharp (WebP) → MinIO
 
 ## 🛠️ Tech Stack
 | Layer | Technology |
 |-------|-----------|
-| Mobile | Flutter 3.x + Riverpod + GoRouter |
-| Backend | Node.js + Express + TypeScript |
+| Backend | Node.js + Express 5 + TypeScript |
 | Database | PostgreSQL + Prisma 7 |
 | Cache | Redis |
 | Storage | MinIO (S3-compatible) |
-| Admin | Next.js 15 + React |
+| Admin | Next.js 16 + React 19 |
+| User Web | Next.js 16 + React 19 |
 | Real-time | Socket.IO |
 
 ## 📄 License
