@@ -17,8 +17,8 @@ import {
 } from "@/components/sections/Skeletons";
 
 export const metadata: Metadata = {
-  title: "Beranda | XINBIE - Segar Setiap Hari",
-  description: "Belanja sayur, buah, dan kebutuhan dapur segar di XINBIE. Kualitas premium, harga terjangkau.",
+  title: "XINBIE | Solusi Alat Terapi & Kesehatan Keluarga Indonesia",
+  description: "XINBIE menyediakan alat terapi kesehatan premium mulai dari korset lutut, sabuk terapi, hingga kebutuhan wellness lainnya dengan harga terjangkau.",
 };
 
 export default function Home() {

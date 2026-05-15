@@ -21,34 +21,42 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://xinbie.com'),
+  alternates: {
+    canonical: '/',
+  },
   title: {
-    default: "XINBIE - Kebutuhan Gaya Hidup & Produk Pilihan",
+    default: "XINBIE - Solusi Alat Terapi & Kesehatan Keluarga",
     template: "%s | XINBIE"
   },
-  description: "XINBIE menyediakan berbagai kebutuhan produk pilihan berkualitas tinggi, mulai dari perlengkapan kesehatan premium hingga kebutuhan harian lainnya dengan layanan pengiriman terbaik.",
-  keywords: ["belanja online", "produk premium", "perlengkapan kesehatan", "korset lutut", "xinbie indonesia"],
+  description: "Temukan alat terapi kesehatan premium mulai dari korset lutut, sabuk terapi, hingga kebutuhan wellness lainnya. Kualitas terbaik, harga terjangkau, kirim ke seluruh Indonesia.",
+  keywords: ["alat terapi", "kesehatan", "korset lutut", "wellness", "xinbie indonesia", "gaya hidup sehat"],
   authors: [{ name: "XINBIE Team" }],
   robots: "index, follow",
+  icons: {
+    icon: '/logo-icon.svg',
+    apple: '/logo-icon.svg',
+  },
   openGraph: {
     type: "website",
     locale: "id_ID",
     url: "https://xinbie.com",
     siteName: "XINBIE",
-    title: "XINBIE - Kebutuhan Gaya Hidup & Produk Pilihan",
-    description: "Temukan produk pilihan berkualitas tinggi dengan harga terbaik hanya di XINBIE. Pengiriman cepat ke seluruh Indonesia.",
+    title: "XINBIE - Solusi Alat Terapi & Kesehatan Keluarga",
+    description: "Temukan alat terapi kesehatan premium dengan harga terbaik hanya di XINBIE. Pengiriman cepat ke seluruh Indonesia.",
     images: [
       {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "XINBIE Banner",
+        alt: "XINBIE - Wellness in Motion",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "XINBIE - Kebutuhan Gaya Hidup & Produk Pilihan",
-    description: "Belanja produk berkualitas tinggi dengan mudah dan aman di XINBIE.",
+    title: "XINBIE - Solusi Alat Terapi & Kesehatan Keluarga",
+    description: "Belanja alat terapi kesehatan berkualitas dengan mudah dan aman di XINBIE.",
     images: ["/og-image.jpg"],
   },
 };

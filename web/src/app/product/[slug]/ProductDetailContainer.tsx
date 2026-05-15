@@ -38,5 +38,34 @@ export default async function ProductDetailContainer({ slug }: { slug: string })
     product.description = DOMPurify.sanitize(product.description.replace(/&nbsp;/g, ' '));
   }
 
-  return <ProductDetailClient product={product} relatedProducts={relatedProducts} similarProducts={similarProducts} />;
+  // Prepare Structured Data (JSON-LD)
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    image: product.images?.map((img: any) => img.url) || [],
+    description: product.description?.replace(/<[^>]*>/g, '').substring(0, 160),
+    brand: {
+      '@type': 'Brand',
+      name: 'XINBIE'
+    },
+    offers: {
+      '@type': 'Offer',
+      url: `https://xinbie.com/product/${slug}`,
+      priceCurrency: 'IDR',
+      price: product.price,
+      itemCondition: 'https://schema.org/NewCondition',
+      availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
+    }
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <ProductDetailClient product={product} relatedProducts={relatedProducts} similarProducts={similarProducts} />
+    </>
+  );
 }

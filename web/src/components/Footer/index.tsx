@@ -2,8 +2,22 @@ import React from 'react';
 import Link from 'next/link';
 import styles from './Footer.module.css';
 
-const Footer = () => {
+async function fetchCategories() {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/categories`, {
+      next: { revalidate: 3600 } // Cache for 1 hour
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (error) {
+    console.error('Error fetching categories in Footer:', error);
+    return [];
+  }
+}
+
+const Footer = async () => {
   const currentYear = new Date().getFullYear();
+  const categories = await fetchCategories();
 
   return (
     <footer className={styles.footer}>
@@ -22,12 +36,13 @@ const Footer = () => {
             <h3 className={styles.columnTitle}>Kategori</h3>
             <ul className={styles.linkList}>
               <li><Link href="/products">Semua Produk</Link></li>
-              <li><Link href="/category/kesehatan">Kesehatan</Link></li>
-              <li><Link href="/category/gaya-hidup">Gaya Hidup</Link></li>
-              <li><Link href="/search">Pencarian</Link></li>
+              {categories.map((cat: any) => (
+                <li key={cat.id}>
+                  <Link href={`/category/${cat.slug}`}>{cat.name}</Link>
+                </li>
+              ))}
             </ul>
           </div>
-
 
           <div className={styles.linksColumn}>
             <h3 className={styles.columnTitle}>Hubungi Kami</h3>
