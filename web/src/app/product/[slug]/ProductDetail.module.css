@@ -2,12 +2,24 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 40px 24px 80px;
+  width: 100%;
+  overflow-x: hidden; /* Prevent any horizontal spill */
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 20px 16px 120px;
+  }
 }
 
 .breadcrumb {
   font-size: 14px;
   color: var(--color-text-secondary);
   margin-bottom: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .breadcrumb a {
@@ -21,9 +33,16 @@
 
 .grid {
   display: grid;
-  grid-template-columns: minmax(320px, 480px) 1fr;
-  gap: 40px;
+  grid-template-columns: 1fr;
+  gap: 24px;
   align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: minmax(320px, 480px) 1fr;
+    gap: 40px;
+  }
 }
 
 .imageSection {
@@ -104,11 +123,20 @@
 }
 
 .prevButton {
-  left: -20px;
+  left: 10px;
 }
 
 .nextButton {
-  right: -20px;
+  right: 10px;
+}
+
+@media (min-width: 1024px) {
+  .prevButton {
+    left: -20px;
+  }
+  .nextButton {
+    right: -20px;
+  }
 }
 
 .thumbnailContainer {

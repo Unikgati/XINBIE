@@ -131,7 +131,7 @@ export default function ReviewList({ productId, refreshTrigger }: ReviewListProp
     <div className={styles.listContainer} style={{ marginTop: 0 }}>
       
       {reviews.length === 0 && !loading ? (
-        <div className={styles.empty}>Belum ada ulasan untuk produk ini. Jadilah yang pertama!</div>
+        null
       ) : (
         <div className={styles.reviewsWrapper}>
           {reviews.map(review => (

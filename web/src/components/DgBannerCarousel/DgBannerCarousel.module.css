@@ -70,24 +70,54 @@
 }
 
 .dotsContainer {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  padding: 16px 0 0;
+  gap: 8px;
+  z-index: 5;
 }
 
 .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 5px;
-  background-color: var(--color-border);
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(4px);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .activeDot {
-  width: 32px;
-  background-color: var(--color-primary);
-  box-shadow: 0 2px 4px rgba(4, 75, 215, 0.2);
+  width: 24px;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+  .bannerItem {
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+  }
+  
+  .dotsContainer {
+    bottom: 12px;
+    gap: 6px;
+  }
+  
+  .dot {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .activeDot {
+    width: 18px;
+  }
+
+  .navButton {
+    display: none;
+  }
 }

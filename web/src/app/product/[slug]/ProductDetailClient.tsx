@@ -110,7 +110,10 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
   };
 
   return (
-    <div className={styles.container}>
+    <main className={styles.container}>
+      <style>{`
+        .whatsapp-float { display: none !important; }
+      `}</style>
       <Breadcrumbs 
         items={[
           { label: 'Beranda', href: '/' },
@@ -388,6 +391,6 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

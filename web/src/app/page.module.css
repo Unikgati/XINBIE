@@ -209,7 +209,19 @@
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .container {
-    padding: 0 16px 40px;
+    padding: 0 16px 24px;
+  }
+
+  .categoriesSection {
+    margin-bottom: 8px;
+  }
+
+  .bannersSection {
+    margin-bottom: 0px;
+  }
+
+  .productSection {
+    margin-bottom: 24px;
   }
 
   .categoriesBadges {
@@ -232,8 +244,8 @@
   }
   
   .sectionTitle {
-    font-size: 20px;
-    margin-bottom: 16px;
+    font-size: 18px;
+    margin-bottom: 12px;
   }
 
   .emptyState {

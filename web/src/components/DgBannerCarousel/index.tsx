@@ -142,22 +142,22 @@ export default function DgBannerCarousel({ banners }: Props) {
             </button>
           </>
         )}
+
+        {safeBanners.length > 1 && (
+          <div className={styles.dotsContainer}>
+            {safeBanners.map((_, index) => (
+              <div 
+                key={index}
+                className={`${styles.dot} ${currentIndex === index ? styles.activeDot : ''}`}
+                onClick={() => {
+                  setCurrentIndex(index);
+                  scrollToIndex(index);
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
-      
-      {safeBanners.length > 1 && (
-        <div className={styles.dotsContainer}>
-          {safeBanners.map((_, index) => (
-            <div 
-              key={index}
-              className={`${styles.dot} ${currentIndex === index ? styles.activeDot : ''}`}
-              onClick={() => {
-                setCurrentIndex(index);
-                scrollToIndex(index);
-              }}
-            />
-          ))}
-        </div>
-      )}
     </section>
   );
 }

@@ -54,6 +54,8 @@ html, body {
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   min-height: 100vh;
+  overflow-x: hidden; /* Global safety for horizontal scroll */
+  width: 100%;
 }
 
 *, *::before, *::after {
