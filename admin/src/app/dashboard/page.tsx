@@ -131,7 +131,15 @@ export default function DashboardPage() {
                               </div>
                             )}
                           </div>
-                          <div style={{ fontWeight: 600 }}>{p.name}</div>
+                          <div style={{ 
+                            fontWeight: 600, 
+                            maxWidth: '250px', 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap' 
+                          }} title={p.name}>
+                            {p.name}
+                          </div>
                         </div>
                       </td>
                       <td><span className="badge blue">{p.stockQty} pcs</span></td>

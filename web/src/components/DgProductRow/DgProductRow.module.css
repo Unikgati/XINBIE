@@ -124,10 +124,16 @@
   color: var(--color-price-active);
 }
 
-.oldPrice {
-  font-size: 11px;
-  color: var(--color-text-hint);
-  text-decoration: line-through;
+.inlineDiscountBadge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #EE4D2D;
+  background: #FFECE8;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  height: fit-content;
 }
 
 .ratingSection {

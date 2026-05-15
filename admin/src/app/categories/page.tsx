@@ -106,6 +106,7 @@ function SortableRow({
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formName, setFormName] = useState('');
@@ -152,8 +153,10 @@ export default function CategoriesPage() {
 
   const handleSave = async () => {
     if (!formName.trim()) { toast.error('Nama kategori wajib diisi'); return; }
+    if (isSaving) return;
 
     try {
+      setIsSaving(true);
       const fd = new FormData();
       fd.append('name', formName);
 
@@ -169,6 +172,8 @@ export default function CategoriesPage() {
       fetchData();
     } catch (err: any) {
       toast.error(err.message || 'Gagal menyimpan kategori');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -281,9 +286,14 @@ export default function CategoriesPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setShowModal(false)}>Batal</button>
-              <button className="btn btn-primary" onClick={handleSave}>
-                <span className="material-symbols-outlined">save</span> {editingId ? 'Simpan Perubahan' : 'Simpan Kategori'}
+              <button className="btn btn-outline" onClick={() => setShowModal(false)} disabled={isSaving}>Batal</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? (
+                  <span className="spinner" style={{ width: 16, height: 16, marginRight: 8 }}></span>
+                ) : (
+                  <span className="material-symbols-outlined">save</span>
+                )}
+                {isSaving ? 'Menyimpan...' : (editingId ? 'Simpan Perubahan' : 'Simpan Kategori')}
               </button>
             </div>
           </div>

@@ -437,7 +437,7 @@ import { emitToAdmins } from '../websocket';
 export async function submitReview(req: Request, res: Response, next: NextFunction) {
   try {
     const productIdOrSlug = req.params.id;
-    const { userName, rating, comment } = req.body;
+    const { userName, rating, comment, avatar } = req.body;
 
     if (!userName || !rating) {
       return res.status(400).json({ message: 'Nama dan Rating wajib diisi' });
@@ -451,6 +451,7 @@ export async function submitReview(req: Request, res: Response, next: NextFuncti
     // Anti-spam text sanitization
     const sanitizedComment = comment ? xss(comment) : null;
     const sanitizedUserName = xss(userName);
+    const sanitizedAvatar = avatar ? xss(avatar) : null;
 
     const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(productIdOrSlug);
     const product = await prisma.product.findUnique({
@@ -475,6 +476,7 @@ export async function submitReview(req: Request, res: Response, next: NextFuncti
         rating: ratingInt,
         comment: sanitizedComment,
         images: imageUrls,
+        avatar: sanitizedAvatar,
         isActive: false // Default to false (requires admin approval)
       }
     });
@@ -502,3 +504,5 @@ export async function getWhatsAppSetting(req: Request, res: Response, next: Next
     res.json({ whatsapp: setting?.value || '6285961462361' });
   } catch (err) { next(err); }
 }
+
+// Trigger reload after prisma generate

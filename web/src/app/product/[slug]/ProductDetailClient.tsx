@@ -54,6 +54,7 @@ interface ProductDetailClientProps {
 export default function ProductDetailClient({ product, relatedProducts, similarProducts }: ProductDetailClientProps) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [refreshReviews, setRefreshReviews] = useState(0);
+  const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isCollapsible, setIsCollapsible] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
@@ -282,8 +283,7 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (
-        <section className={styles.relatedSection}>
-          <div className={styles.divider} />
+        <section className={styles.relatedSection} style={{ borderTop: '1px solid #f1f5f9', paddingTop: 48 }}>
           <h2 className={styles.relatedTitle}>Mungkin Kamu Suka</h2>
           <div className={styles.relatedGrid}>
             {relatedProducts.map((p: any) => (
@@ -306,9 +306,42 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
       )}
 
       {/* Product Reviews */}
-      <section className={styles.relatedSection} style={{ marginTop: 32 }}>
-        <div className={styles.divider} />
-        <ReviewForm productId={product.id} onSuccess={() => setRefreshReviews(prev => prev + 1)} />
+      <section className={styles.relatedSection} style={{ marginTop: 48, paddingTop: 48, borderTop: '1px solid #f1f5f9' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <h2 className={styles.relatedTitle} style={{ margin: 0 }}>Ulasan Pembeli</h2>
+          {!isReviewFormOpen && (
+            <button 
+              onClick={() => setIsReviewFormOpen(true)}
+              style={{ 
+                background: 'var(--primary, #2563eb)', 
+                color: '#fff', 
+                border: 'none', 
+                padding: '8px 16px', 
+                borderRadius: '8px', 
+                fontSize: '14px', 
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>edit_note</span>
+              Tulis Ulasan
+            </button>
+          )}
+        </div>
+        
+        <ReviewForm 
+          productId={product.id} 
+          onSuccess={() => {
+            setRefreshReviews(prev => prev + 1);
+            setIsReviewFormOpen(false);
+          }} 
+          isOpen={isReviewFormOpen}
+          onClose={() => setIsReviewFormOpen(false)}
+        />
         <ReviewList productId={product.id} refreshTrigger={refreshReviews} />
       </section>
 

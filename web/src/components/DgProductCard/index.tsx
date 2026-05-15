@@ -65,9 +65,6 @@ const DgProductCard = React.memo(({
           )}
         </div>
         
-        {hasDiscount && discountPercent != null && (
-          <DgDiscountBadge discountPercent={discountPercent} />
-        )}
 
 
 
@@ -86,8 +83,8 @@ const DgProductCard = React.memo(({
           
           <div className={styles.priceContainer}>
             <span className={`${styles.activePrice} ${flashPrice ? styles.flashPrice : ''}`}>Rp {formatRp(displayPrice)}</span>
-            {hasDiscount && (
-              <span className={styles.strikethroughPrice}>Rp {formatRp(price)}</span>
+            {hasDiscount && discountPercent != null && (
+              <span className={styles.inlineDiscountBadge}>{discountPercent}% OFF</span>
             )}
           </div>
 

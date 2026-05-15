@@ -23,6 +23,7 @@ import FileUpload from '@/components/FileUpload';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { TableSkeleton } from '@/components/Skeleton';
+import CustomSelect from '@/components/CustomSelect';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 
 interface Banner {
@@ -30,7 +31,7 @@ interface Banner {
   title: string;
   imageUrl: string;
   type: string;
-  actionType?: string;
+  actionType: string;
   actionValue?: string;
   isActive: boolean;
   sortOrder: number;
@@ -96,7 +97,12 @@ function SortableRow({
           <span style={{ fontWeight: 600 }}>{banner.title}</span>
         </div>
       </td>
-      <td><span className="badge gray">{banner.type}</span></td>
+      <td>
+        <div style={{ fontSize: 12 }}>
+           <div style={{ fontWeight: 600, color: '#64748b' }}>{banner.actionType}</div>
+           {banner.actionValue && <div style={{ color: '#94a3b8', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{banner.actionValue}</div>}
+        </div>
+      </td>
       <td><span className={`badge ${banner.isActive ? 'green' : 'gray'}`}>{banner.isActive ? 'Aktif' : 'Nonaktif'}</span></td>
       <td>
         <ActionMenu items={[
@@ -112,10 +118,13 @@ function SortableRow({
 export default function BannersPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState('');
   const [formType, setFormType] = useState('PROMO');
+  const [formActionType, setFormActionType] = useState('NONE');
+  const [formActionValue, setFormActionValue] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const toast = useToast();
@@ -162,11 +171,15 @@ export default function BannersPage() {
   const handleSave = async () => {
     if (!formTitle.trim()) { toast.error('Judul wajib diisi'); return; }
     if (!editingId && !imageFile) { toast.error('Gambar wajib diisi untuk banner baru'); return; }
+    if (isSaving) return;
 
     try {
+      setIsSaving(true);
       const fd = new FormData();
       fd.append('title', formTitle);
       fd.append('type', formType);
+      fd.append('actionType', formActionType);
+      fd.append('actionValue', formActionValue);
       if (imageFile) fd.append('image', imageFile);
 
       if (editingId) {
@@ -181,6 +194,8 @@ export default function BannersPage() {
       fetchData();
     } catch (err: any) {
       toast.error(err.message || 'Gagal menyimpan banner');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -213,14 +228,16 @@ export default function BannersPage() {
 
   const openCreate = () => {
     setEditingId(null);
-    setFormTitle(''); setFormType('PROMO'); setImageFile(null); setImagePreview('');
+    setFormTitle(''); setFormType('PROMO'); setFormActionType('NONE'); setFormActionValue(''); setImageFile(null); setImagePreview('');
     setShowModal(true);
   };
 
   const openEdit = (b: Banner) => {
     setEditingId(b.id);
-    setFormTitle(b.title);
+    setFormTitle(b.title || '');
     setFormType(b.type);
+    setFormActionType(b.actionType || 'NONE');
+    setFormActionValue(b.actionValue || '');
     setImageFile(null);
     setImagePreview(b.imageUrl);
     setShowModal(true);
@@ -240,7 +257,7 @@ export default function BannersPage() {
       <div className="page-body">
         <div className="data-card">
           {loading ? (
-            <TableSkeleton rows={4} columns={4} />
+            <TableSkeleton rows={4} columns={5} />
           ) : banners.length === 0 ? (
             <div className="empty-state">
               <span className="material-symbols-outlined">image</span>
@@ -255,7 +272,7 @@ export default function BannersPage() {
                       <tr>
                         <th style={{ width: 40 }}></th>
                         <th>Banner</th>
-                        <th>Tipe</th>
+                        <th>Aksi Tautan</th>
                         <th>Status</th>
                         <th style={{ width: 48 }}></th>
                       </tr>
@@ -293,6 +310,30 @@ export default function BannersPage() {
                 <label className="form-label">Judul</label>
                 <input className="form-input" value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder="Judul banner" />
               </div>
+              
+              <div className="form-group">
+                <label className="form-label">Aksi Saat Diklik</label>
+                <CustomSelect
+                  options={[
+                    { value: 'NONE', label: 'Tanpa Aksi' },
+                    { value: 'URL', label: 'URL / Link' },
+                    { value: 'CATEGORY', label: 'Kategori' },
+                    { value: 'PRODUCT', label: 'Produk' },
+                  ]}
+                  value={formActionType}
+                  onChange={setFormActionType}
+                />
+              </div>
+
+              {formActionType !== 'NONE' && (
+                <div className="form-group">
+                  <label className="form-label">
+                    {formActionType === 'URL' ? 'URL Lengkap (http...)' : formActionType === 'CATEGORY' ? 'Slug Kategori' : 'Slug Produk'}
+                  </label>
+                  <input className="form-input" value={formActionValue} onChange={e => setFormActionValue(e.target.value)} placeholder={formActionType === 'URL' ? "https://..." : "slug-tujuan"} />
+                </div>
+              )}
+
               <div className="form-group">
                 <label className="form-label">Gambar Banner</label>
                 <FileUpload
@@ -308,9 +349,14 @@ export default function BannersPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setShowModal(false)}>Batal</button>
-              <button className="btn btn-primary" onClick={handleSave}>
-                <span className="material-symbols-outlined">save</span> {editingId ? 'Simpan Perubahan' : 'Simpan Banner'}
+              <button className="btn btn-outline" onClick={() => setShowModal(false)} disabled={isSaving}>Batal</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? (
+                  <span className="spinner" style={{ width: 16, height: 16, marginRight: 8 }}></span>
+                ) : (
+                  <span className="material-symbols-outlined">save</span>
+                )}
+                {isSaving ? 'Menyimpan...' : (editingId ? 'Simpan Perubahan' : 'Simpan Banner')}
               </button>
             </div>
           </div>

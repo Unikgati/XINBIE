@@ -43,7 +43,7 @@ export default function LoginPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(160deg, #78B34A 0%, #3A7D44 50%, #2D6739 100%);
+          background: linear-gradient(135deg, #044bd7 0%, #17a1fb 100%);
           padding: 32px;
         }
 
@@ -155,11 +155,11 @@ export default function LoginPage() {
         .login-input-wrap input::placeholder { color: #BDBDBD; }
 
         .login-input-wrap input:focus {
-          border-color: #4CAF50;
-          box-shadow: 0 0 0 3px rgba(76,175,80,0.08);
+          border-color: #044bd7;
+          box-shadow: 0 0 0 3px rgba(4,75,215,0.08);
         }
 
-        .login-input-wrap input:focus ~ .li-icon { color: #4CAF50; }
+        .login-input-wrap input:focus ~ .li-icon { color: #044bd7; }
 
         .login-eye {
           position: absolute;
@@ -181,7 +181,7 @@ export default function LoginPage() {
           width: 100%;
           margin-top: 8px;
           padding: 14px;
-          background: #9ECE67;
+          background: #044bd7;
           color: #fff;
           border: none;
           border-radius: 24px;
@@ -196,8 +196,8 @@ export default function LoginPage() {
         }
 
         .login-submit:hover:not(:disabled) {
-          background: #8CBE55;
-          box-shadow: 0 4px 16px rgba(158,206,103,0.4);
+          background: #0339a3;
+          box-shadow: 0 4px 16px rgba(4,75,215,0.4);
         }
 
         .login-submit:active:not(:disabled) { transform: scale(0.98); }
@@ -284,7 +284,7 @@ export default function LoginPage() {
         <div className="login-inner">
           {/* Left: Login Form */}
           <div className="login-left">
-            <div className="login-chip">Admin panel</div>
+            
 
             <div className="login-heading">
               <h2>Selamat Datang !</h2>
@@ -351,7 +351,7 @@ export default function LoginPage() {
           {/* Right: Mascot + Logo */}
           <div className="login-right">
             <div className="login-brand-top">
-              <img src="/XINBIE.svg" alt="XINBIE" />
+              <img src="/logo-white.svg" alt="XINBIE" />
             </div>
             <img
               src="/mascot-admin.webp"

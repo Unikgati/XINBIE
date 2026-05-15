@@ -52,7 +52,9 @@ export const ProductGridSkeleton = () => (
           <DgSkeleton width="50%" height="12px" borderRadius="4px" />
           
           {/* Price */}
-          <DgSkeleton width="60%" height="20px" borderRadius="4px" style={{ marginTop: '4px' }} />
+          <div style={{ marginTop: '4px' }}>
+            <DgSkeleton width="60%" height="20px" borderRadius="4px" />
+          </div>
           
           {/* Footer (Rating) */}
           <div style={{ marginTop: 'auto', paddingTop: '8px' }}>

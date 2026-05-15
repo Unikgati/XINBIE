@@ -66,7 +66,6 @@ export default function DgProductRow({
 
   return (
     <div className={`${styles.row} ${isOutOfStock ? styles.outOfStock : ''}`}>
-      {/* Badge Pita Lipat (Ditempatkan di sini agar tidak terpotong) */}
       {isFlashSale ? (
         <div className={styles.flashSaleBadgeContainer}>
           <div className={styles.flashSaleBadge}>
@@ -103,8 +102,17 @@ export default function DgProductRow({
           {name}
         </Link>
         <div className={styles.priceRow}>
-          <span className={styles.price}>Rp {formatRp(displayPrice)}</span>
-          {hasDiscount && <span className={styles.oldPrice}>Rp {formatRp(price)}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span className={styles.price}>Rp {formatRp(displayPrice)}</span>
+            {isFlashSale ? (
+              <span className={styles.inlineDiscountBadge}>
+                <span className="material-symbols-outlined" style={{ fontSize: 12, marginRight: 2 }}>bolt</span>
+                FLASH
+              </span>
+            ) : hasDiscount && discountPercent != null && (
+              <span className={styles.inlineDiscountBadge}>{discountPercent}% OFF</span>
+            )}
+          </div>
         </div>
         <div className={styles.ratingSection}>
           <div className={styles.ratingBadge}>

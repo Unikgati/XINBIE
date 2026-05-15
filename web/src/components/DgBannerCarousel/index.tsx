@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import styles from './DgBannerCarousel.module.css';
 
 interface Banner {
   id: string;
   imageUrl: string;
   title: string;
+  actionType?: 'NONE' | 'URL' | 'CATEGORY' | 'PRODUCT';
+  actionValue?: string;
 }
 
 interface Props {
@@ -19,6 +22,21 @@ export default function DgBannerCarousel({ banners }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const safeBanners = banners ?? [];
+
+  const getLinkProps = (banner: Banner) => {
+    if (!banner.actionType || banner.actionType === 'NONE' || !banner.actionValue) return null;
+    
+    if (banner.actionType === 'URL') {
+      return { href: banner.actionValue, isExternal: true };
+    }
+    if (banner.actionType === 'CATEGORY') {
+      return { href: `/category/${banner.actionValue}`, isExternal: false };
+    }
+    if (banner.actionType === 'PRODUCT') {
+      return { href: `/product/${banner.actionValue}`, isExternal: false };
+    }
+    return null;
+  };
 
   useEffect(() => {
     if (safeBanners.length <= 1) return;
@@ -78,8 +96,9 @@ export default function DgBannerCarousel({ banners }: Props) {
           ref={scrollRef}
           onScroll={handleScroll}
         >
-          {safeBanners.map((banner, idx) => (
-            <div key={banner.id} className={styles.bannerItem}>
+          {safeBanners.map((banner, idx) => {
+            const link = getLinkProps(banner);
+            const content = (
               <Image 
                 src={banner.imageUrl} 
                 alt={banner.title || 'Promo Banner'} 
@@ -89,8 +108,24 @@ export default function DgBannerCarousel({ banners }: Props) {
                 unoptimized
                 priority={idx === 0}
               />
-            </div>
-          ))}
+            );
+
+            return (
+              <div key={banner.id} className={styles.bannerItem}>
+                {link ? (
+                  link.isExternal ? (
+                    <a href={link.href} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100%', height: '100%', position: 'relative' }}>
+                      {content}
+                    </a>
+                  ) : (
+                    <Link href={link.href} style={{ display: 'block', width: '100%', height: '100%', position: 'relative' }}>
+                      {content}
+                    </Link>
+                  )
+                ) : content}
+              </div>
+            );
+          })}
         </div>
         
         {safeBanners.length > 1 && (

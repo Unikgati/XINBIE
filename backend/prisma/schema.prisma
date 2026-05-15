@@ -119,7 +119,8 @@ model ProductReview {
   userId    String?  @map("user_id")
   userName  String   @map("user_name")
   rating    Int
-  comment   String?
+  comment   String?  @db.Text
+  avatar    String?  @default("Felix")
   images    String[] @default([])
   isActive  Boolean  @default(false) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")

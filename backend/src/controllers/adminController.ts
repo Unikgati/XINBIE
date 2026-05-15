@@ -133,8 +133,14 @@ const parseProductData = (body: any) => {
   }
 
   // Convert numeric types
-  if (data.price !== undefined) data.price = parseInt(data.price) || 0;
-  if (data.costPrice !== undefined) data.costPrice = parseInt(data.costPrice) || 0;
+  if (data.price !== undefined) {
+      const parsedPrice = parseInt(data.price);
+      data.price = isNaN(parsedPrice) ? existingVariant.product.price : parsedPrice;
+    }
+    if (data.costPrice !== undefined) {
+      const parsedCostPrice = parseInt(data.costPrice);
+      data.costPrice = isNaN(parsedCostPrice) ? existingVariant.product.costPrice : parsedCostPrice;
+    }
   if (data.discountPrice !== undefined) {
     const parsed = parseInt(data.discountPrice);
     data.discountPrice = isNaN(parsed) || parsed < 0 ? null : parsed;
@@ -185,48 +191,157 @@ const parseProductData = (body: any) => {
 
 export async function adminCreateProduct(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    let images: string[] = [];
-    if (req.files && Array.isArray(req.files)) {
-      images = await processAndUploadImages(req.files, 'products');
+    const data = parseProductData(req.body);
+    const variantsRaw = req.body.variants; // Expecting JSON string
+    let variantsData = [];
+    if (variantsRaw) {
+      try {
+        variantsData = JSON.parse(variantsRaw);
+      } catch (e) {
+        throw new AppError('Format data varian tidak valid', 400);
+      }
     }
 
-    const data = parseProductData(req.body);
-    data.images = images;
+    let productImages: string[] = [];
+    if (req.files && Array.isArray(req.files)) {
+      // Find files that belong to product images (not variants)
+      // Usually multer files have fieldname like 'images' for product, 'variant_image_0' for variants
+      const prodFiles = (req.files as Express.Multer.File[]).filter(f => f.fieldname === 'images');
+      productImages = await processAndUploadImages(prodFiles, 'products');
+    }
+
+    data.images = productImages;
     data.slug = await generateUniqueSlug(data.name);
 
-    const product = await prisma.product.create({ 
-      data: data 
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Create Product
+      const product = await tx.product.create({ data });
+
+      // 2. Create Variants if any
+      if (variantsData.length > 0) {
+        for (let i = 0; i < variantsData.length; i++) {
+          const v = variantsData[i];
+          let variantImageUrl = null;
+          
+          // Look for variant file in req.files
+          const variantFile = (req.files as Express.Multer.File[]).find(f => f.fieldname === `variant_image_${i}`);
+          if (variantFile) {
+            variantImageUrl = await processAndUploadImage(variantFile, 'variants');
+          }
+
+          await tx.productVariant.create({
+            data: {
+              productId: product.id,
+              name: v.name,
+              price: parseInt(v.price) || 0,
+              costPrice: parseInt(v.costPrice) || 0,
+              discountPrice: v.discountPrice ? parseInt(v.discountPrice) : null,
+              stockQty: parseInt(v.stockQty) || 0,
+              imageUrl: variantImageUrl,
+              isActive: true
+            }
+          });
+        }
+      }
+      return product;
     });
 
-    res.status(201).json(product);
+    res.status(201).json(result);
   } catch (err) { next(err); }
 }
 
 export async function adminUpdateProduct(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    let images: string[] | undefined;
-    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      images = await processAndUploadImages(req.files, 'products');
-    }
-
+    const { id } = req.params;
     const data = parseProductData(req.body);
-    if (images) data.images = images;
-    if (data.name) {
-      data.slug = await generateUniqueSlug(data.name, req.params.id as string);
+    const variantsRaw = req.body.variants; // JSON string
+    const deletedVariantsRaw = req.body.deletedVariants; // JSON string (array of IDs)
+    
+    let variantsData = [];
+    if (variantsRaw) variantsData = JSON.parse(variantsRaw);
+    
+    let deletedVariantIds = [];
+    if (deletedVariantsRaw) deletedVariantIds = JSON.parse(deletedVariantsRaw);
+
+    let newProductImages: string[] | undefined;
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+      const prodFiles = (req.files as Express.Multer.File[]).filter(f => f.fieldname === 'images');
+      if (prodFiles.length > 0) {
+        newProductImages = await processAndUploadImages(prodFiles, 'products');
+      }
     }
 
-    const product = await prisma.product.update({
-      where: { id: req.params.id as string },
-      data: data,
+    if (newProductImages) data.images = newProductImages;
+    if (data.name) {
+      data.slug = await generateUniqueSlug(data.name, id);
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update Product
+      const product = await tx.product.update({
+        where: { id },
+        data: data,
+      });
+
+      // 2. Delete removed variants
+      if (deletedVariantIds.length > 0) {
+        await tx.productVariant.deleteMany({
+          where: { id: { in: deletedVariantIds }, productId: id }
+        });
+      }
+
+      // 3. Upsert Variants
+      if (variantsData.length > 0) {
+        for (let i = 0; i < variantsData.length; i++) {
+          const v = variantsData[i];
+          let variantImageUrl = v.imageUrl || null;
+          
+          // Check for new file upload for this variant
+          const variantFile = (req.files as Express.Multer.File[]).find(f => f.fieldname === `variant_image_${i}`);
+          if (variantFile) {
+            variantImageUrl = await processAndUploadImage(variantFile, 'variants');
+          }
+
+          const variantFields = {
+            name: v.name,
+            price: parseInt(v.price) || 0,
+            costPrice: parseInt(v.costPrice) || 0,
+            discountPrice: v.discountPrice ? parseInt(v.discountPrice) : null,
+            stockQty: parseInt(v.stockQty) || 0,
+            imageUrl: variantImageUrl,
+          };
+
+          if (v.id && v.id.length > 10) { // Simple check if it's a real UUID
+            await tx.productVariant.update({
+              where: { id: v.id },
+              data: variantFields
+            });
+          } else {
+            await tx.productVariant.create({
+              data: {
+                ...variantFields,
+                productId: id,
+                isActive: true
+              }
+            });
+          }
+        }
+      }
+      return product;
     });
 
-    res.json(product);
+    res.json(result);
   } catch (err) { next(err); }
 }
 
 export async function adminDeleteProduct(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { id } = idParamSchema.parse(req.params);
+    const existingVariant = await prisma.productVariant.findUnique({
+      where: { id },
+      include: { product: true }
+    });
+    if (!existingVariant) throw new AppError('Varian tidak ditemukan', 404);
     await prisma.product.delete({
       where: { id },
     });
@@ -275,6 +390,8 @@ export async function getCookingVideos(req: Request, res: Response, next: NextFu
 export async function adminGetVariants(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { productId } = z.object({ productId: z.string().min(1) }).parse(req.params);
+    const baseProduct = await prisma.product.findUnique({ where: { id: productId } });
+    if (!baseProduct) throw new AppError('Produk utama tidak ditemukan', 404);
     const variants = await prisma.productVariant.findMany({
       where: { productId },
       orderBy: { sortOrder: 'asc' },
@@ -288,13 +405,15 @@ export async function adminCreateVariant(req: AuthRequest, res: Response, next: 
     const { productId } = z.object({ productId: z.string().min(1) }).parse(req.params);
     let imageUrl: string | undefined;
     if (req.file) imageUrl = await processAndUploadImage(req.file, 'variants');
+    let parsedPrice = parseInt(req.body.price);
+    let parsedCostPrice = parseInt(req.body.costPrice);
 
     const data = {
       productId,
       name: req.body.name,
       sku: req.body.sku || null,
-      price: parseInt(req.body.price) || 0,
-      costPrice: parseInt(req.body.costPrice) || 0,
+      price: isNaN(parsedPrice) ? baseProduct.price : parsedPrice,
+      costPrice: isNaN(parsedCostPrice) ? baseProduct.costPrice : parsedCostPrice,
       discountPrice: req.body.discountPrice ? parseInt(req.body.discountPrice) : null,
       priceAddition: parseInt(req.body.priceAddition) || 0,
       stockQty: parseInt(req.body.stockQty) || 0,
@@ -851,12 +970,13 @@ export async function adminCreateBanner(req: AuthRequest, res: Response, next: N
       title: req.body.title || 'Banner',
       type: req.body.type || 'PROMO',
       imageUrl,
-      linkUrl: req.body.linkUrl || null,
+      actionType: req.body.actionType || 'NONE',
+      actionValue: req.body.actionValue || null,
       isActive: req.body.isActive === undefined ? true : String(req.body.isActive) === 'true',
       sortOrder: parseInt(req.body.sortOrder) || (await prisma.banner.count()) + 1,
     };
 
-    const banner = await prisma.banner.create({ data });
+    const banner = await prisma.banner.create({ data: data as any });
     res.status(201).json(banner);
   } catch (err) { next(err); }
 }
@@ -868,7 +988,7 @@ export async function adminUpdateBanner(req: AuthRequest, res: Response, next: N
     if (req.file) imageUrl = await processAndUploadImage(req.file, 'banners', 1200, 90);
 
     const data: any = {};
-    const allowed = ['title', 'type', 'linkUrl', 'isActive', 'sortOrder'];
+    const allowed = ['title', 'type', 'actionType', 'actionValue', 'isActive', 'sortOrder'];
     allowed.forEach(f => {
       if (req.body[f] !== undefined) data[f] = req.body[f];
     });

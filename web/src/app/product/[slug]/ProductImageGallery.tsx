@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import styles from './ProductDetail.module.css';
+import Lightbox from 'yet-another-react-lightbox';
+import 'yet-another-react-lightbox/styles.css';
 
 interface ProductImageGalleryProps {
   images: string[];
@@ -13,6 +15,8 @@ interface ProductImageGalleryProps {
 export default function ProductImageGallery({ images, name, variantImage }: ProductImageGalleryProps) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showVariantImage, setShowVariantImage] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   // When variantImage changes, automatically show it
   React.useEffect(() => {
@@ -24,6 +28,16 @@ export default function ProductImageGallery({ images, name, variantImage }: Prod
   const handleThumbnailClick = (idx: number) => {
     setActiveImageIndex(idx);
     setShowVariantImage(false);
+  };
+
+  const handleMainImageClick = () => {
+    if (showVariantImage && variantImage) {
+      // Find variant image in list or prepend it
+      setPhotoIndex(0);
+    } else {
+      setPhotoIndex(activeImageIndex);
+    }
+    setLightboxOpen(true);
   };
 
   const nextImage = (e: React.MouseEvent) => {
@@ -48,10 +62,21 @@ export default function ProductImageGallery({ images, name, variantImage }: Prod
   
   const mainImage = showVariantImage && variantImage ? variantImage : (images.length > 0 ? images[activeImageIndex] : null);
 
+  // Prepare slides for lightbox
+  const slides = images.map(src => ({ src }));
+  if (variantImage && !images.includes(variantImage)) {
+    // If variant image is not in gallery, add it at the beginning for the lightbox
+    slides.unshift({ src: variantImage });
+  }
+
   return (
     <div className={styles.imageSection}>
       <div className={styles.imageGalleryWrapper}>
-        <div className={styles.mainImageWrapper}>
+        <div 
+          className={styles.mainImageWrapper} 
+          onClick={handleMainImageClick} 
+          style={{ cursor: 'zoom-in' }}
+        >
           {mainImage ? (
             <>
               <Image 
@@ -113,7 +138,12 @@ export default function ProductImageGallery({ images, name, variantImage }: Prod
         </div>
       )}
 
-
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        index={photoIndex}
+        slides={slides}
+      />
     </div>
   );
 }

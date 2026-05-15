@@ -207,6 +207,7 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -373,7 +374,10 @@ export default function ProductsPage() {
 
   const handleSubmit = async () => {
     if (!formName.trim() || !formPrice) { toast.error('Nama dan harga wajib diisi'); return; }
+    if (isSaving) return;
+
     try {
+      setIsSaving(true);
       const formData = new FormData();
       formData.append('name', formName);
       formData.append('categoryId', productCategory);
@@ -383,58 +387,46 @@ export default function ProductsPage() {
       formData.append('stock', formStock || '0');
 
       formData.append('description', formDesc);
-
       formData.append('shopeeUrl', formShopeeUrl || '');
       formData.append('ratingAvg', formRating || '4.8');
       formTags.forEach(t => formData.append('tags', t));
       formSizes.forEach(s => formData.append('sizes', s));
       formImages.forEach(file => formData.append('images', file));
+
+      // Append variants data as JSON
+      const variantsToSubmit = formVariants.map(v => ({
+        id: v.tempId.includes('-') ? v.tempId : undefined,
+        name: v.name,
+        price: v.price,
+        costPrice: v.costPrice,
+        discountPrice: v.discountPrice,
+        stockQty: v.stockQty,
+        imageUrl: v.imageUrl
+      }));
+      formData.append('variants', JSON.stringify(variantsToSubmit));
+      formData.append('deletedVariants', JSON.stringify(deletedVariants));
+
+      // Append variant files with specific fieldnames
+      formVariants.forEach((v, idx) => {
+        if (v.file) {
+          formData.append(`variant_image_${idx}`, v.file);
+        }
+      });
       
-      let prodId = editingId;
       if (editingId) {
         await apiPut(`/products/${editingId}`, formData);
         toast.success('Produk berhasil diperbarui');
       } else {
-        const prod = await apiPost<Product>('/products', formData);
-        prodId = prod.id;
+        await apiPost<Product>('/products', formData);
         toast.success('Produk berhasil ditambahkan');
-      }
-
-      // Handle variants mapping
-      if (prodId) {
-        // 1. Delete removed variants
-        for (const delId of deletedVariants) {
-          try {
-            await apiDelete(`/variants/${delId}`);
-          } catch (e) {
-            console.error('Failed to delete variant', delId);
-          }
-        }
-
-        // 2. Create or Update current variants
-        for (const v of formVariants) {
-          const varData = new FormData();
-          varData.append('name', v.name);
-          varData.append('price', v.price);
-          varData.append('costPrice', v.costPrice || '0');
-          if (v.discountPrice) varData.append('discountPrice', v.discountPrice);
-          varData.append('stockQty', v.stockQty || '0');
-          if (v.file) varData.append('image', v.file);
-
-          if (v.tempId.includes('-')) {
-            // It's a Prisma UUID, so update it
-            await apiPut(`/variants/${v.tempId}`, varData);
-          } else {
-            // It's a new temp timestamp, create it
-            await apiPost(`/products/${prodId}/variants`, varData);
-          }
-        }
       }
 
       setShowModal(false);
       fetchData();
     } catch (err: any) {
       toast.error(err.message || 'Gagal menambah produk');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1032,8 +1024,15 @@ export default function ProductsPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setShowModal(false)}>Batal</button>
-              <button className="btn btn-primary" onClick={handleSubmit}><span className="material-symbols-outlined">save</span> Simpan</button>
+              <button className="btn btn-outline" onClick={() => setShowModal(false)} disabled={isSaving}>Batal</button>
+              <button className="btn btn-primary" onClick={handleSubmit} disabled={isSaving}>
+                {isSaving ? (
+                  <span className="spinner" style={{ width: 16, height: 16, marginRight: 8 }}></span>
+                ) : (
+                  <span className="material-symbols-outlined">save</span>
+                )}
+                {isSaving ? 'Menyimpan...' : 'Simpan'}
+              </button>
             </div>
           </div>
         </div>

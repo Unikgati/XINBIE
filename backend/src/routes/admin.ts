@@ -45,6 +45,7 @@ router.put('/settings', admin.adminUpdateSettings);
 // Reviews
 import * as review from '../controllers/reviewController';
 router.get('/reviews', review.getAllReviews);
+router.put('/reviews/bulk-approve', review.bulkApproveReviews);
 router.put('/reviews/:id/approve', review.approveReview);
 router.delete('/reviews/:id', review.deleteReview);
 
