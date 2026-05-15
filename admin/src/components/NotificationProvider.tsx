@@ -19,8 +19,10 @@ interface OrderNotification {
 interface NotificationContextType {
   pendingCount: number;
   pendingDriversCount: number;
+  pendingReviewsCount: number;
   decrementPendingCount: () => void;
   decrementPendingDriversCount: () => void;
+  decrementPendingReviewsCount: () => void;
   notifications: OrderNotification[];
   socketStatus: SocketStatus;
 }
@@ -28,8 +30,10 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType>({
   pendingCount: 0,
   pendingDriversCount: 0,
+  pendingReviewsCount: 0,
   decrementPendingCount: () => {},
   decrementPendingDriversCount: () => {},
+  decrementPendingReviewsCount: () => {},
   notifications: [],
   socketStatus: 'disconnected',
 });
@@ -78,9 +82,18 @@ function showBrowserNotification(order: OrderNotification) {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 /** Fetch unread counts from backend */
-async function fetchUnreadCount(): Promise<{ orders: number; drivers: number }> {
-  // Legacy feature disabled for XINBIE
-  return { orders: 0, drivers: 0 };
+async function fetchUnreadCount(): Promise<{ orders: number; drivers: number; reviews: number }> {
+  try {
+    const token = getAuthToken();
+    const res = await fetch(`${API_URL}/admin/unread-counts`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { orders: 0, drivers: 0, reviews: data.reviews || 0 };
+    }
+  } catch (err) {}
+  return { orders: 0, drivers: 0, reviews: 0 };
 }
 
 // BroadcastChannel for cross-tab sync (graceful fallback if unsupported)
@@ -98,6 +111,7 @@ function getBroadcastChannel(): BroadcastChannel | null {
 export default function NotificationProvider({ children }: { children: ReactNode }) {
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingDriversCount, setPendingDriversCount] = useState(0);
+  const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
   const [notifications, setNotifications] = useState<OrderNotification[]>([]);
   const [socketStatus, setSocketStatus] = useState<SocketStatus>('disconnected');
   const toast = useToast();
@@ -126,6 +140,7 @@ export default function NotificationProvider({ children }: { children: ReactNode
       fetchUnreadCount().then(counts => {
         setPendingCount(counts.orders);
         setPendingDriversCount(counts.drivers);
+        setPendingReviewsCount(counts.reviews);
       });
     }
   }, [pathname, socketStatus]);
@@ -146,6 +161,14 @@ export default function NotificationProvider({ children }: { children: ReactNode
     });
   }, []);
 
+  const decrementPendingReviewsCount = useCallback(() => {
+    setPendingReviewsCount(prev => {
+      const next = Math.max(0, prev - 1);
+      channelRef.current?.postMessage({ type: 'sync_reviews', count: next });
+      return next;
+    });
+  }, []);
+
   // ─── Fix #2: Cross-tab sync via BroadcastChannel ───
   useEffect(() => {
     const channel = getBroadcastChannel();
@@ -154,16 +177,14 @@ export default function NotificationProvider({ children }: { children: ReactNode
 
     channel.onmessage = (event) => {
       const { type, count } = event.data || {};
-      if (type === 'sync' && typeof count === 'number') {
-        setPendingCount(count);
-      }
-      if (type === 'sync_drivers' && typeof count === 'number') {
-        setPendingDriversCount(count);
-      }
+      if (type === 'sync' && typeof count === 'number') setPendingCount(count);
+      if (type === 'sync_drivers' && typeof count === 'number') setPendingDriversCount(count);
+      if (type === 'sync_reviews' && typeof count === 'number') setPendingReviewsCount(count);
       if (type === 'refetch') {
         fetchUnreadCount().then(counts => {
           setPendingCount(counts.orders);
           setPendingDriversCount(counts.drivers);
+          setPendingReviewsCount(counts.reviews);
         });
       }
     };
@@ -211,6 +232,16 @@ export default function NotificationProvider({ children }: { children: ReactNode
       showBrowserNotification(data);
     };
 
+    const handleNewReview = (data: { id: string; userName: string }) => {
+      setPendingReviewsCount(prev => {
+        const next = prev + 1;
+        channelRef.current?.postMessage({ type: 'sync_reviews', count: next });
+        return next;
+      });
+      playNotificationSound();
+      toast.success(`Ulasan baru dari ${data.userName}!`);
+    };
+
     const handleNewDriver = (data: { driverId: string }) => {
       setPendingDriversCount(prev => {
         const next = prev + 1;
@@ -232,12 +263,14 @@ export default function NotificationProvider({ children }: { children: ReactNode
     socket.on('order:new', handleNewOrder);
     socket.on('driver:new_pending', handleNewDriver);
     socket.on('order:statusUpdate', handleStatusUpdate);
+    socket.on('review:new', handleNewReview);
 
     return () => {
       // Only remove OUR specific listeners, not all listeners for these events
       socket.off('order:new', handleNewOrder);
       socket.off('driver:new_pending', handleNewDriver);
       socket.off('order:statusUpdate', handleStatusUpdate);
+      socket.off('review:new', handleNewReview);
       listenersAttached.current = false;
     };
   }, [pathname, toast]);
@@ -246,6 +279,7 @@ export default function NotificationProvider({ children }: { children: ReactNode
     <NotificationContext.Provider value={{ 
       pendingCount, decrementPendingCount, 
       pendingDriversCount, decrementPendingDriversCount, 
+      pendingReviewsCount, decrementPendingReviewsCount,
       notifications, socketStatus 
     }}>
       {children}

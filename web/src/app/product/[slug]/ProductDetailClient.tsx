@@ -7,6 +7,8 @@ import DgProductCard from '@/components/DgProductCard';
 import ProductImageGallery from './ProductImageGallery';
 import CookingVideoSection from './CookingVideoSection';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import ReviewForm from '@/components/ProductReviews/ReviewForm';
+import ReviewList from '@/components/ProductReviews/ReviewList';
 
 interface Variant {
   id: string;
@@ -51,6 +53,7 @@ interface ProductDetailClientProps {
 
 export default function ProductDetailClient({ product, relatedProducts, similarProducts }: ProductDetailClientProps) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
+  const [refreshReviews, setRefreshReviews] = useState(0);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isCollapsible, setIsCollapsible] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
@@ -301,6 +304,13 @@ export default function ProductDetailClient({ product, relatedProducts, similarP
           </div>
         </section>
       )}
+
+      {/* Product Reviews */}
+      <section className={styles.relatedSection} style={{ marginTop: 32 }}>
+        <div className={styles.divider} />
+        <ReviewForm productId={product.id} onSuccess={() => setRefreshReviews(prev => prev + 1)} />
+        <ReviewList productId={product.id} refreshTrigger={refreshReviews} />
+      </section>
 
       {/* Similar Products */}
       {similarProducts.length > 0 && (

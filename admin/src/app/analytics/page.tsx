@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/Toast';
 import { apiGet } from '@/lib/api';
 import { StatCardSkeleton, TableSkeleton } from '@/components/Skeleton';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AnalyticsData {
   locations: Array<{ city: string; region: string; count: number }>;
@@ -156,35 +157,72 @@ export default function AnalyticsPage() {
           </div>
           <div style={{ padding: 24 }}>
             {!hasData ? (
-              <div className="empty-state" style={{ height: 200 }}>
+              <div className="empty-state" style={{ height: 300 }}>
                 <span className="material-symbols-outlined">query_stats</span>
                 Belum ada data traffic harian
               </div>
             ) : (
-              <>
-                <div style={{ height: 200, display: 'flex', alignItems: 'flex-end', gap: 6, paddingBottom: 24, borderBottom: '1px solid var(--divider)' }}>
-                  {data.dailyVisitors.map((v, i) => (
-                    <div 
-                      key={i} 
-                      style={{ 
-                        flex: 1, 
-                        height: `${(v.visitorCount / maxVisitors) * 100}%`, 
-                        background: 'linear-gradient(to top, var(--primary), var(--primary-dark))',
-                        borderRadius: '4px 4px 0 0',
-                        minWidth: 8,
-                        position: 'relative',
-                        transition: 'all 0.3s ease'
-                      }}
-                      title={`${new Date(v.date).toLocaleDateString('id-ID')}: ${v.visitorCount} pengunjung`}
+              <div style={{ height: 300, width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={data.dailyVisitors}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="colorVisitors" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--divider)" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => formatDate(value)}
+                      tick={{ fill: 'var(--text-hint)', fontSize: 12 }}
+                      axisLine={{ stroke: 'var(--divider)' }}
+                      tickLine={false}
                     />
-                  ))}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, color: 'var(--text-hint)', fontSize: 12, fontWeight: 500 }}>
-                  <span>{formatDate(data.dailyVisitors[0]?.date)}</span>
-                  <span>{formatDate(data.dailyVisitors[Math.floor(data.dailyVisitors.length / 2)]?.date)}</span>
-                  <span>{formatDate(data.dailyVisitors[data.dailyVisitors.length - 1]?.date)}</span>
-                </div>
-              </>
+                    <YAxis 
+                      tick={{ fill: 'var(--text-hint)', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={30}
+                    />
+                    <Tooltip 
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div style={{ 
+                              background: '#fff', 
+                              padding: '10px 14px', 
+                              border: '1px solid var(--divider)', 
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                            }}>
+                              <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>
+                                {new Date(label).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                              </div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                {payload[0].value} Pengunjung
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="visitorCount" 
+                      stroke="var(--primary)" 
+                      strokeWidth={3}
+                      fillOpacity={1} 
+                      fill="url(#colorVisitors)" 
+                      activeDot={{ r: 6, fill: 'var(--primary)', stroke: '#fff', strokeWidth: 2 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             )}
           </div>
         </div>

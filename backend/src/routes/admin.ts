@@ -10,6 +10,7 @@ router.use(authenticate, requireRole('ADMIN'));
 // Dashboard
 router.get('/dashboard', admin.getDashboard);
 router.get('/analytics', admin.getDetailedAnalytics);
+router.get('/unread-counts', admin.getUnreadCounts);
 
 // Products
 router.get('/products', admin.adminGetProducts);
@@ -40,5 +41,11 @@ router.delete('/banners/:id', admin.adminDeleteBanner);
 // Settings
 router.get('/settings', admin.adminGetSettings);
 router.put('/settings', admin.adminUpdateSettings);
+
+// Reviews
+import * as review from '../controllers/reviewController';
+router.get('/reviews', review.getAllReviews);
+router.put('/reviews/:id/approve', review.approveReview);
+router.delete('/reviews/:id', review.deleteReview);
 
 export default router;

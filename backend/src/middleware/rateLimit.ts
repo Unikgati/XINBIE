@@ -35,3 +35,15 @@ export const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Strict rate limiter for product reviews to prevent spam.
+ * Limits to 3 requests per hour per IP.
+ */
+export const reviewLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Limit each IP to 3 reviews per hour
+  message: { message: 'Anda hanya dapat mengirim 3 ulasan per jam. Silakan coba lagi nanti.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

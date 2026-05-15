@@ -13,6 +13,7 @@ const navItems = [
     { href: '/categories', icon: 'category', label: 'Kategori' },
     { href: '/products', icon: 'inventory_2', label: 'Produk' },
     { href: '/banners', icon: 'photo_library', label: 'Banner' },
+    { href: '/reviews', icon: 'reviews', label: 'Ulasan' },
   ]},
   { section: 'Sistem', items: [
     { href: '/settings', icon: 'settings', label: 'Pengaturan' },
@@ -22,7 +23,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { pendingCount, socketStatus } = useNotification();
+  const { pendingCount, pendingReviewsCount, decrementPendingReviewsCount, socketStatus } = useNotification();
 
   const statusDot: Record<string, { color: string; title: string; pulse?: boolean }> = {
     connected: { color: '#4CAF50', title: 'Terhubung' },
@@ -75,6 +76,7 @@ export default function Sidebar() {
           <div key={section.section} className="nav-section">
             {!collapsed && <div className="nav-section-label">{section.section}</div>}
             {section.items.map((item) => {
+              const showBadge = item.href === '/reviews' && pendingReviewsCount > 0;
               return (
                 <Link
                   key={item.href}
@@ -82,9 +84,32 @@ export default function Sidebar() {
                   className={`nav-item ${pathname === item.href ? 'active' : ''}`}
                   title={collapsed ? item.label : undefined}
                   style={{ position: 'relative' }}
+                  onClick={item.href === '/reviews' ? decrementPendingReviewsCount : undefined}
                 >
                   <span className="material-symbols-outlined">{item.icon}</span>
                   {!collapsed && <span className="nav-label">{item.label}</span>}
+                  {showBadge && (
+                    <span style={{
+                      position: 'absolute',
+                      top: 6,
+                      right: collapsed ? 4 : 12,
+                      background: '#F44336',
+                      color: 'white',
+                      fontSize: 10,
+                      fontWeight: 'bold',
+                      minWidth: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 5px',
+                      lineHeight: 1,
+                      boxShadow: '0 1px 3px rgba(244,67,54,0.4)',
+                    }}>
+                      {pendingReviewsCount > 99 ? '99+' : pendingReviewsCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

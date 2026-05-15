@@ -22,6 +22,21 @@ export const upload = multer({
   },
 });
 
+export const uploadReview = multer({
+  storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB per file (Anti-Spam)
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new AppError('Format gambar tidak didukung (hanya JPG/PNG/WEBP)', 422) as any);
+    }
+  },
+});
+
 /**
  * Process uploaded image: resize, compress, upload to MinIO.
  * Returns the public URL.

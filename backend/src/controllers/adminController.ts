@@ -15,6 +15,15 @@ import { generateUniqueSlug } from '../utils/helpers';
 // Dashboard
 // ═══════════════════════════════════════
 
+export async function getUnreadCounts(req: Request, res: Response, next: NextFunction) {
+  try {
+    const reviews = await prisma.productReview.count({
+      where: { isActive: false }
+    });
+    res.json({ reviews });
+  } catch (err) { next(err); }
+}
+
 export async function getDashboard(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const [totalProducts, activeProducts, totalCategories, topProducts, siteAnalytics] = await Promise.all([
