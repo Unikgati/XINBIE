@@ -8,6 +8,7 @@ export const viewport: Viewport = {
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar/index";
+import Footer from "@/components/Footer/index";
 import ClientProviders from "@/components/ClientProviders/index";
 import AutoScrollToTop from "@/components/AutoScrollToTop";
 import VisitTracker from "@/components/VisitTracker";
@@ -85,6 +86,7 @@ export default async function RootLayout({
             <div className="app-container">
               {children}
             </div>
+            <Footer />
 
             {/* WhatsApp Floating Button */}
             <style>{`

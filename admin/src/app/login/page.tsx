@@ -45,6 +45,8 @@ export default function LoginPage() {
           justify-content: center;
           background: linear-gradient(135deg, #044bd7 0%, #17a1fb 100%);
           padding: 32px;
+          position: relative;
+          overflow: hidden;
         }
 
         /* ===== Outer container with border ===== */
@@ -54,6 +56,53 @@ export default function LoginPage() {
           border: 1.5px solid rgba(255,255,255,0.25);
           border-radius: 28px;
           padding: 20px;
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          background: rgba(255, 255, 255, 0.1);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          position: relative;
+          z-index: 1;
+        }
+
+        /* ===== Background Shapes ===== */
+        .login-bg-shapes {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: -1;
+          pointer-events: none;
+        }
+
+        .login-shape {
+          position: absolute;
+          border-radius: 50%;
+          opacity: 0.6;
+          animation: shape-move 20s infinite alternate ease-in-out;
+        }
+
+        .shape-1 {
+          width: 450px;
+          height: 450px;
+          background: #db2777;
+          top: -150px;
+          left: -150px;
+        }
+
+        .shape-2 {
+          width: 320px;
+          height: 320px;
+          background: #db2777;
+          bottom: -100px;
+          right: -100px;
+          animation-delay: -5s;
+        }
+
+        @keyframes shape-move {
+          0% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(40px, 30px) scale(1.05); }
+          100% { transform: translate(-30px, -20px) scale(0.95); }
         }
 
         /* ===== Inner card: split layout ===== */
@@ -68,7 +117,7 @@ export default function LoginPage() {
         /* ===== Left: White form area ===== */
         .login-left {
           flex: 0 0 420px;
-          background: #fff;
+          background: rgba(255, 255, 255, 0.85);
           padding: 48px 40px;
           display: flex;
           flex-direction: column;
@@ -230,7 +279,7 @@ export default function LoginPage() {
         .login-right {
           flex: 1;
           display: flex;
-          align-items: flex-end;
+          align-items: center;
           justify-content: center;
           position: relative;
           overflow: visible;
@@ -247,41 +296,66 @@ export default function LoginPage() {
           width: auto;
         }
 
-        .login-mascot {
-          width: 360px;
-          max-width: 100%;
-          height: auto;
-          object-fit: contain;
-          margin-bottom: -2px;
-          filter: drop-shadow(0 8px 20px rgba(0,0,0,0.1));
+        .login-promo-text {
+          font-size: 48px;
+          font-weight: 800;
+          color: #fff;
+          line-height: 1.1;
+          text-align: center;
+          padding: 0 40px;
+          text-transform: uppercase;
+          letter-spacing: -1px;
+          opacity: 0.9;
         }
 
         /* ===== Responsive ===== */
+        @media (max-width: 880px) {
+          .login-bg-shapes-wrapper {
+            width: 100% !important;
+            max-width: 420px;
+          }
+          .shape-1 { width: 300px; height: 300px; top: -100px; left: -50px; }
+          .shape-2 { width: 200px; height: 200px; bottom: -50px; right: -50px; }
+        }
+
         @media (max-width: 820px) {
-          .login-root { padding: 24px; }
+          .login-root { padding: 20px; }
 
           .login-outer {
-            max-width: 420px;
-            border: none;
-            padding: 0;
+            max-width: 480px;
+            padding: 12px;
           }
 
           .login-right { display: none; }
 
           .login-left {
             flex: 1;
-            border-radius: 20px;
+            padding: 40px 32px;
           }
+          
+          .login-promo-text { font-size: 32px; }
         }
 
         @media (max-width: 480px) {
-          .login-root { padding: 16px; }
-          .login-left { padding: 36px 24px; border-radius: 16px; }
+          .login-root { padding: 12px; }
+          .login-outer { padding: 8px; border-radius: 24px; }
+          .login-left { 
+            padding: 32px 20px; 
+            border-radius: 18px;
+          }
+          .login-heading h2 { font-size: 24px; }
         }
       `}</style>
 
-      <div className="login-outer">
-        <div className="login-inner">
+      <div className="login-bg-shapes-wrapper" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '880px', display: 'flex', justifyContent: 'center' }}>
+        {/* Background Shapes anchored to card center */}
+        <div className="login-bg-shapes" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100%', height: '100%' }}>
+          <div className="login-shape shape-1"></div>
+          <div className="login-shape shape-2"></div>
+        </div>
+
+        <div className="login-outer">
+          <div className="login-inner">
           {/* Left: Login Form */}
           <div className="login-left">
             
@@ -353,14 +427,11 @@ export default function LoginPage() {
             <div className="login-brand-top">
               <img src="/logo-white.svg" alt="XINBIE" />
             </div>
-            <img
-              src="/mascot-admin.webp"
-              alt="XINBIE Mascot"
-              className="login-mascot"
-              width={340}
-              height={451}
-            />
+            <div className="login-promo-text">
+              Wellness in motion
+            </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

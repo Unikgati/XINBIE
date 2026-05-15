@@ -1,0 +1,144 @@
+.footer {
+  background-color: var(--color-text-primary); /* Dark navy/slate from globals */
+  color: #FFFFFF;
+  padding: 80px 20px 40px;
+  margin-top: 60px;
+  position: relative;
+  z-index: 10;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.topSection {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr;
+  gap: 40px;
+  margin-bottom: 60px;
+}
+
+.brandColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoImage {
+  height: 32px;
+  width: auto;
+  filter: brightness(0) invert(1);
+}
+
+.description {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #94A3B8; /* Slate-400 */
+  max-width: 320px;
+}
+
+
+.columnTitle {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: #FFFFFF;
+  position: relative;
+}
+
+.columnTitle::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -8px;
+  width: 24px;
+  height: 2px;
+  background: var(--color-primary);
+}
+
+.linkList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.linkList a {
+  font-size: 14px;
+  color: #94A3B8;
+  transition: color 0.2s;
+}
+
+.linkList a:hover {
+  color: var(--color-primary-light);
+}
+
+.contactItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #94A3B8;
+}
+
+.contactItem span:first-child {
+  font-size: 20px;
+  color: var(--color-primary-light);
+}
+
+.bottomSection {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.copyright {
+  font-size: 13px;
+  color: #64748B;
+  text-align: center;
+}
+
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .topSection {
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+  }
+}
+
+@media (max-width: 640px) {
+  .footer {
+    padding: 60px 20px 40px;
+    margin-top: 40px;
+  }
+  
+  .topSection {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .bottomSection {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .brandColumn {
+    align-items: flex-start;
+  }
+}
