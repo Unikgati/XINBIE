@@ -120,4 +120,8 @@
   .navButton {
     display: none;
   }
+
+  .bannersSection {
+    margin-bottom: 24px;
+  }
 }

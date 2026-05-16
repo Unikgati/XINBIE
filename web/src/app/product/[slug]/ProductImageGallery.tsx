@@ -25,6 +25,46 @@ export default function ProductImageGallery({ images, name, variantImage }: Prod
     }
   }, [variantImage]);
 
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Min swipe distance in pixels
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      // Next image
+      if (showVariantImage) {
+        setShowVariantImage(false);
+        setActiveImageIndex(0);
+      } else {
+        setActiveImageIndex((prev) => (prev + 1) % images.length);
+      }
+    } else if (isRightSwipe) {
+      // Prev image
+      if (showVariantImage) {
+        setShowVariantImage(false);
+        setActiveImageIndex(images.length - 1);
+      } else {
+        setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
+      }
+    }
+  };
+
   const handleThumbnailClick = (idx: number) => {
     setActiveImageIndex(idx);
     setShowVariantImage(false);
@@ -32,7 +72,6 @@ export default function ProductImageGallery({ images, name, variantImage }: Prod
 
   const handleMainImageClick = () => {
     if (showVariantImage && variantImage) {
-      // Find variant image in list or prepend it
       setPhotoIndex(0);
     } else {
       setPhotoIndex(activeImageIndex);
@@ -75,6 +114,9 @@ export default function ProductImageGallery({ images, name, variantImage }: Prod
         <div 
           className={styles.mainImageWrapper} 
           onClick={handleMainImageClick} 
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
           style={{ cursor: 'zoom-in' }}
         >
           {mainImage ? (

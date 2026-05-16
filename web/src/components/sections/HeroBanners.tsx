@@ -20,7 +20,7 @@ export default async function HeroBanners() {
   if (!banners || banners.length === 0) return null;
 
   return (
-    <div style={{ marginTop: '24px' }}>
+    <div style={{ marginTop: '16px' }}>
       <DgBannerCarousel banners={banners} />
     </div>
   );

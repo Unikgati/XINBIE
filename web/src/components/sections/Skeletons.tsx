@@ -20,31 +20,36 @@ export const CategorySkeleton = () => (
 
 export const ProductGridSkeleton = () => (
   <div className={styles.productGrid}>
-    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+    {[1, 2, 3, 4, 5, 6].map((i) => (
       <div key={i} style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        background: '#fff', 
+        background: 'var(--color-card, #fff)', 
         borderRadius: '16px',
-        border: '1px solid #f1f5f9',
+        boxShadow: 'var(--shadow-md)',
         overflow: 'hidden',
         height: '100%'
       }}>
-        {/* Image Shimmer with 1:1 Aspect Ratio */}
+        {/* Image Shimmer with 1:1 Aspect Ratio and Top Radius */}
         <div style={{ width: '100%', aspectRatio: '1/1', position: 'relative' }}>
-          <DgSkeleton width="100%" height="100%" borderRadius="0" />
+          <DgSkeleton width="100%" height="100%" borderRadius="16px 16px 0 0" />
         </div>
         
-        <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
-          <DgSkeleton width="90%" height="16px" borderRadius="4px" />
-          <DgSkeleton width="60%" height="12px" borderRadius="4px" />
+        <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+          {/* Mall Badge + Title Shimmer */}
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <DgSkeleton width="30px" height="14px" borderRadius="4px" />
+            <DgSkeleton width="70%" height="16px" borderRadius="4px" />
+          </div>
+          <DgSkeleton width="40%" height="14px" borderRadius="4px" />
           
           <div style={{ marginTop: '4px' }}>
-            <DgSkeleton width="50%" height="18px" borderRadius="4px" />
+            <DgSkeleton width="60%" height="20px" borderRadius="4px" />
           </div>
           
-          <div style={{ marginTop: 'auto', paddingTop: '4px' }}>
-            <DgSkeleton width="40px" height="14px" borderRadius="10px" />
+          <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px' }}>
+            <DgSkeleton width="40px" height="14px" borderRadius="4px" />
+            <DgSkeleton width="24px" height="24px" borderRadius="6px" />
           </div>
         </div>
       </div>

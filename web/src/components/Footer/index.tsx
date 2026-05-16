@@ -35,7 +35,6 @@ const Footer = async () => {
           <div className={styles.linksColumn}>
             <h3 className={styles.columnTitle}>Kategori</h3>
             <ul className={styles.linkList}>
-              <li><Link href="/products">Semua Produk</Link></li>
               {categories.map((cat: any) => (
                 <li key={cat.id}>
                   <Link href={`/category/${cat.slug}`}>{cat.name}</Link>

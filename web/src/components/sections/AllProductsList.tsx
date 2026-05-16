@@ -22,7 +22,7 @@ export default async function AllProductsList() {
 
   return (
     <section className={styles.productSection}>
-      <h2 className={styles.sectionTitle}>Belanja Harianmu 🛒</h2>
+      <h2 className={styles.sectionTitle}>Koleksi Kesehatan & Terapi 🩺</h2>
       <InfiniteProductList initialProducts={initialProducts} initialMeta={initialMeta} />
     </section>
   );

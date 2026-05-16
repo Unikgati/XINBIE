@@ -281,39 +281,38 @@
   
   .logo {
     order: 1;
-    font-size: 20px;
+    flex: 1;
+    justify-content: center;
+    margin-right: -48px; /* Offset to center relative to container when actions exist, though currently empty */
+  }
+
+  .logoImage {
+    width: 110px !important;
+    height: auto !important;
   }
   
   .actionsContainer {
     order: 2;
-    gap: 12px;
+    width: 48px; /* Match logo offset for perfect centering */
+    justify-content: flex-end;
   }
   
   .searchContainer {
     order: 3;
     width: 100%;
     max-width: 100%;
-  }
-
-  .loginButton, .registerButton {
-    display: none;
-  }
-  
-  .avatarButton {
-    display: none;
-  }
-  
-  .cartIconButton {
-    display: none !important;
-  }
-
-  .searchButtonText {
-    display: none;
+    padding: 4px 4px 4px 16px;
   }
 
   .searchButton {
-    padding: 0;
-    width: 36px;
+    width: auto;
+    padding: 0 16px;
+    height: 38px;
+  }
+
+  .searchButtonText {
+    display: block;
+    font-size: 13px;
   }
 
   .hideOnMobile {
