@@ -81,6 +81,7 @@ export default function LoginPage() {
           opacity: 0.5;
           filter: blur(60px);
           animation: shape-move 20s infinite alternate ease-in-out;
+          will-change: transform, filter;
         }
 
         .shape-1 {
@@ -89,6 +90,7 @@ export default function LoginPage() {
           background: #db2777;
           top: -150px;
           left: -150px;
+          animation-duration: 8s;
         }
 
         .shape-2 {
@@ -97,13 +99,15 @@ export default function LoginPage() {
           background: #db2777;
           bottom: -100px;
           right: -100px;
-          animation-delay: -5s;
+          animation-delay: -2s;
+          animation-duration: 12s;
         }
 
         @keyframes shape-move {
-          0% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(40px, 30px) scale(1.05); }
-          100% { transform: translate(-30px, -20px) scale(0.95); }
+          0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+          33% { transform: translate(100px, 80px) scale(1.15) rotate(120deg); }
+          66% { transform: translate(-80px, 120px) scale(0.85) rotate(240deg); }
+          100% { transform: translate(0, 0) scale(1) rotate(360deg); }
         }
 
         /* ===== Inner card: split layout ===== */
@@ -305,8 +309,37 @@ export default function LoginPage() {
           text-align: center;
           padding: 0 40px;
           text-transform: uppercase;
-          letter-spacing: -1px;
-          opacity: 0.9;
+          letter-spacing: 4px;
+          opacity: 0;
+          filter: blur(10px);
+          animation: cinematic-reveal 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 70%);
+          background-size: 200% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          animation: 
+            cinematic-reveal 2s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+            shimmer-sweep 4s infinite 2.5s;
+        }
+
+        @keyframes cinematic-reveal {
+          0% {
+            opacity: 0;
+            filter: blur(12px);
+            letter-spacing: 0px;
+            transform: scale(0.95);
+          }
+          100% {
+            opacity: 1;
+            filter: blur(0);
+            letter-spacing: 6px;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes shimmer-sweep {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
 
         /* ===== Responsive ===== */
@@ -432,7 +465,7 @@ export default function LoginPage() {
               <img src="/logo-white.svg" alt="XINBIE" />
             </div>
             <div className="login-promo-text">
-              Wellness in motion
+              WELLNESS IN MOTION
             </div>
           </div>
         </div>
