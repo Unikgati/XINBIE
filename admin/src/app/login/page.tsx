@@ -18,7 +18,7 @@ export default function LoginPage() {
     try {
       const res = await api('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, adminOnly: true }),
         noAuth: true,
       });
       

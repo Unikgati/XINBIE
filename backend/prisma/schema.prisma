@@ -28,9 +28,26 @@ model User {
   orders          Order[]        @relation("UserOrders")
   otpCodes        OtpCode[]
   refreshTokens   RefreshToken[]
+  loginLogs       LoginLog[]
 
   @@map("users")
 }
+
+model LoginLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  email     String
+  status    String   // SUCCESS, FAILED
+  message   String?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("login_logs")
+}
+
 
 model OtpCode {
   id        String    @id @default(uuid())

@@ -38,7 +38,7 @@ router.post('/message', optionalAuth, async (req: AuthRequest, res) => {
 
     if (currentUsage > limit) {
       return res.status(429).json({ 
-        message: `Batas chat gratis Anda (${limit}/jam) sudah habis. Silakan login atau hubungi Customer Service kami via WhatsApp untuk bantuan langsung: https://wa.me/6285961462361` 
+        message: `Batas chat gratis Anda (${limit}/jam) sudah habis. Silakan login atau hubungi Customer Service kami via WhatsApp untuk bantuan langsung: https://wa.me/6287794204259` 
       });
     }
 

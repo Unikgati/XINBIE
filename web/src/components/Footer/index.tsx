@@ -58,14 +58,14 @@ const Footer = async () => {
                 <span className={`material-symbols-outlined ${styles.contactIcon}`}>call</span>
                 <div className={styles.contactText}>
                   <span className={styles.contactLabel}>Telepon</span>
-                  <span className={styles.contactValue}>+62 859-6146-2361</span>
+                  <span className={styles.contactValue}>+62 877-9420-4259</span>
                 </div>
               </div>
               <div className={styles.contactItem}>
                 <span className={`material-symbols-outlined ${styles.contactIcon}`}>location_on</span>
                 <div className={styles.contactText}>
                   <span className={styles.contactLabel}>Lokasi</span>
-                  <span className={styles.contactValue}>Bogor, Indonesia</span>
+                  <span className={styles.contactValue}>Depok, Indonesia</span>
                 </div>
               </div>
             </div>

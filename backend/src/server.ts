@@ -26,6 +26,7 @@ import syncRoutes from './routes/sync';
 
 
 const app = express();
+app.set('trust proxy', true);
 const server = createServer(app);
 
 // Middleware

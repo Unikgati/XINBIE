@@ -11,6 +11,29 @@ import redis from '../config/redis';
 import { OAuth2Client } from 'google-auth-library';
 import { config } from '../config';
 
+async function createLoginLog(data: {
+  email: string;
+  userId?: string;
+  status: 'SUCCESS' | 'FAILED';
+  message?: string;
+  req: Request;
+}) {
+  try {
+    await prisma.loginLog.create({
+      data: {
+        email: data.email,
+        userId: data.userId,
+        status: data.status,
+        message: data.message,
+        ipAddress: data.req.ip,
+        userAgent: data.req.headers['user-agent'],
+      },
+    });
+  } catch (err) {
+    console.error('❌ Failed to create login log:', err);
+  }
+}
+
 const googleClient = new OAuth2Client(config.google.clientId);
 
 // POST /api/auth/register
@@ -110,16 +133,33 @@ export async function verifyEmail(req: Request, res: Response, next: NextFunctio
 // POST /api/auth/login
 export async function login(req: Request, res: Response, next: NextFunction) {
   try {
-    const { email, password } = req.body;
+    const { email, password, adminOnly } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || !user.password) throw new AppError('Email atau password salah', 401);
-    if (!user.isActive) throw new AppError('Akun dinonaktifkan', 403);
+    
+    if (!user || !user.password) {
+      await createLoginLog({ email, status: 'FAILED', message: 'User not found or no password', req });
+      throw new AppError('Email atau password salah', 401);
+    }
+
+    if (!user.isActive) {
+      await createLoginLog({ email, userId: user.id, status: 'FAILED', message: 'Account inactive', req });
+      throw new AppError('Akun dinonaktifkan', 403);
+    }
+
+    if (adminOnly && user.role !== 'ADMIN') {
+      await createLoginLog({ email, userId: user.id, status: 'FAILED', message: 'Unauthorized admin login attempt', req });
+      throw new AppError('Akses ditolak. Anda bukan admin.', 403);
+    }
 
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid) throw new AppError('Email atau password salah', 401);
+    if (!valid) {
+      await createLoginLog({ email, userId: user.id, status: 'FAILED', message: 'Invalid password', req });
+      throw new AppError('Email atau password salah', 401);
+    }
 
     if (!user.emailVerifiedAt) {
+      await createLoginLog({ email, userId: user.id, status: 'FAILED', message: 'Email not verified', req });
       throw new AppError('Email belum diverifikasi', 403);
     }
 
@@ -134,6 +174,8 @@ export async function login(req: Request, res: Response, next: NextFunction) {
       },
     });
 
+    await createLoginLog({ email, userId: user.id, status: 'SUCCESS', req });
+
     res.json({ accessToken, refreshToken, user: sanitizeUser(user) });
   } catch (err) { next(err); }
 }
@@ -141,7 +183,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
 // POST /api/auth/google
 export async function googleAuth(req: Request, res: Response, next: NextFunction) {
   try {
-    const { idToken, name, email, avatarUrl, googleId } = req.body;
+    const { idToken, name, email, avatarUrl, googleId, adminOnly } = req.body;
     
     // Verify token if clientId is configured
     if (config.google.clientId) {
@@ -183,7 +225,15 @@ export async function googleAuth(req: Request, res: Response, next: NextFunction
       }
     }
 
-    if (!user.isActive) throw new AppError('Akun dinonaktifkan', 403);
+    if (!user.isActive) {
+      await createLoginLog({ email, userId: user.id, status: 'FAILED', message: 'Account inactive (Google)', req });
+      throw new AppError('Akun dinonaktifkan', 403);
+    }
+
+    if (adminOnly && user.role !== 'ADMIN') {
+      await createLoginLog({ email, userId: user.id, status: 'FAILED', message: 'Unauthorized admin login attempt (Google)', req });
+      throw new AppError('Akses ditolak. Anda bukan admin.', 403);
+    }
 
     const accessToken = generateAccessToken(user.id, user.role);
     const refreshToken = generateRefreshToken(user.id, user.role);
@@ -195,6 +245,8 @@ export async function googleAuth(req: Request, res: Response, next: NextFunction
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       },
     });
+
+    await createLoginLog({ email, userId: user.id, status: 'SUCCESS', message: 'Google Auth', req });
 
     res.json({ accessToken, refreshToken, user: sanitizeUser(user) });
   } catch (err) { next(err); }

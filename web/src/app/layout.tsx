@@ -67,7 +67,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   // Fetch WhatsApp number from settings
-  let whatsappNumber = '6285961462361'; // Fallback
+  let whatsappNumber = '6287794204259'; // Fallback
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/settings/whatsapp`, { 
       cache: 'no-store' 

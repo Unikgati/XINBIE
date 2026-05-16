@@ -501,7 +501,7 @@ export async function getWhatsAppSetting(req: Request, res: Response, next: Next
     const setting = await prisma.appSetting.findFirst({
       where: { key: 'admin_wa' }
     });
-    res.json({ whatsapp: setting?.value || '6285961462361' });
+    res.json({ whatsapp: setting?.value || '6287794204259' });
   } catch (err) { next(err); }
 }
 
