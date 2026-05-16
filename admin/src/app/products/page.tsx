@@ -224,8 +224,6 @@ export default function ProductsPage() {
   const [formStock, setFormStock] = useState('');
 
   const [formDesc, setFormDesc] = useState('');
-  const [generatingDesc, setGeneratingDesc] = useState(false);
-  const [generateSuccess, setGenerateSuccess] = useState(false);
   const [formImages, setFormImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
 
@@ -291,29 +289,6 @@ export default function ProductsPage() {
     setFormVariants(prev => prev.map(v => v.tempId === tempId ? { ...v, [field]: value } : v));
   };
 
-  const handleGenerateDesc = async () => {
-    if (!formName) {
-      toast.error('Masukkan nama produk terlebih dahulu');
-      return;
-    }
-    try {
-      setGeneratingDesc(true);
-      const catName = categories.find(c => c.id === productCategory)?.name || '';
-      const res = await apiPost<any>('/ai/generate-desc', { productName: formName, categoryName: catName });
-      if (res && res.description) {
-        setFormDesc(res.description);
-
-        
-        toast.success('Deskripsi berhasil di-generate!');
-        setGenerateSuccess(true);
-        setTimeout(() => setGenerateSuccess(false), 2000);
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal generate AI');
-    } finally {
-      setGeneratingDesc(false);
-    }
-  };
 
   const resetForm = () => {
     setEditingId(null);
@@ -845,30 +820,11 @@ export default function ProductsPage() {
                 )}
               </div>
               <div className="form-group">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <label className="form-label" style={{ marginBottom: 0 }}>Deskripsi</label>
-                  <button 
-                    type="button" 
-                    onClick={handleGenerateDesc}
-                    disabled={generatingDesc || generateSuccess}
-                    className="btn btn-outline btn-icon ai-generate-btn" 
-                    title="Generate Deskripsi dengan AI"
-                    style={{ borderRadius: 100, borderColor: generateSuccess ? 'var(--success)' : 'transparent', background: generateSuccess ? 'var(--success-surface)' : 'var(--surface)' }}
-                  >
-                    {generatingDesc ? (
-                      <span className="spinner" style={{ width: 18, height: 18, borderBottomColor: 'var(--primary)' }}></span>
-                    ) : generateSuccess ? (
-                      <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--success)' }}>check_circle</span>
-                    ) : (
-                      <span className="material-symbols-outlined gradient-icon" style={{ fontSize: 20 }}>auto_awesome</span>
-                    )}
-                  </button>
-                </div>
+                <label className="form-label">Deskripsi</label>
                 <RichTextEditor 
                   value={formDesc} 
                   onChange={setFormDesc} 
-                  placeholder={generatingDesc ? "Sedang di-generate oleh AI..." : "Deskripsi produk..."} 
-                  loading={generatingDesc} 
+                  placeholder="Deskripsi produk..." 
                 />
               </div>
 
@@ -951,7 +907,7 @@ export default function ProductsPage() {
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                               <label className="form-label" style={{ fontSize: 11 }}>Nama Varian</label>
-                              <input className="form-input" placeholder="cth: Besar, 1kg, 500ml" value={v.name} onChange={e => updateFormVariant(v.tempId, 'name', e.target.value)} />
+                              <input className="form-input" placeholder="cth: Hitam, Abu, 1 Pcs, 2 Pcs" value={v.name} onChange={e => updateFormVariant(v.tempId, 'name', e.target.value)} />
                             </div>
                             
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
