@@ -169,8 +169,29 @@
 }
 
 .submitBtn:disabled {
-  background-color: #fdba74;
+  background-color: #94a3b8;
   cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.spinnerRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.spinnerRing {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .avatarSection {

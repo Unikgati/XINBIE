@@ -44,27 +44,40 @@ const Footer = async () => {
             </ul>
           </div>
 
-          <div className={styles.linksColumn}>
+          <div className={styles.contactColumn}>
             <h3 className={styles.columnTitle}>Hubungi Kami</h3>
-            <div className={styles.contactItem}>
-              <span className="material-symbols-outlined">mail</span>
-              <span>hello@xinbie.id</span>
-            </div>
-            <div className={styles.contactItem}>
-              <span className="material-symbols-outlined">call</span>
-              <span>+62 859-6146-2361</span>
-            </div>
-            <div className={styles.contactItem}>
-              <span className="material-symbols-outlined">location_on</span>
-              <span>Bogor, Indonesia</span>
+            <div className={styles.contactList}>
+              <div className={styles.contactItem}>
+                <span className={`material-symbols-outlined ${styles.contactIcon}`}>mail</span>
+                <div className={styles.contactText}>
+                  <span className={styles.contactLabel}>Email</span>
+                  <span className={styles.contactValue}>hello@xinbie.id</span>
+                </div>
+              </div>
+              <div className={styles.contactItem}>
+                <span className={`material-symbols-outlined ${styles.contactIcon}`}>call</span>
+                <div className={styles.contactText}>
+                  <span className={styles.contactLabel}>Telepon</span>
+                  <span className={styles.contactValue}>+62 859-6146-2361</span>
+                </div>
+              </div>
+              <div className={styles.contactItem}>
+                <span className={`material-symbols-outlined ${styles.contactIcon}`}>location_on</span>
+                <div className={styles.contactText}>
+                  <span className={styles.contactLabel}>Lokasi</span>
+                  <span className={styles.contactValue}>Bogor, Indonesia</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div className={styles.bottomSection}>
-          <p className={styles.copyright}>
-            © {currentYear} XINBIE. Seluruh hak cipta dilindungi.
-          </p>
+          <div className={styles.bottomContainer}>
+            <p className={styles.copyright}>
+              © {currentYear} XINBIE. Seluruh hak cipta dilindungi.
+            </p>
+          </div>
         </div>
       </div>
     </footer>

@@ -83,7 +83,7 @@ export default function ProductImageGallery({ images, name, variantImage }: Prod
                 src={mainImage} 
                 alt={name} 
                 fill 
-                style={{ objectFit: 'cover' }} 
+                style={{ objectFit: 'contain', padding: '10px' }} 
                 unoptimized
                 priority
               />
@@ -129,7 +129,7 @@ export default function ProductImageGallery({ images, name, variantImage }: Prod
                 className={`${styles.thumbnail} ${!showVariantImage && idx === activeImageIndex ? styles.thumbnailActive : ''}`}
                 onClick={() => handleThumbnailClick(idx)}
               >
-                <Image src={img} alt={`Thumbnail ${idx}`} fill style={{ objectFit: 'cover' }} unoptimized />
+                <Image src={img} alt={`Thumbnail ${idx}`} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized />
               </div>
             ))}
           </div>

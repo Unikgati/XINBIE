@@ -78,7 +78,8 @@ export default function LoginPage() {
         .login-shape {
           position: absolute;
           border-radius: 50%;
-          opacity: 0.6;
+          opacity: 0.5;
+          filter: blur(60px);
           animation: shape-move 20s infinite alternate ease-in-out;
         }
 
@@ -348,13 +349,13 @@ export default function LoginPage() {
       `}</style>
 
       <div className="login-bg-shapes-wrapper" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '880px', display: 'flex', justifyContent: 'center' }}>
-        {/* Background Shapes anchored to card center */}
-        <div className="login-bg-shapes" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100%', height: '100%' }}>
-          <div className="login-shape shape-1"></div>
-          <div className="login-shape shape-2"></div>
-        </div>
-
-        <div className="login-outer">
+        <div className="login-outer" style={{ overflow: 'hidden' }}>
+          {/* Background Shapes clipped to the card */}
+          <div className="login-bg-shapes">
+            <div className="login-shape shape-1"></div>
+            <div className="login-shape shape-2"></div>
+          </div>
+          
           <div className="login-inner">
           {/* Left: Login Form */}
           <div className="login-left">
@@ -412,7 +413,10 @@ export default function LoginPage() {
 
               <button type="submit" className="login-submit" disabled={loading}>
                 {loading ? (
-                  <div className="login-spinner-ring" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="login-spinner-ring" />
+                    <span>Mohon tunggu...</span>
+                  </div>
                 ) : 'Masuk'}
               </button>
             </form>

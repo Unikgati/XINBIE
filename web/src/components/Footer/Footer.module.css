@@ -1,66 +1,65 @@
 .footer {
-  background-color: var(--color-text-primary); /* Dark navy/slate from globals */
-  color: #FFFFFF;
-  padding: 80px 20px 40px;
-  margin-top: 60px;
-  position: relative;
-  z-index: 10;
+  background-color: #0f172a; /* Slate 900 - Premium dark */
+  color: #f8fafc;
+  padding: 80px 0 0;
+  margin-top: 80px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 24px;
 }
 
 .topSection {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.5fr;
-  gap: 40px;
-  margin-bottom: 60px;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 48px;
+  padding-bottom: 60px;
 }
 
 .brandColumn {
+  grid-column: span 4;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
 }
 
 .logoImage {
-  height: 32px;
+  height: 36px;
   width: auto;
   filter: brightness(0) invert(1);
 }
 
 .description {
   font-size: 15px;
-  line-height: 1.6;
-  color: #94A3B8; /* Slate-400 */
+  line-height: 1.7;
+  color: #94a3b8;
   max-width: 320px;
+  margin: 0;
 }
 
+.linksColumn {
+  grid-column: span 4;
+}
+
+.contactColumn {
+  grid-column: span 4;
+}
 
 .columnTitle {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   margin-bottom: 24px;
-  color: #FFFFFF;
-  position: relative;
-}
-
-.columnTitle::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: -8px;
-  width: 24px;
-  height: 2px;
-  background: var(--color-primary);
+  color: #ffffff;
 }
 
 .linkList {
@@ -69,76 +68,130 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+}
+
+.linkList li {
+  display: flex;
+  align-items: center;
 }
 
 .linkList a {
-  font-size: 14px;
-  color: #94A3B8;
-  transition: color 0.2s;
+  font-size: 15px;
+  color: #94a3b8;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
 .linkList a:hover {
   color: var(--color-primary-light);
+  transform: translateX(4px);
+}
+
+.contactList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .contactItem {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  font-size: 14px;
-  color: #94A3B8;
+  align-items: flex-start;
+  gap: 14px;
+  color: #94a3b8;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
-.contactItem span:first-child {
-  font-size: 20px;
+.contactIcon {
   color: var(--color-primary-light);
+  font-size: 20px !important;
+  margin-top: 2px;
+}
+
+.contactText {
+  display: flex;
+  flex-direction: column;
+}
+
+.contactLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.contactValue {
+  color: #f1f5f9;
+  font-weight: 500;
 }
 
 .bottomSection {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 32px;
+  padding: 40px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.bottomContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
   display: flex;
   justify-content: center;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
 }
 
 .copyright {
-  font-size: 13px;
-  color: #64748B;
-  text-align: center;
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
 }
 
-
-/* Responsive */
+/* Tablet */
 @media (max-width: 1024px) {
   .topSection {
-    grid-template-columns: 1fr 1fr;
-    gap: 48px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+  }
+  
+  .brandColumn {
+    grid-column: span 2;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .linksColumn, .contactColumn {
+    grid-column: span 1;
   }
 }
 
+/* Mobile */
 @media (max-width: 640px) {
   .footer {
-    padding: 60px 20px 40px;
-    margin-top: 40px;
+    padding-top: 60px;
   }
-  
+
   .topSection {
     grid-template-columns: 1fr;
-    gap: 36px;
+    gap: 32px;
+  }
+
+  .brandColumn, .linksColumn, .contactColumn {
+    grid-column: span 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 32px;
+  }
+
+  .contactColumn {
+    border-bottom: none;
+  }
+
+  .columnTitle {
+    margin-bottom: 20px;
   }
 
   .bottomSection {
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-  }
-
-  .brandColumn {
-    align-items: flex-start;
+    padding: 24px 0 40px;
   }
 }

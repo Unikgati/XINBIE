@@ -200,7 +200,12 @@ export default function ReviewForm({ productId, onSuccess, isOpen, onClose }: Re
             </div>
 
             <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? 'Mengirim...' : 'Kirim Ulasan'}
+              {loading ? (
+                <div className={styles.spinnerRow}>
+                  <div className={styles.spinnerRing} />
+                  <span>Mengirim...</span>
+                </div>
+              ) : 'Kirim Ulasan'}
             </button>
           </form>
     </div>

@@ -10,6 +10,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   const hiddenRoutes = ['/login', '/register', '/forgot-password', '/otp', '/reset-password'];
   if (hiddenRoutes.includes(pathname)) return null;
@@ -17,6 +18,7 @@ export default function Navbar() {
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
+    setIsSearching(true);
     router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
   };
 
@@ -41,9 +43,11 @@ export default function Navbar() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <button type="submit" className={styles.searchButton}>
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>search</span>
-            <span className={styles.searchButtonText}>Cari</span>
+          <button type="submit" className={styles.searchButton} disabled={isSearching}>
+            <span className={`material-symbols-outlined ${isSearching ? styles.spin : ''}`} style={{ fontSize: '18px' }}>
+              {isSearching ? 'progress_activity' : 'search'}
+            </span>
+            <span className={styles.searchButtonText}>{isSearching ? 'Mencari...' : 'Cari'}</span>
           </button>
         </form>
 
