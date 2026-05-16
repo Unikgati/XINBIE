@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
-import { idParamSchema, paginationQuerySchema } from '../utils/schema';
+import { productBodySchema, idParamSchema, paginationQuerySchema } from '../utils/schema';
 import slugify from 'slugify';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { processAndUploadImage, processAndUploadImages } from '../middleware/upload';
+import { deleteFile } from '../config/minio';
 import { emitToAdmins, broadcastOrderOffer } from '../websocket';
 import { NotificationService } from '../utils/notification';
 import { generateUniqueSlug } from '../utils/helpers';
@@ -108,240 +109,192 @@ export async function adminGetProducts(req: AuthRequest, res: Response, next: Ne
   } catch (err) { next(err); }
 }
 
-const parseProductData = (body: any) => {
-  const data: any = {};
-  
-  // Whitelist of fields allowed in Prisma Product model
-  const allowedFields = [
-    'name', 'description', 'categoryId', 'price', 'costPrice', 
-    'discountPrice', 'unit', 'weightGram', 'isUnlimitedStock', 
-    'isActive', 'isFeatured', 'sortOrder', 'shopeeUrl', 'ratingAvg',
-    'tags', 'sizes'
-  ];
-
-  allowedFields.forEach(field => {
-    if (body[field] !== undefined) {
-      data[field] = body[field];
-    }
-  });
-
-  // Remap 'stock' to 'stockQty' (compatibility with older frontend)
-  if (body.stock !== undefined) {
-    data.stockQty = parseInt(body.stock) || 0;
-  } else if (body.stockQty !== undefined) {
-    data.stockQty = parseInt(body.stockQty) || 0;
-  }
-
-  // Convert numeric types
-  if (data.price !== undefined) {
-      const parsedPrice = parseInt(data.price);
-      data.price = isNaN(parsedPrice) ? existingVariant.product.price : parsedPrice;
-    }
-    if (data.costPrice !== undefined) {
-      const parsedCostPrice = parseInt(data.costPrice);
-      data.costPrice = isNaN(parsedCostPrice) ? existingVariant.product.costPrice : parsedCostPrice;
-    }
-  if (data.discountPrice !== undefined) {
-    const parsed = parseInt(data.discountPrice);
-    data.discountPrice = isNaN(parsed) || parsed < 0 ? null : parsed;
-  }
-  if (data.weightGram !== undefined) {
-    const parsed = parseInt(data.weightGram);
-    data.weightGram = isNaN(parsed) ? null : parsed;
-  }
-  if (data.sortOrder !== undefined) data.sortOrder = parseInt(data.sortOrder) || 0;
-  if (data.ratingAvg !== undefined) data.ratingAvg = parseFloat(data.ratingAvg) || 4.8;
-
-  // Convert booleans
-  if (data.isActive !== undefined) data.isActive = String(data.isActive) === 'true';
-  if (data.isFeatured !== undefined) data.isFeatured = String(data.isFeatured) === 'true';
-  if (data.isUnlimitedStock !== undefined) data.isUnlimitedStock = String(data.isUnlimitedStock) === 'true';
-
-  // Handle arrays from FormData and split by comma if needed
-  if (body.tags !== undefined) {
-    let rawTags = Array.isArray(body.tags) ? body.tags : [body.tags];
-    data.tags = rawTags.flatMap(t => String(t).split(',')).map(t => t.trim()).filter(Boolean);
-  }
-  if (body.sizes !== undefined) {
-    let rawSizes = Array.isArray(body.sizes) ? body.sizes : [body.sizes];
-    data.sizes = rawSizes.flatMap(s => String(s).split(',')).map(s => s.trim()).filter(Boolean);
-  }
-
-  // Handle category relation
-  if (data.categoryId) {
-    data.category = { connect: { id: data.categoryId } };
-    delete data.categoryId;
-  }
-
-  // Auto-calculate discountPercent
-  if (data.price && data.price > 0 && data.discountPrice !== null && data.discountPrice > 0 && data.discountPrice < data.price) {
-    data.discountPercent = Math.round(((data.price - data.discountPrice) / data.price) * 100);
-  } else {
-    data.discountPercent = null;
-  }
-
-  // Clean up description
-  if (typeof data.description === 'string') {
-    data.description = data.description.replace(/&nbsp;/g, ' ');
-  }
-
-  return data;
-};
-
-
 export async function adminCreateProduct(req: AuthRequest, res: Response, next: NextFunction) {
+  const uploadedUrls: string[] = [];
   try {
-    const data = parseProductData(req.body);
-    const variantsRaw = req.body.variants; // Expecting JSON string
-    let variantsData = [];
-    if (variantsRaw) {
-      try {
-        variantsData = JSON.parse(variantsRaw);
-      } catch (e) {
-        throw new AppError('Format data varian tidak valid', 400);
-      }
-    }
+    const body = productBodySchema.parse(req.body);
+    const { variants, ...productData } = body;
 
-    let productImages: string[] = [];
-    if (req.files && Array.isArray(req.files)) {
-      // Find files that belong to product images (not variants)
-      // Usually multer files have fieldname like 'images' for product, 'variant_image_0' for variants
-      const prodFiles = (req.files as Express.Multer.File[]).filter(f => f.fieldname === 'images');
-      productImages = await processAndUploadImages(prodFiles, 'products');
-    }
+    // 1. Parallel Image Processing
+    const files = (req.files as Express.Multer.File[]) || [];
+    const prodFiles = files.filter(f => f.fieldname === 'images');
+    const variantFileMap = new Map<number, Express.Multer.File>();
+    files.forEach(f => {
+      const match = f.fieldname.match(/^variant_image_(\d+)$/);
+      if (match) variantFileMap.set(parseInt(match[1]), f);
+    });
 
-    data.images = productImages;
-    data.slug = await generateUniqueSlug(data.name);
+    const [prodUrls, ...variantUrls] = await Promise.all([
+      processAndUploadImages(prodFiles, 'products'),
+      ...variants.map((_, i) => {
+        const file = variantFileMap.get(i);
+        return file ? processAndUploadImage(file, 'variants') : Promise.resolve(null);
+      })
+    ]);
 
+    uploadedUrls.push(...prodUrls, ...variantUrls.filter((u): u is string => !!u));
+
+    // 2. Data Preparation
+    const slug = await generateUniqueSlug(productData.name);
+    const discountPercent = (productData.price > 0 && productData.discountPrice && productData.discountPrice < productData.price)
+      ? Math.round(((productData.price - productData.discountPrice) / productData.price) * 100)
+      : null;
+
+    // 3. Database Transaction
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create Product
-      const product = await tx.product.create({ data });
-
-      // 2. Create Variants if any
-      if (variantsData.length > 0) {
-        for (let i = 0; i < variantsData.length; i++) {
-          const v = variantsData[i];
-          let variantImageUrl = null;
-          
-          // Look for variant file in req.files
-          const variantFile = (req.files as Express.Multer.File[]).find(f => f.fieldname === `variant_image_${i}`);
-          if (variantFile) {
-            variantImageUrl = await processAndUploadImage(variantFile, 'variants');
-          }
-
-          await tx.productVariant.create({
-            data: {
-              productId: product.id,
-              name: v.name,
-              price: parseInt(v.price) || 0,
-              costPrice: parseInt(v.costPrice) || 0,
-              discountPrice: v.discountPrice ? parseInt(v.discountPrice) : null,
-              stockQty: parseInt(v.stockQty) || 0,
-              imageUrl: variantImageUrl,
-              isActive: true
-            }
-          });
+      const product = await tx.product.create({
+        data: {
+          name: productData.name,
+          description: productData.description?.replace(/&nbsp;/g, ' '),
+          price: productData.price,
+          costPrice: productData.costPrice,
+          discountPrice: productData.discountPrice,
+          discountPercent,
+          stockQty: productData.stock,
+          images: prodUrls,
+          slug,
+          shopeeUrl: productData.shopeeUrl,
+          ratingAvg: productData.ratingAvg,
+          tags: productData.tags,
+          sizes: productData.sizes,
+          isActive: true,
+          category: { connect: { id: productData.categoryId } }
         }
+      });
+
+      if (variants.length > 0) {
+        await tx.productVariant.createMany({
+          data: variants.map((v, i) => ({
+            productId: product.id,
+            name: v.name,
+            price: v.price,
+            costPrice: v.costPrice,
+            discountPrice: v.discountPrice,
+            stockQty: v.stockQty,
+            imageUrl: variantUrls[i] || v.imageUrl || null,
+            isActive: true
+          }))
+        });
       }
       return product;
     });
 
     res.status(201).json(result);
-  } catch (err) { next(err); }
+  } catch (err) {
+    for (const url of uploadedUrls) {
+      await deleteFile(url).catch(console.error);
+    }
+    next(err);
+  }
 }
 
 export async function adminUpdateProduct(req: AuthRequest, res: Response, next: NextFunction) {
+  const { id } = idParamSchema.parse(req.params);
+  const uploadedUrls: string[] = [];
   try {
-    const { id } = req.params;
-    const data = parseProductData(req.body);
-    const variantsRaw = req.body.variants; // JSON string
-    const deletedVariantsRaw = req.body.deletedVariants; // JSON string (array of IDs)
-    
-    let variantsData = [];
-    if (variantsRaw) variantsData = JSON.parse(variantsRaw);
-    
-    let deletedVariantIds = [];
-    if (deletedVariantsRaw) deletedVariantIds = JSON.parse(deletedVariantsRaw);
+    const body = productBodySchema.parse(req.body);
+    const { variants, deletedVariants, ...productData } = body;
 
-    let newProductImages: string[] | undefined;
-    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      const prodFiles = (req.files as Express.Multer.File[]).filter(f => f.fieldname === 'images');
-      if (prodFiles.length > 0) {
-        newProductImages = await processAndUploadImages(prodFiles, 'products');
-      }
-    }
+    // 1. Parallel Image Processing
+    const files = (req.files as Express.Multer.File[]) || [];
+    const prodFiles = files.filter(f => f.fieldname === 'images');
+    const variantFileMap = new Map<number, Express.Multer.File>();
+    files.forEach(f => {
+      const match = f.fieldname.match(/^variant_image_(\d+)$/);
+      if (match) variantFileMap.set(parseInt(match[1]), f);
+    });
 
-    if (newProductImages) data.images = newProductImages;
-    if (data.name) {
-      data.slug = await generateUniqueSlug(data.name, id);
-    }
+    const [prodUrls, ...variantUrls] = await Promise.all([
+      prodFiles.length > 0 ? processAndUploadImages(prodFiles, 'products') : Promise.resolve(null),
+      ...variants.map((_, i) => {
+        const file = variantFileMap.get(i);
+        return file ? processAndUploadImage(file, 'variants') : Promise.resolve(null);
+      })
+    ]);
 
+    if (prodUrls) uploadedUrls.push(...prodUrls);
+    uploadedUrls.push(...variantUrls.filter((u): u is string => !!u));
+
+    // 2. Data Preparation
+    const discountPercent = (productData.price > 0 && productData.discountPrice && productData.discountPrice < productData.price)
+      ? Math.round(((productData.price - productData.discountPrice) / productData.price) * 100)
+      : null;
+
+    // 3. Database Transaction
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Update Product
+      const updateData: any = {
+        name: productData.name,
+        description: productData.description?.replace(/&nbsp;/g, ' '),
+        price: productData.price,
+        costPrice: productData.costPrice,
+        discountPrice: productData.discountPrice,
+        discountPercent,
+        stockQty: productData.stock,
+        shopeeUrl: productData.shopeeUrl,
+        ratingAvg: productData.ratingAvg,
+        tags: productData.tags,
+        sizes: productData.sizes,
+        category: { connect: { id: productData.categoryId } }
+      };
+
+      if (prodUrls) updateData.images = prodUrls;
+      if (productData.name) {
+        updateData.slug = await generateUniqueSlug(productData.name, id);
+      }
+
       const product = await tx.product.update({
         where: { id },
-        data: data,
+        data: updateData,
       });
 
-      // 2. Delete removed variants
-      if (deletedVariantIds.length > 0) {
+      if (deletedVariants.length > 0) {
         await tx.productVariant.deleteMany({
-          where: { id: { in: deletedVariantIds }, productId: id }
+          where: { id: { in: deletedVariants }, productId: id }
         });
       }
 
-      // 3. Upsert Variants
-      if (variantsData.length > 0) {
-        for (let i = 0; i < variantsData.length; i++) {
-          const v = variantsData[i];
-          let variantImageUrl = v.imageUrl || null;
-          
-          // Check for new file upload for this variant
-          const variantFile = (req.files as Express.Multer.File[]).find(f => f.fieldname === `variant_image_${i}`);
-          if (variantFile) {
-            variantImageUrl = await processAndUploadImage(variantFile, 'variants');
-          }
+      for (let i = 0; i < variants.length; i++) {
+        const v = variants[i];
+        const vData = {
+          name: v.name,
+          price: v.price,
+          costPrice: v.costPrice,
+          discountPrice: v.discountPrice,
+          stockQty: v.stockQty,
+          imageUrl: variantUrls[i] || v.imageUrl || null,
+        };
 
-          const variantFields = {
-            name: v.name,
-            price: parseInt(v.price) || 0,
-            costPrice: parseInt(v.costPrice) || 0,
-            discountPrice: v.discountPrice ? parseInt(v.discountPrice) : null,
-            stockQty: parseInt(v.stockQty) || 0,
-            imageUrl: variantImageUrl,
-          };
-
-          if (v.id && v.id.length > 10) { // Simple check if it's a real UUID
-            await tx.productVariant.update({
-              where: { id: v.id },
-              data: variantFields
-            });
-          } else {
-            await tx.productVariant.create({
-              data: {
-                ...variantFields,
-                productId: id,
-                isActive: true
-              }
-            });
-          }
+        if (v.id && v.id.length > 10) {
+          await tx.productVariant.update({
+            where: { id: v.id },
+            data: vData
+          });
+        } else {
+          await tx.productVariant.create({
+            data: { ...vData, productId: id, isActive: true }
+          });
         }
       }
+
       return product;
     });
 
     res.json(result);
-  } catch (err) { next(err); }
+  } catch (err) {
+    for (const url of uploadedUrls) {
+      await deleteFile(url).catch(console.error);
+    }
+    next(err);
+  }
 }
 
 export async function adminDeleteProduct(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { id } = idParamSchema.parse(req.params);
-    const existingVariant = await prisma.productVariant.findUnique({
-      where: { id },
-      include: { product: true }
+    const product = await prisma.product.findUnique({
+      where: { id }
     });
-    if (!existingVariant) throw new AppError('Varian tidak ditemukan', 404);
+    if (!product) throw new AppError('Produk tidak ditemukan', 404);
     await prisma.product.delete({
       where: { id },
     });
@@ -403,6 +356,8 @@ export async function adminGetVariants(req: AuthRequest, res: Response, next: Ne
 export async function adminCreateVariant(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { productId } = z.object({ productId: z.string().min(1) }).parse(req.params);
+    const baseProduct = await prisma.product.findUnique({ where: { id: productId } });
+    if (!baseProduct) throw new AppError('Produk utama tidak ditemukan', 404);
     let imageUrl: string | undefined;
     if (req.file) imageUrl = await processAndUploadImage(req.file, 'variants');
     let parsedPrice = parseInt(req.body.price);

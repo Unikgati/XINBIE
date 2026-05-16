@@ -14,8 +14,8 @@ router.get('/unread-counts', admin.getUnreadCounts);
 
 // Products
 router.get('/products', admin.adminGetProducts);
-router.post('/products', upload.array('images', 10), admin.adminCreateProduct);
-router.put('/products/:id', upload.array('images', 10), admin.adminUpdateProduct);
+router.post('/products', upload.any(), admin.adminCreateProduct);
+router.put('/products/:id', upload.any(), admin.adminUpdateProduct);
 router.delete('/products/:id', admin.adminDeleteProduct);
 
 // Categories

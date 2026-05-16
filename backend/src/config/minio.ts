@@ -35,4 +35,16 @@ export function getFileUrl(objectName: string): string {
   return `${protocol}://${config.minio.endpoint}:${config.minio.port}/${config.minio.bucket}/${objectName}`;
 }
 
+export async function deleteFile(url: string) {
+  try {
+    const bucketPath = `/${config.minio.bucket}/`;
+    const index = url.indexOf(bucketPath);
+    if (index === -1) return;
+    const objectName = url.substring(index + bucketPath.length);
+    await minioClient.removeObject(config.minio.bucket, objectName);
+  } catch (err) {
+    console.error('Failed to delete file from MinIO:', err);
+  }
+}
+
 export default minioClient;
